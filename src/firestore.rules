@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can create their own user document
+    // Users can read/update/delete their own document if they are logged in
+    match /users/{userId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Admins can read/write any transaction
+    // Users can create their own transactions
+    // Users can read their own transactions
+    match /transactions/{transactionId} {
+       allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+       allow create: if request.auth.uid == request.resource.data.userId;
+       allow read: if request.auth.uid == resource.data.userId;
+    }
+
+    // Admins can read/write any trading account
+    // Users can create their own trading accounts
+    // Users can read their own trading accounts
+     match /tradingAccounts/{accountId} {
+       allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+       allow create: if request.auth.uid == request.resource.data.userId;
+       allow read: if request.auth.uid == resource.data.userId;
+    }
+  }
+}

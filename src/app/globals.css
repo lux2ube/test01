@@ -1,0 +1,91 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 98%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 142.1 76.2% 36.3%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220 8.9% 46.1%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 142.1 70.2% 46.3%;
+    --accent-foreground: 355.7 100% 97.3%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 142.1 76.2% 36.3%;
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 220 18% 11%;
+    --foreground: 210 20% 98%;
+    --card: 220 20% 13%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 20% 13%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 142.1 70.2% 46.3%;
+    --primary-foreground: 144.9 80.4% 97.1%;
+    --secondary: 220 10% 18%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 220 10% 18%;
+    --muted-foreground: 217.5 13.8% 62.9%;
+    --accent: 142.1 70.2% 46.3%;
+    --accent-foreground: 144.9 80.4% 97.1%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 85.7% 97.3%;
+    --border: 220 10% 23%;
+    --input: 220 10% 23%;
+    --ring: 142.1 70.2% 46.3%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  .phone-input-container .PhoneInput {
+      @apply flex items-center;
+  }
+  .phone-input-container .PhoneInputCountry {
+      @apply relative flex items-center;
+      order: 1;
+  }
+  .phone-input-container .PhoneInputInput {
+      @apply bg-transparent w-full h-10 rounded-md border border-input !pl-3 pr-1 focus:ring-2 focus:ring-ring focus:ring-offset-2;
+      order: 2;
+  }
+  .phone-input-container .PhoneInputCountrySelect {
+      @apply absolute inset-0 opacity-0 w-full cursor-pointer;
+  }
+}
+
+@layer utilities {
+  .border-spinner {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 3px solid hsl(var(--border));
+    border-top-color: hsl(var(--primary));
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

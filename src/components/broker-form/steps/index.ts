@@ -1,0 +1,11 @@
+export { BasicInfoStep } from "./BasicInfoStep";
+export { RegulationStep } from "./RegulationStep";
+export { TradingConditionsStep } from "./TradingConditionsStep";
+export { PlatformsStep } from "./PlatformsStep";
+export { InstrumentsStep } from "./InstrumentsStep";
+export { DepositsWithdrawalsStep } from "./DepositsWithdrawalsStep";
+export { CashbackStep } from "./CashbackStep";
+export { GlobalReachStep } from "./GlobalReachStep";
+export { ReputationStep } from "./ReputationStep";
+export { AdditionalFeaturesStep } from "./AdditionalFeaturesStep";
+export { InstructionsStep } from "./InstructionsStep";

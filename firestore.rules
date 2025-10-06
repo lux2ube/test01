@@ -1,0 +1,236 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+    
+    function isNewOwner() {
+      return isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // =================================
+    // Users Collection
+    // =================================
+    match /users/{userId} {
+      // Users can create their own profile during registration
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+      
+      // Users can only update specific safe fields (name, phoneNumber, kycData, addressData)
+      // All server-managed fields must remain unchanged
+      allow update: if isOwner(userId) &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['name', 'phoneNumber', 'kycData', 'addressData']) &&
+                       request.resource.data.email == resource.data.email &&
+                       request.resource.data.role == resource.data.role &&
+                       request.resource.data.status == resource.data.status &&
+                       request.resource.data.clientId == resource.data.clientId &&
+                       request.resource.data.referralCode == resource.data.referralCode &&
+                       request.resource.data.level == resource.data.level &&
+                       request.resource.data.monthlyEarnings == resource.data.monthlyEarnings &&
+                       request.resource.data.referrals == resource.data.referrals &&
+                       (!resource.data.keys().hasAny(['phoneNumberVerified']) || 
+                        request.resource.data.phoneNumberVerified == resource.data.phoneNumberVerified);
+      
+      // Admins have full access
+      allow read, write: if isAdmin();
+    }
+    
+    // =================================
+    // Trading Accounts
+    // =================================
+    match /tradingAccounts/{accountId} {
+      // Users can create trading accounts for themselves
+      allow create: if isNewOwner();
+      
+      // Users can read their own trading accounts
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users cannot update or delete their own accounts (admin only)
+      allow update, delete: if isAdmin();
+      
+      // Admins have full access
+      allow read, write: if isAdmin();
+    }
+    
+    // =================================
+    // Cashback Transactions
+    // =================================
+    match /cashbackTransactions/{transactionId} {
+      // Users can only read their own cashback transactions
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Only admins can create/modify cashback transactions
+      allow write: if isAdmin();
+    }
+    
+    // =================================
+    // Withdrawals
+    // =================================
+    match /withdrawals/{withdrawalId} {
+      // Users can create withdrawal requests for themselves
+      allow create: if isNewOwner();
+      
+      // Users can read their own withdrawals
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users cannot update or delete withdrawals (admin only)
+      allow update, delete: if isAdmin();
+      
+      // Admins have full access
+      allow read, write: if isAdmin();
+    }
+    
+    // =================================
+    // Orders
+    // =================================
+    match /orders/{orderId} {
+      // Users can create orders for themselves
+      allow create: if isNewOwner();
+      
+      // Users can read their own orders
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users cannot update or delete orders (admin only)
+      allow update, delete: if isAdmin();
+      
+      // Admins have full access
+      allow read, write: if isAdmin();
+    }
+    
+    // =================================
+    // Notifications
+    // =================================
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can update their own notifications (mark as read only)
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']);
+      
+      // Only admins/server can create notifications
+      allow create, delete: if isAdmin();
+      
+      // Admins have full access
+      allow read, write: if isAdmin();
+    }
+    
+    // =================================
+    // Feedback Forms
+    // =================================
+    match /feedbackForms/{formId} {
+      // Authenticated users can read active feedback forms
+      allow read: if isAuthenticated() && resource.data.status == 'active';
+      
+      // Admins can read all forms and manage them
+      allow read, write, create, delete: if isAdmin();
+    }
+    
+    // =================================
+    // Feedback Responses
+    // =================================
+    match /feedbackResponses/{responseId} {
+      // Users can create their own feedback responses
+      allow create: if isNewOwner();
+      
+      // Users can read their own responses
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Admins have full access
+      allow read, write, delete: if isAdmin();
+    }
+    
+    // =================================
+    // Offers
+    // =================================
+    match /offers/{offerId} {
+      // Authenticated users can read enabled offers
+      allow read: if isAuthenticated() && resource.data.isEnabled == true;
+      
+      // Admins can read all offers and manage them
+      allow read, write, create, delete: if isAdmin();
+    }
+    
+    // =================================
+    // Public Read Collections
+    // =================================
+    
+    // Brokers - public read, admin write
+    match /brokers/{brokerId} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+    }
+    
+    // Products - public read, admin write
+    match /products/{productId} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+    }
+    
+    // Product Categories - public read, admin write
+    match /productCategories/{categoryId} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+    }
+    
+    // Client Levels - public read, admin write
+    match /clientLevels/{levelId} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+    }
+    
+    // Blog Posts - public can read published posts, admin can do everything
+    match /blogPosts/{postId} {
+      allow read: if resource.data.status == 'published';
+      allow read, write, delete: if isAdmin();
+    }
+    
+    // Payment Methods - public read, admin write
+    match /paymentMethods/{methodId} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+    }
+    
+    // =================================
+    // Admin-Only Collections
+    // =================================
+    
+    // Activity Logs - users can read their own logs, admin can do everything
+    match /activityLogs/{logId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read, write, create, delete: if isAdmin();
+    }
+    
+    // Admin Notifications - admin only
+    match /adminNotifications/{notificationId} {
+      allow read, write, create, delete: if isAdmin();
+    }
+    
+    // Counters - admin only (server-side managed)
+    match /counters/{counterId} {
+      allow read, write, create, delete: if isAdmin();
+    }
+    
+    // Settings - public read, admin write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write, create, delete: if isAdmin();
+    }
+  }
+}

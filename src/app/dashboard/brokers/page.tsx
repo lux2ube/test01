@@ -36,8 +36,7 @@ export default function BrokersPage() {
 
   const filteredBrokers = useMemo(() => {
     return allBrokers.filter((broker) => {
-      // Backward compatibility for search
-      const name = broker.basicInfo?.broker_name || broker.name;
+      const name = broker.name || "";
       return name.toLowerCase().includes(searchQuery.toLowerCase())
     });
   }, [allBrokers, searchQuery]);

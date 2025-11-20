@@ -106,7 +106,7 @@ export default function BrokerLinkPage() {
     notFound();
   }
 
-  const brokerName = broker.basicInfo?.broker_name || broker.name;
+  const brokerName = broker.name || broker.basicInfo?.broker_name;
 
   const processForm = async (data: FormData) => {
     if (!user) {
@@ -169,14 +169,16 @@ export default function BrokerLinkPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col items-start gap-4">
-            <Image
-                src={broker.logoUrl}
-                alt={`${brokerName} logo`}
-                width={48}
-                height={48}
-                className="w-12 h-12 object-contain rounded-lg border p-1 bg-background flex-shrink-0"
-                data-ai-hint="logo"
-              />
+            {broker.logo_url &&
+              <Image
+                  src={broker.logo_url}
+                  alt={`${brokerName} logo`}
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 object-contain rounded-lg border p-1 bg-background flex-shrink-0"
+                  data-ai-hint="logo"
+                />
+            }
             <div className="flex-1">
               <h1 className="text-lg font-bold font-headline">{brokerName}</h1>
               <p className="text-xs text-muted-foreground">{broker.basicInfo ? `تأسست عام ${broker.basicInfo.founded_year}، ومقرها في ${broker.basicInfo.headquarters}` : broker.description}</p>
@@ -266,12 +268,11 @@ function Step1({ brokerName }: { brokerName: string }) {
 }
 
 function Step2({ hasAccount, broker }: { hasAccount: string | undefined; broker: Broker }) {
-    const isNewStructure = !!broker.basicInfo;
-    const brokerName = isNewStructure ? broker.basicInfo.broker_name : broker.name;
-    const description = isNewStructure ? broker.instructions?.description || "اتبع الرابط لفتح حساب جديد." : "اتبع الرابط لفتح حساب جديد.";
-    const link = isNewStructure ? broker.cashback?.affiliate_program_link : (broker as any).instructions?.link;
-    const linkText = isNewStructure ? broker.instructions?.linkText || `افتح حسابًا مع ${brokerName}`: `افتح حسابًا مع ${brokerName}`;
-    const existingAccountInstructions = isNewStructure ? broker.existingAccountInstructions || "يرجى الاتصال بالدعم لربط حسابك الحالي تحت شبكة شركائنا." : (broker as any).existingAccountInstructions || "يرجى الاتصال بالدعم لربط حسابك الحالي تحت شبكة شركائنا.";
+    const brokerName = broker.name || broker.basicInfo?.broker_name;
+    const description = broker.instructions?.description || "اتبع الرابط لفتح حساب جديد.";
+    const link = broker.cashback?.affiliate_program_link || (broker as any).instructions?.link;
+    const linkText = broker.instructions?.linkText || `افتح حسابًا مع ${brokerName}`;
+    const existingAccountInstructions = broker.existingAccountInstructions || "يرجى الاتصال بالدعم لربط حسابك الحالي تحت شبكة شركائنا.";
 
     return (
         <>

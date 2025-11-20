@@ -32,28 +32,34 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export function BrokerCard({ broker }: { broker: Broker }) {
-  const name = broker.basicInfo.broker_name;
-  const rating = (broker.reputation.wikifx_score ?? 0) / 2;
-  const description = `Founded in ${broker.basicInfo.founded_year}`;
-  const cashbackPerLot = broker.cashback.cashback_per_lot ?? 0;
-  const cashbackFrequency = broker.cashback.cashback_frequency;
-  const swapFree = broker.tradingConditions.swap_free;
-  const copyTrading = broker.additionalFeatures.copy_trading;
+  if (!broker) {
+    return null; 
+  }
+
+  const name = broker.name;
+  const rating = (broker.reputation?.wikifx_score ?? 0) / 2;
+  const description = `Founded in ${broker.basicInfo?.founded_year}`;
+  const cashbackPerLot = broker.cashback?.cashback_per_lot ?? 0;
+  const cashbackFrequency = broker.cashback?.cashback_frequency;
+  const swapFree = broker.tradingConditions?.swap_free;
+  const copyTrading = broker.additionalFeatures?.copy_trading;
   
   return (
     <Card className="w-full overflow-hidden">
-        <CardContent className="p-3 space-y-3">
+        <CardContent className="p-4 space-y-3">
              <Link href={`/dashboard/brokers/${broker.id}`} className="block">
                 <div className="flex justify-between items-start">
                     <div className="flex items-start gap-3">
-                        <Image
-                            src={broker.logoUrl}
-                            alt={`${name} logo`}
-                            width={48}
-                            height={48}
-                            className="w-12 h-12 object-contain rounded-md border p-1 flex-shrink-0 bg-white"
-                            data-ai-hint="logo"
-                        />
+                        {broker.logo_url && 
+                            <Image
+                                src={broker.logo_url}
+                                alt={`${name} logo`}
+                                width={48}
+                                height={48}
+                                className="w-12 h-12 object-contain rounded-md border p-1 flex-shrink-0 bg-white"
+                                data-ai-hint="logo"
+                            />
+                        }
                         <div className="space-y-1">
                             <h3 className="text-base font-bold">{name}</h3>
                             <StarRating rating={rating} />

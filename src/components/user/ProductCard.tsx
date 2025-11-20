@@ -32,13 +32,17 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export function BrokerCard({ broker }: { broker: Broker }) {
+  if (!broker || !broker.basicInfo) {
+    return null; 
+  }
+
   const name = broker.basicInfo.broker_name;
-  const rating = (broker.reputation.wikifx_score ?? 0) / 2;
+  const rating = (broker.reputation?.wikifx_score ?? 0) / 2;
   const description = `Founded in ${broker.basicInfo.founded_year}`;
-  const cashbackPerLot = broker.cashback.cashback_per_lot ?? 0;
-  const cashbackFrequency = broker.cashback.cashback_frequency;
-  const swapFree = broker.tradingConditions.swap_free;
-  const copyTrading = broker.additionalFeatures.copy_trading;
+  const cashbackPerLot = broker.cashback?.cashback_per_lot ?? 0;
+  const cashbackFrequency = broker.cashback?.cashback_frequency;
+  const swapFree = broker.tradingConditions?.swap_free;
+  const copyTrading = broker.additionalFeatures?.copy_trading;
   
   return (
     <Card className="w-full overflow-hidden">

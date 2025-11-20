@@ -55,15 +55,13 @@ export async function addCashbackTransaction(
       .single();
 
     if (userError) throw userError;
+    if (!user) throw new Error(`User with id ${data.userId} not found.`);
 
     const newMonthlyEarnings = (user.monthly_earnings || 0) + data.cashbackAmount;
     
     const { error: updateError } = await supabase
       .from('users')
-      .update({
-        status: 'Trader',
-        monthly_earnings: newMonthlyEarnings,
-      })
+      .update({ monthly_earnings: newMonthlyEarnings })
       .eq('id', data.userId);
 
     if (updateError) throw updateError;

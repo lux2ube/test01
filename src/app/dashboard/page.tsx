@@ -104,34 +104,38 @@ function OffersTabContent() {
         
         if (type === 'text') {
             return (
-                <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value={offer.id} className="border-b-0">
-                        <Card dir="rtl" className="bg-gradient-to-l from-primary/80 to-accent/80 text-primary-foreground border-0 overflow-hidden">
-                            <AccordionTrigger className="p-4 hover:no-underline w-full cursor-pointer text-right">
-                                <div className="flex flex-col gap-2 w-full text-right">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <h3 className="font-bold flex-grow">{title}</h3>
-                                        {ctaText && ctaLink && (
-                                            <Button asChild variant="secondary" size="sm" className="shrink-0" onClick={(e) => e.stopPropagation()}>
-                                                <a href={ctaLink} target="_blank" rel="noopener noreferrer">
-                                                    {ctaText}
-                                                </a>
-                                            </Button>
-                                        )}
-                                    </div>
-                                    {description && (
-                                        <p className="text-xs text-primary-foreground/80 text-right line-clamp-1">
-                                            {description}
-                                        </p>
-                                    )}
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                {description && <p className="px-4 pt-0 pb-4 text-xs text-primary-foreground/80 text-right whitespace-pre-line">{description}</p>}
-                            </AccordionContent>
-                        </Card>
-                    </AccordionItem>
-                </Accordion>
+                <Card dir="rtl" className="bg-gradient-to-br from-primary/20 to-secondary/20 border-primary/20 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex-row items-start gap-4 space-y-0 pb-3">
+                        <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-primary to-secondary rounded-lg shrink-0">
+                            <Gift className="h-6 w-6 text-primary-foreground" />
+                        </div>
+                        <div className="flex-grow">
+                            <CardTitle className="text-base font-bold">{title}</CardTitle>
+                            {description && <CardDescription className="text-xs mt-1 line-clamp-2">{description}</CardDescription>}
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                         {description && (
+                            <Accordion type="single" collapsible>
+                                <AccordionItem value="item-1" className="border-b-0">
+                                    <AccordionTrigger className="text-xs justify-end py-1">عرض المزيد</AccordionTrigger>
+                                    <AccordionContent>
+                                        <p className="text-xs text-muted-foreground whitespace-pre-line">{description}</p>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+                        )}
+                    </CardContent>
+                    {ctaText && ctaLink && (
+                        <CardFooter className="pt-3">
+                            <Button asChild size="sm" className="w-full">
+                                <a href={ctaLink} target="_blank" rel="noopener noreferrer">
+                                    {ctaText} <ArrowRight className="mr-2 h-4 w-4" />
+                                </a>
+                            </Button>
+                        </CardFooter>
+                    )}
+                </Card>
             );
         }
 

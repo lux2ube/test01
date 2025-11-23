@@ -61,6 +61,8 @@ export async function POST(request: NextRequest) {
       success: true,
       redirectUrl,
       userId: data.user.id,
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
     });
 
     // CRITICAL: Clear ALL old session cookies first to prevent session mixing

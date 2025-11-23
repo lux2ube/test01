@@ -96,8 +96,19 @@ export default function LoginPage() {
           description: "Logged in successfully. Redirecting...",
         });
 
-        // Server has set cookies, redirect
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // CRITICAL: Call the set-session endpoint to sync Supabase client state
+        await fetch('/api/set-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token
+          })
+        });
+
+        // Wait a bit longer to ensure session is fully set
+        await new Promise(resolve => setTimeout(resolve, 500));
         window.location.href = data.redirectUrl;
       }
     } catch (error: any) {

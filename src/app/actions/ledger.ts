@@ -525,3 +525,29 @@ export async function changeOrderStatusInLedger(
     };
   }
 }
+
+/**
+ * Get user's balance (admin version)
+ * ADMIN USE ONLY
+ * SECURITY: Requires admin privileges
+ */
+export async function getUserBalanceAdmin(userId: string): Promise<{ success: true; balance: AvailableBalance } | { success: false; error: string }> {
+  const auth = await verifyAdminOrServiceRole();
+  if (!auth.isAdmin || !auth.userId) {
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
+  try {
+    const balance = await ledgerService.getAvailableBalance(userId);
+    return { success: true, balance };
+  } catch (error) {
+    console.error('Failed to get user balance:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get user balance' 
+    };
+  }
+}

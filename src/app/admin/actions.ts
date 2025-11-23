@@ -100,7 +100,7 @@ export async function getUserBalance(userId: string) {
   const { getUserBalanceAdmin } = await import('@/app/actions/ledger');
   const result = await getUserBalanceAdmin(userId);
   
-  if (!result.success || !result.data) {
+  if (!result.success || !result.balance) {
     return {
       availableBalance: 0,
       totalEarned: 0,
@@ -116,7 +116,7 @@ export async function getUserBalance(userId: string) {
     total_pending_withdrawals, 
     total_withdrawn, 
     total_orders 
-  } = result.data;
+  } = result.balance;
   
   return {
     availableBalance: available_balance,
@@ -187,8 +187,8 @@ export async function awardReferralCommission(
 
     const commissionAmount = (amountValue * commissionPercent) / 100;
 
-    const { addReferralCommissionInLedger } = await import('@/app/actions/ledger');
-    const ledgerResult = await addReferralCommissionInLedger(
+    const { addReferralCommissionToLedger } = await import('@/app/actions/ledger');
+    const ledgerResult = await addReferralCommissionToLedger(
       referrerId,
       commissionAmount,
       `referral-${userId}-${sourceType}-${Date.now()}`,
@@ -204,16 +204,6 @@ export async function awardReferralCommission(
     if (!ledgerResult.success) {
       console.error('Error creating commission in ledger:', ledgerResult.error);
       return;
-    }
-
-    const newMonthlyEarnings = (referrer.monthly_earnings || 0) + commissionAmount;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ monthly_earnings: newMonthlyEarnings })
-      .eq('id', referrerId);
-
-    if (updateError) {
-      console.error('Error updating monthly earnings:', updateError);
     }
 
     const message = `لقد ربحت ${commissionAmount.toFixed(2)}$ عمولة إحالة من ${user.name}.`;
@@ -288,16 +278,6 @@ export async function clawbackReferralCommission(
     if (!ledgerResult.success) {
       console.error('Error creating clawback in ledger:', ledgerResult.error);
       return;
-    }
-
-    const newMonthlyEarnings = (referrer.monthly_earnings || 0) - commissionAmountToClawback;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ monthly_earnings: newMonthlyEarnings })
-      .eq('id', referrerId);
-
-    if (updateError) {
-      console.error('Error updating monthly earnings:', updateError);
     }
 
     const message = `تم خصم ${commissionAmountToClawback.toFixed(2)}$ من رصيدك بسبب إلغاء معاملة من قبل ${user.name}.`;

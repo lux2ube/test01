@@ -413,6 +413,7 @@ export async function placeOrder(
     const userId = user.id;
     
     try {
+        const { getMyBalance, createOrderInLedger } = await import('@/app/actions/ledger');
         const supabase = await createAdminClient();
         
         const { data: product, error: productError } = await supabase
@@ -429,14 +430,13 @@ export async function placeOrder(
             throw new Error("This product is currently out of stock.");
         }
         
-        const { getMyBalance } = await import('@/app/actions/ledger');
         const balanceResult = await getMyBalance();
         
         if (!balanceResult.success) {
             throw new Error(balanceResult.error || 'Unable to fetch balance');
         }
         
-        const availableBalance = balanceResult.data?.available_balance || 0;
+        const availableBalance = balanceResult.balance?.available_balance || 0;
         
         if (availableBalance < product.price) {
             throw new Error("You do not have enough available balance to purchase this item.");
@@ -470,10 +470,10 @@ export async function placeOrder(
             .single();
         
         if (orderError) {
+            await supabase.from('products').update({ stock: product.stock }).eq('id', productId);
             throw orderError;
         }
         
-        const { createOrderInLedger } = await import('@/app/actions/ledger');
         const ledgerResult = await createOrderInLedger(
             userId,
             product.price,
@@ -640,7 +640,7 @@ export async function getUserBalance() {
     const { getMyBalance } = await import('@/app/actions/ledger');
     const result = await getMyBalance();
     
-    if (!result.success || !result.data) {
+    if (!result.success || !result.balance) {
         return {
             availableBalance: 0,
             totalEarned: 0,
@@ -656,7 +656,7 @@ export async function getUserBalance() {
         total_pending_withdrawals, 
         total_withdrawn, 
         total_orders 
-    } = result.data;
+    } = result.balance;
     
     return {
         availableBalance: available_balance,

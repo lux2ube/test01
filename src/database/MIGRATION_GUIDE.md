@@ -74,6 +74,12 @@ Copy and paste the contents of: src/database/migrations/008_additional_ledger_pr
 Copy and paste the contents of: src/database/migrations/009_create_place_order_atomic.sql
 ```
 
+#### Migration 010: Update Orders Table
+```bash
+Copy and paste the contents of: src/database/migrations/010_update_orders_table.sql
+```
+**Note:** This migration adds missing fields to your existing `orders` table to support the ledger integration.
+
 ### Option 2: Via Command Line (Alternative)
 
 If you have the Supabase CLI installed:
@@ -122,7 +128,7 @@ WHERE routine_schema = 'public'
   AND routine_name LIKE 'ledger_%';
 ```
 
-Expected result: 9 procedures
+Expected result: 9+ procedures (including ledger_place_order)
 
 ### Check RLS Enabled
 ```sql

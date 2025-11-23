@@ -7,6 +7,7 @@ export async function POST(request: Request) {
     const { access_token, refresh_token } = body
 
     if (!access_token || !refresh_token) {
+      console.error('Missing tokens in request')
       return NextResponse.json({ error: 'Missing tokens' }, { status: 400 })
     }
 
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     })
 
     if (error) {
-      console.error('Session sync error:', error)
+      console.error('Session sync error:', error.message, error)
       return NextResponse.json({ error: error.message }, { status: 401 })
     }
 
@@ -27,14 +28,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
     }
 
-    console.log('Session synced successfully for user:', data.user?.id)
+    if (!data.user) {
+      console.error('No user returned after setSession')
+      return NextResponse.json({ error: 'Failed to get user' }, { status: 500 })
+    }
+
+    console.log('✅ Session synced successfully for user:', data.user.id)
+    console.log('✅ Session expires at:', data.session.expires_at)
     
-    const response = NextResponse.json({ success: true })
+    const response = NextResponse.json({ 
+      success: true,
+      userId: data.user.id 
+    })
     
-    // Ensure cookies are set with proper attributes for Replit
     return response
   } catch (error) {
-    console.error('Session sync exception:', error)
+    console.error('❌ Session sync exception:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

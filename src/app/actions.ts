@@ -75,10 +75,14 @@ export async function handleRegisterUser(formData: { name: string, email: string
     const detectedCountry = await getCountryFromHeaders();
 
     try {
-        const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
+        // Use the server-side Supabase client for registration
+        const supabase = await createClient();
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
-            email_confirm: true,
+            options: {
+                emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:5000'}/auth/callback`,
+            },
         });
 
         if (signUpError || !authData.user) {

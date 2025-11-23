@@ -47,14 +47,6 @@ export default function LoginPage() {
     // Log login activity
     await logLoginActivity(userId);
 
-    toast({
-      title: "Success",
-      description: "Logged in successfully.",
-    });
-
-    // Small delay to let session propagate
-    await new Promise(resolve => setTimeout(resolve, 200));
-
     // Fetch user profile to check role
     const supabase = createClient();
     const { data: profile } = await supabase
@@ -62,6 +54,12 @@ export default function LoginPage() {
       .select('role')
       .eq('id', userId)
       .single();
+
+    // Show success message
+    toast({
+      title: "Success",
+      description: "Logged in successfully. Redirecting...",
+    });
 
     // Use window.location.href for full page redirect (ensures session is picked up)
     if (profile?.role === 'admin') {
@@ -86,7 +84,8 @@ export default function LoginPage() {
       }
 
       if (data.user && data.session) {
-        await fetch('/auth/sync-session', {
+        // Sync session to server and wait for completion
+        const syncResponse = await fetch('/auth/sync-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -94,6 +93,13 @@ export default function LoginPage() {
             refresh_token: data.session.refresh_token,
           }),
         });
+
+        if (!syncResponse.ok) {
+          throw new Error('Failed to sync session');
+        }
+
+        // Wait a bit longer for cookies to propagate
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         await handleLoginSuccess(data.user.id);
       }

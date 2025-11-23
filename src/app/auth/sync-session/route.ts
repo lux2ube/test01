@@ -12,17 +12,29 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
     
-    const { error } = await supabase.auth.setSession({
+    const { data, error } = await supabase.auth.setSession({
       access_token,
       refresh_token,
     })
 
     if (error) {
+      console.error('Session sync error:', error)
       return NextResponse.json({ error: error.message }, { status: 401 })
     }
 
-    return NextResponse.json({ success: true })
+    if (!data.session) {
+      console.error('No session returned after setSession')
+      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
+    }
+
+    console.log('Session synced successfully for user:', data.user?.id)
+    
+    const response = NextResponse.json({ success: true })
+    
+    // Ensure cookies are set with proper attributes for Replit
+    return response
   } catch (error) {
+    console.error('Session sync exception:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

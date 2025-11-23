@@ -56,12 +56,6 @@ export default function LoginPage() {
       description: "Logged in successfully.",
     });
 
-    // Refresh the router to update server components with new session
-    router.refresh();
-
-    // Small delay to let session propagate
-    await new Promise(resolve => setTimeout(resolve, 100));
-
     // Fetch user profile to check role
     try {
       const supabase = createClient();
@@ -71,16 +65,17 @@ export default function LoginPage() {
         .eq('id', userId)
         .single();
 
-      // Redirect based on role (default to dashboard if profile not found)
+      // Use hard navigation (window.location) to ensure cookies are sent
+      // This forces a full page reload with the new session
       if (profile?.role === 'admin') {
-        router.push('/admin/dashboard');
+        window.location.href = '/admin/dashboard';
       } else {
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
       }
     } catch (error) {
       // If profile fetch fails, default to regular dashboard
       console.error('Error fetching user profile:', error);
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }
   }
 
@@ -99,7 +94,7 @@ export default function LoginPage() {
       }
 
       if (data.user && data.session) {
-        await fetch('/auth/sync-session', {
+        const syncResponse = await fetch('/auth/sync-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -107,6 +102,13 @@ export default function LoginPage() {
             refresh_token: data.session.refresh_token,
           }),
         });
+
+        if (!syncResponse.ok) {
+          throw new Error('Session sync failed');
+        }
+
+        // Wait for session to propagate
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         await handleLoginSuccess(data.user.id);
       }

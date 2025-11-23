@@ -69,6 +69,11 @@ Copy and paste the contents of: src/database/migrations/007_create_stored_proced
 Copy and paste the contents of: src/database/migrations/008_additional_ledger_procedures.sql
 ```
 
+#### Migration 009: Atomic Order Placement
+```bash
+Copy and paste the contents of: src/database/migrations/009_create_place_order_atomic.sql
+```
+
 ### Option 2: Via Command Line (Alternative)
 
 If you have the Supabase CLI installed:
@@ -117,7 +122,7 @@ WHERE routine_schema = 'public'
   AND routine_name LIKE 'ledger_%';
 ```
 
-Expected result: 8 procedures
+Expected result: 9 procedures
 
 ### Check RLS Enabled
 ```sql
@@ -178,6 +183,7 @@ All procedures are `SECURITY DEFINER` and require service role authentication:
 6. `ledger_create_order` - Create order (with balance check)
 7. `ledger_change_order_status` - Update order status
 8. `ledger_get_available_balance` - Get calculated available balance
+9. `ledger_place_order` - **ATOMIC** order placement (stock + order + ledger in one transaction)
 
 ## Available Balance Formula
 

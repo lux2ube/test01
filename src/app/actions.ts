@@ -413,7 +413,6 @@ export async function placeOrder(
     const userId = user.id;
     
     try {
-        const { getMyBalance, createOrderInLedger } = await import('@/app/actions/ledger');
         const supabase = await createAdminClient();
         
         const { data: product, error: productError } = await supabase
@@ -426,74 +425,33 @@ export async function placeOrder(
             throw new Error("Product not found.");
         }
         
-        if (product.stock <= 0) {
-            throw new Error("This product is currently out of stock.");
+        const { data: result, error: placeOrderError } = await supabase.rpc('ledger_place_order', {
+            p_user_id: userId,
+            p_product_id: productId,
+            p_product_name: product.name,
+            p_product_image: product.image_url,
+            p_product_price: product.price,
+            p_user_name: formData.userName,
+            p_user_email: formData.userEmail,
+            p_delivery_phone: formData.deliveryPhoneNumber,
+            p_actor_id: userId,
+            p_actor_action: 'user_place_order'
+        });
+        
+        if (placeOrderError) {
+            throw new Error(placeOrderError.message || 'Failed to place order');
         }
         
-        const balanceResult = await getMyBalance();
-        
-        if (!balanceResult.success) {
-            throw new Error(balanceResult.error || 'Unable to fetch balance');
+        if (!result || result.length === 0 || !result[0].success) {
+            const errorMsg = result?.[0]?.error_message || 'Failed to place order';
+            throw new Error(errorMsg);
         }
         
-        const availableBalance = balanceResult.balance?.available_balance || 0;
-        
-        if (availableBalance < product.price) {
-            throw new Error("You do not have enough available balance to purchase this item.");
-        }
-        
-        const { error: stockError } = await supabase
-            .from('products')
-            .update({ stock: product.stock - 1 })
-            .eq('id', productId);
-        
-        if (stockError) {
-            throw stockError;
-        }
-        
-        const { data: newOrder, error: orderError } = await supabase
-            .from('orders')
-            .insert({
-                user_id: userId,
-                product_id: productId,
-                product_name: product.name,
-                product_image: product.image_url,
-                product_price: product.price,
-                status: 'Pending',
-                created_at: new Date().toISOString(),
-                user_name: formData.userName,
-                user_email: formData.userEmail,
-                delivery_phone_number: formData.deliveryPhoneNumber,
-                referral_commission_awarded: false,
-            })
-            .select()
-            .single();
-        
-        if (orderError) {
-            await supabase.from('products').update({ stock: product.stock }).eq('id', productId);
-            throw orderError;
-        }
-        
-        const ledgerResult = await createOrderInLedger(
-            userId,
-            product.price,
-            newOrder.id,
-            {
-                product_id: productId,
-                product_name: product.name,
-                order_status: 'Pending'
-            }
-        );
-        
-        if (!ledgerResult.success) {
-            await supabase.from('orders').delete().eq('id', newOrder.id);
-            await supabase.from('products').update({ stock: product.stock }).eq('id', productId);
-            throw new Error(ledgerResult.error || 'Failed to record order in ledger');
-        }
+        const orderId = result[0].order_id;
         
         await logUserActivity(userId, 'store_purchase', clientInfo, { 
             productId, 
-            orderId: newOrder.id,
+            orderId,
             price: product.price 
         });
         

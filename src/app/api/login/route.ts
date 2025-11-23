@@ -45,13 +45,15 @@ export async function POST(request: NextRequest) {
     );
 
     // Fetch user role
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('role')
       .eq('id', data.user.id)
       .single();
 
+    console.log('User profile role:', profile?.role, 'Profile:', profile);
     const redirectUrl = profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    console.log('Redirect URL:', redirectUrl);
 
     console.log('✅ Login successful, session created for user:', data.user.id);
 

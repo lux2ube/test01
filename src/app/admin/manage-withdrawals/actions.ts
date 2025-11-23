@@ -69,6 +69,21 @@ export async function approveWithdrawal(withdrawalId: string, txId: string) {
       throw new Error('لم يتم العثور على طلب السحب');
     }
 
+    const { changeWithdrawalStatusInLedger } = await import('@/app/actions/ledger');
+    
+    const ledgerResult = await changeWithdrawalStatusInLedger(
+      withdrawal.user_id,
+      withdrawal.id,
+      'processing',
+      'completed',
+      withdrawal.amount,
+      { tx_id: txId }
+    );
+
+    if (!ledgerResult.success) {
+      throw new Error(ledgerResult.error || 'فشل تحديث حالة السحب في النظام المحاسبي');
+    }
+
     const { error: updateError } = await supabase
       .from('withdrawals')
       .update({
@@ -87,7 +102,8 @@ export async function approveWithdrawal(withdrawalId: string, txId: string) {
     return { success: true, message: 'تمت الموافقة على السحب بنجاح مع TXID.' };
   } catch (error) {
     console.error('Error approving withdrawal:', error);
-    return { success: false, message: 'فشل الموافقة على السحب.' };
+    const errorMessage = error instanceof Error ? error.message : 'فشل الموافقة على السحب.';
+    return { success: false, message: errorMessage };
   }
 }
 
@@ -105,6 +121,21 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
 
     if (fetchError || !withdrawal) {
       throw new Error('لم يتم العثور على طلب السحب');
+    }
+
+    const { changeWithdrawalStatusInLedger } = await import('@/app/actions/ledger');
+    
+    const ledgerResult = await changeWithdrawalStatusInLedger(
+      withdrawal.user_id,
+      withdrawal.id,
+      'processing',
+      'cancelled',
+      withdrawal.amount,
+      { rejection_reason: reason }
+    );
+
+    if (!ledgerResult.success) {
+      throw new Error(ledgerResult.error || 'فشل تحديث حالة السحب في النظام المحاسبي');
     }
 
     const { error: updateError } = await supabase

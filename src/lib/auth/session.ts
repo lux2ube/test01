@@ -13,7 +13,7 @@ const sessionOptions = {
   password: process.env.SESSION_SECRET!,
   cookieName: 'auth_session',
   cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Disabled for Replit development environment
     httpOnly: true,
     sameSite: 'lax' as const,
     maxAge: 60 * 60 * 24 * 7, // 7 days

@@ -97,42 +97,33 @@ async function createNotificationDirect(
 
 // Balance Calculation
 export async function getUserBalance(userId: string) {
-  const supabase = await createAdminClient();
+  const { getUserBalanceAdmin } = await import('@/app/actions/ledger');
+  const result = await getUserBalanceAdmin(userId);
   
-  const [transactionsResult, withdrawalsResult, ordersResult] = await Promise.all([
-    supabase.from('cashback_transactions').select('cashback_amount').eq('user_id', userId),
-    supabase.from('withdrawals').select('amount, status').eq('user_id', userId),
-    supabase.from('orders').select('total_price, status').eq('user_id', userId),
-  ]);
-
-  const totalEarned = (transactionsResult.data || []).reduce(
-    (sum, tx) => sum + (tx.cashback_amount || 0),
-    0
-  );
-
-  let pendingWithdrawals = 0;
-  let completedWithdrawals = 0;
-  (withdrawalsResult.data || []).forEach((withdrawal) => {
-    if (withdrawal.status === 'Processing') {
-      pendingWithdrawals += withdrawal.amount;
-    } else if (withdrawal.status === 'Completed') {
-      completedWithdrawals += withdrawal.amount;
-    }
-  });
-
-  const totalSpentOnOrders = (ordersResult.data || [])
-    .filter((order) => order.status !== 'Cancelled')
-    .reduce((sum, order) => sum + (order.total_price || 0), 0);
-
-  const availableBalance =
-    totalEarned - completedWithdrawals - pendingWithdrawals - totalSpentOnOrders;
-
+  if (!result.success || !result.data) {
+    return {
+      availableBalance: 0,
+      totalEarned: 0,
+      pendingWithdrawals: 0,
+      completedWithdrawals: 0,
+      totalSpentOnOrders: 0,
+    };
+  }
+  
+  const { 
+    available_balance, 
+    total_earned, 
+    total_pending_withdrawals, 
+    total_withdrawn, 
+    total_orders 
+  } = result.data;
+  
   return {
-    availableBalance: Number(availableBalance.toFixed(2)),
-    totalEarned: Number(totalEarned.toFixed(2)),
-    pendingWithdrawals: Number(pendingWithdrawals.toFixed(2)),
-    completedWithdrawals: Number(completedWithdrawals.toFixed(2)),
-    totalSpentOnOrders: Number(totalSpentOnOrders.toFixed(2)),
+    availableBalance: available_balance,
+    totalEarned: total_earned,
+    pendingWithdrawals: total_pending_withdrawals,
+    completedWithdrawals: total_withdrawn,
+    totalSpentOnOrders: total_orders,
   };
 }
 

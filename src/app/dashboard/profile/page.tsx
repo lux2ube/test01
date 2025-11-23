@@ -60,10 +60,10 @@ export default function ProfilePage() {
         // We removed the verifyAdmin check from this function
         const result = await updateUser(user.id, { name: values.name });
         if (result.success) {
-            toast({ type: "success", title: "نجاح", description: result.message });
+            toast({ title: "نجاح", description: result.message });
             refetchUserData();
         } else {
-            toast({ type: "error", title: "خطأ", description: result.message });
+            toast({ variant: "destructive", title: "خطأ", description: result.message });
         }
         setIsProfileSubmitting(false);
     };

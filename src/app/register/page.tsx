@@ -78,7 +78,7 @@ function RegisterForm() {
     });
 
     if (result.success) {
-        toast({ type: "success", title: "نجاح!", description: "تم إنشاء الحساب بنجاح. يتم تسجيل الدخول..." });
+        toast({ title: "نجاح!", description: "تم إنشاء الحساب بنجاح. يتم تسجيل الدخول..." });
         try {
             const supabase = createClient();
             const { error } = await supabase.auth.signInWithPassword({

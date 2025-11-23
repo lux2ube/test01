@@ -51,7 +51,6 @@ export default function LoginPage() {
     await logLoginActivity(userId);
 
     toast({
-      type: "success",
       title: "Success",
       description: "Logged in successfully.",
     });
@@ -149,7 +148,6 @@ export default function LoginPage() {
     const result = await handleForgotPassword(resetEmail);
     if (result.success) {
         toast({
-            type: "success",
             title: "Check your email",
             description: "A password reset link has been sent to your email address.",
         });

@@ -78,10 +78,10 @@ function PostForm({ post, onSuccess, onCancel }: { post?: BlogPost | null; onSuc
             : await addBlogPost(payload);
 
         if (result.success) {
-            toast({ type: "success", title: "نجاح", description: result.message });
+            toast({ title: "نجاح", description: result.message });
             onSuccess();
         } else {
-            toast({ type: "error", title: "خطأ", description: result.message });
+            toast({ variant: "destructive", title: "خطأ", description: result.message });
         }
         setIsSubmitting(false);
     };
@@ -186,7 +186,7 @@ export default function ManageBlogPage() {
             const data = await getAllBlogPosts();
             setPosts(data);
         } catch (error) {
-            toast({ type: "error", title: "خطأ", description: "تعذر جلب المقالات." });
+            toast({ variant: "destructive", title: "خطأ", description: "تعذر جلب المقالات." });
         } finally {
             setIsLoading(false);
         }
@@ -200,10 +200,10 @@ export default function ManageBlogPage() {
         if (!deletingId) return;
         const result = await deleteBlogPost(deletingId);
         if (result.success) {
-            toast({ type: "success", title: "نجاح", description: result.message });
+            toast({ title: "نجاح", description: result.message });
             fetchPosts();
         } else {
-            toast({ type: "error", title: "خطأ", description: result.message });
+            toast({ variant: "destructive", title: "خطأ", description: result.message });
         }
         setIsAlertOpen(false);
         setDeletingId(null);

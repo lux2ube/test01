@@ -63,17 +63,23 @@ export default function LoginPage() {
     await new Promise(resolve => setTimeout(resolve, 100));
 
     // Fetch user profile to check role
-    const supabase = createClient();
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single();
+    try {
+      const supabase = createClient();
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
 
-    // Redirect based on role
-    if (profile?.role === 'admin') {
-      router.push('/admin/dashboard');
-    } else {
+      // Redirect based on role (default to dashboard if profile not found)
+      if (profile?.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      // If profile fetch fails, default to regular dashboard
+      console.error('Error fetching user profile:', error);
       router.push('/dashboard');
     }
   }

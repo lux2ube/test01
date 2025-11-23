@@ -88,9 +88,6 @@ export default function LoginPage() {
       }
 
       if (data.success) {
-        // Log activity on client
-        await logLoginActivity(data.userId);
-        
         toast({
           title: "Success",
           description: "Logged in successfully. Redirecting...",

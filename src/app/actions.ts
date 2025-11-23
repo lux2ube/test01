@@ -429,36 +429,14 @@ export async function placeOrder(
             throw new Error("This product is currently out of stock.");
         }
         
-        const { data: transactions } = await supabase
-            .from('cashback_transactions')
-            .select('cashback_amount')
-            .eq('user_id', userId);
+        const { getMyBalance } = await import('@/app/actions/ledger');
+        const balanceResult = await getMyBalance();
         
-        const { data: withdrawals } = await supabase
-            .from('withdrawals')
-            .select('amount, status')
-            .eq('user_id', userId);
+        if (!balanceResult.success) {
+            throw new Error(balanceResult.error || 'Unable to fetch balance');
+        }
         
-        const { data: orders } = await supabase
-            .from('orders')
-            .select('product_price, status')
-            .eq('user_id', userId)
-            .in('status', ['Pending', 'Shipped', 'Delivered']);
-        
-        const totalEarned = (transactions || []).reduce((sum, t) => sum + t.cashback_amount, 0);
-        
-        let pendingWithdrawals = 0;
-        let completedWithdrawals = 0;
-        (withdrawals || []).forEach(w => {
-            if (w.status === 'Processing') {
-                pendingWithdrawals += w.amount;
-            } else if (w.status === 'Completed') {
-                completedWithdrawals += w.amount;
-            }
-        });
-        
-        const ordersTotal = (orders || []).reduce((sum, o) => sum + o.product_price, 0);
-        const availableBalance = totalEarned - completedWithdrawals - pendingWithdrawals - ordersTotal;
+        const availableBalance = balanceResult.data?.available_balance || 0;
         
         if (availableBalance < product.price) {
             throw new Error("You do not have enough available balance to purchase this item.");
@@ -493,6 +471,24 @@ export async function placeOrder(
         
         if (orderError) {
             throw orderError;
+        }
+        
+        const { createOrderInLedger } = await import('@/app/actions/ledger');
+        const ledgerResult = await createOrderInLedger(
+            userId,
+            product.price,
+            newOrder.id,
+            {
+                product_id: productId,
+                product_name: product.name,
+                order_status: 'Pending'
+            }
+        );
+        
+        if (!ledgerResult.success) {
+            await supabase.from('orders').delete().eq('id', newOrder.id);
+            await supabase.from('products').update({ stock: product.stock }).eq('id', productId);
+            throw new Error(ledgerResult.error || 'Failed to record order in ledger');
         }
         
         await logUserActivity(userId, 'store_purchase', clientInfo, { 

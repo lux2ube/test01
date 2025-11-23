@@ -196,22 +196,22 @@ export async function awardReferralCommission(
 
     const commissionAmount = (amountValue * commissionPercent) / 100;
 
-    const { error: txError } = await supabase
-      .from('cashback_transactions')
-      .insert({
-        user_id: referrerId,
-        account_id: null,
-        account_number: 'Referral',
-        broker: `Commission from ${user.name}`,
-        date: new Date().toISOString(),
-        trade_details: `Referral commission from ${sourceType}`,
-        cashback_amount: commissionAmount,
+    const { addReferralCommissionInLedger } = await import('@/app/actions/ledger');
+    const ledgerResult = await addReferralCommissionInLedger(
+      referrerId,
+      commissionAmount,
+      `referral-${userId}-${sourceType}-${Date.now()}`,
+      {
         source_user_id: userId,
+        source_user_name: user.name,
         source_type: sourceType,
-      });
+        commission_percent: commissionPercent,
+        original_amount: amountValue
+      }
+    );
 
-    if (txError) {
-      console.error('Error creating commission transaction:', txError);
+    if (!ledgerResult.success) {
+      console.error('Error creating commission in ledger:', ledgerResult.error);
       return;
     }
 
@@ -279,22 +279,23 @@ export async function clawbackReferralCommission(
 
     const commissionAmountToClawback = (originalAmount * commissionPercent) / 100;
 
-    const { error: txError } = await supabase
-      .from('cashback_transactions')
-      .insert({
-        user_id: referrerId,
-        account_id: null,
-        account_number: 'Clawback',
-        broker: `Reversed Commission from ${user.name}`,
-        date: new Date().toISOString(),
-        trade_details: `Commission reversed due to cancelled order/transaction from original user.`,
-        cashback_amount: -commissionAmountToClawback,
+    const { reverseReferralCommissionInLedger } = await import('@/app/actions/ledger');
+    const ledgerResult = await reverseReferralCommissionInLedger(
+      referrerId,
+      commissionAmountToClawback,
+      `clawback-${originalUserId}-${sourceType}-${Date.now()}`,
+      {
         source_user_id: originalUserId,
+        source_user_name: user.name,
         source_type: sourceType,
-      });
+        reason: 'Order/transaction cancelled',
+        commission_percent: commissionPercent,
+        original_amount: originalAmount
+      }
+    );
 
-    if (txError) {
-      console.error('Error creating clawback transaction:', txError);
+    if (!ledgerResult.success) {
+      console.error('Error creating clawback in ledger:', ledgerResult.error);
       return;
     }
 

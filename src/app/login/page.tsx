@@ -74,26 +74,41 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      const { loginWithEmail } = await import('./login-action');
-      const result = await loginWithEmail(email, password);
+      const supabase = createClient();
       
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-      
-      // If we reach here without redirect, something went wrong
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "Unexpected error occurred.",
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-    } catch (error: any) {
-      // Check if it's a Next.js redirect (expected behavior)
-      if (error?.message?.includes('NEXT_REDIRECT')) {
-        // This is expected - the server action is redirecting us
-        return;
+
+      if (error) {
+        throw error;
       }
-      
+
+      if (!data.user || !data.session) {
+        throw new Error('Authentication failed');
+      }
+
+      // Log activity
+      await logLoginActivity(data.user.id);
+
+      // Get user role
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      const redirectUrl = profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+
+      toast({
+        title: "Success",
+        description: "Logged in successfully. Redirecting...",
+      });
+
+      // Force hard redirect through callback to ensure cookies are set
+      window.location.href = `/auth/callback?next=${encodeURIComponent(redirectUrl)}`;
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login Failed",

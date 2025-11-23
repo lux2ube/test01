@@ -15,20 +15,17 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              // Force proper cookie attributes for Replit environment
+              // CRITICAL: Disable secure flag in development for Replit proxy compatibility
               const cookieOptions = {
                 ...options,
                 path: '/',
                 sameSite: 'lax' as const,
-                secure: process.env.NODE_ENV === 'production',
-                httpOnly: true,
+                secure: false, // Always false - Replit proxy strips Secure cookies
+                httpOnly: false, // Allow client-side access for Supabase client
               }
               cookieStore.set(name, value, cookieOptions)
             })
           } catch (error) {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
             console.error('Error setting cookies:', error)
           }
         },

@@ -80,30 +80,21 @@ function RegisterForm() {
     if (result.success) {
         toast({ title: "نجاح!", description: "تم إنشاء الحساب بنجاح. يتم تسجيل الدخول..." });
         try {
-            const supabase = createClient();
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+            // Use our custom login endpoint
+            const loginResponse = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
             });
-            
-            if (error) {
-                throw error;
+
+            const loginData = await loginResponse.json();
+
+            if (!loginResponse.ok || !loginData.success) {
+                throw new Error(loginData.error || 'Login failed');
             }
-            
-            // Sync session on server
-            const { data: sessionData } = await supabase.auth.getSession();
-            if (sessionData.session) {
-                await fetch('/auth/sync-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        access_token: sessionData.session.access_token,
-                        refresh_token: sessionData.session.refresh_token,
-                    }),
-                });
-            }
-            
-            // Use window.location.href for full page redirect
+
+            // Session cookie is now set, redirect to phone verification
+            await new Promise(resolve => setTimeout(resolve, 200));
             window.location.href = `/phone-verification?userId=${result.userId}`;
         } catch (loginError) {
             toast({ variant: 'destructive', title: "فشل تسجيل الدخول التلقائي", description: "يرجى تسجيل الدخول يدويًا." });

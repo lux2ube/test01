@@ -111,6 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Auth context init - Session user:', session?.user?.id);
       if (session?.user) {
         fetchUserData(session.user);
       } else {
@@ -119,9 +120,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Listen for auth changes
+    // Listen for auth changes - CRITICAL: handle logout events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', _event);
       setIsLoading(true);
+      if (_event === 'SIGNED_OUT' || !session?.user) {
+        console.log('User signed out, clearing user state');
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
       if (session?.user) {
         fetchUserData(session.user);
       } else {

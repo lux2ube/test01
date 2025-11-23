@@ -18,7 +18,13 @@ export async function middleware(request: NextRequest) {
     const sessionCookie = request.cookies.get('auth_session');
     
     if (!sessionCookie) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      // Clear all auth cookies on redirect
+      response.cookies.delete('auth_session');
+      response.cookies.delete('sb-access-token');
+      response.cookies.delete('sb-refresh-token');
+      response.cookies.delete('sb-session');
+      return response;
     }
 
     try {
@@ -27,12 +33,25 @@ export async function middleware(request: NextRequest) {
       });
 
       if (!sessionData.userId || !sessionData.access_token) {
-        return NextResponse.redirect(new URL('/login', request.url));
+        const response = NextResponse.redirect(new URL('/login', request.url));
+        response.cookies.delete('auth_session');
+        response.cookies.delete('sb-access-token');
+        response.cookies.delete('sb-refresh-token');
+        response.cookies.delete('sb-session');
+        return response;
       }
 
-      return NextResponse.next();
+      // Set Cache-Control on protected pages to prevent browser caching user data
+      const response = NextResponse.next();
+      response.headers.set('Cache-Control', 'private, no-store, must-revalidate');
+      return response;
     } catch (error) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      response.cookies.delete('auth_session');
+      response.cookies.delete('sb-access-token');
+      response.cookies.delete('sb-refresh-token');
+      response.cookies.delete('sb-session');
+      return response;
     }
   }
   

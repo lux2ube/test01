@@ -15,8 +15,14 @@ export async function POST() {
     
     const response = NextResponse.json({ success: true })
     
-    // Delete the session cookie
+    // CRITICAL: Delete ALL auth cookies to ensure complete logout
     response.cookies.delete('auth_session')
+    response.cookies.delete('sb-access-token')
+    response.cookies.delete('sb-refresh-token')
+    response.cookies.delete('sb-session')
+    
+    // Set Cache-Control to prevent browser cache of session data
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
     
     return response
   } catch (error) {

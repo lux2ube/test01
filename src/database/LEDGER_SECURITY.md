@@ -132,24 +132,44 @@ User Request → Server Action → Admin Check → Stored Procedure → Database
 ## Audit Trail
 
 Every ledger operation creates:
-1. **Transaction record** - The financial transaction itself
+1. **Transaction record** - The financial transaction itself with metadata including actor attribution
 2. **Immutable event** - Permanent audit log (cannot be modified/deleted)
 3. **Audit log** - Admin action with before/after state, IP, user agent
 
-Query audit trail:
+### Actor Attribution
+
+All admin operations include the actor's ID in the metadata:
+- `_actor_id`: UUID of the admin who performed the operation
+- `_actor_action`: The specific action performed (e.g., 'admin_add_cashback')
+
+This allows full forensic tracking of WHO performed WHAT operation on WHICH user account.
+
+Query audit trail with actor attribution:
 ```sql
--- Recent ledger operations
+-- Recent ledger operations with actor information
 SELECT 
-  a.action,
-  a.resource_type,
-  a.before->>'total_earned' as before_earned,
-  a.after->>'total_earned' as after_earned,
-  a.ip_address,
-  a.created_at
-FROM audit_logs a
-WHERE a.user_id = 'user-id'
-ORDER BY a.created_at DESC
+  t.type,
+  t.amount,
+  t.user_id as affected_user,
+  t.metadata->>'_actor_id' as admin_who_acted,
+  t.metadata->>'_actor_action' as admin_action,
+  t.metadata,
+  t.created_at
+FROM transactions t
+WHERE t.user_id = 'user-id'
+ORDER BY t.created_at DESC
 LIMIT 50;
+
+-- Find all operations performed by a specific admin
+SELECT 
+  t.user_id as affected_user,
+  t.type,
+  t.amount,
+  t.metadata->>'_actor_action' as action,
+  t.created_at
+FROM transactions t
+WHERE t.metadata->>'_actor_id' = 'admin-user-id'
+ORDER BY t.created_at DESC;
 ```
 
 ## Testing Authorization

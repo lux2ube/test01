@@ -126,30 +126,35 @@ export async function getMyAccount() {
  * This prevents unauthorized users from manipulating balances
  * 
  * SECURITY: Checks if the user has 'admin' role in the users table
+ * Uses authenticated Supabase client (session-based) to avoid SERVICE_ROLE_KEY dependency
+ * 
+ * @returns Object with isAdmin flag and userId if authorized
  */
-async function verifyAdminOrServiceRole(): Promise<boolean> {
+async function verifyAdminOrServiceRole(): Promise<{ isAdmin: boolean; userId: string | null }> {
   const session = await getSession();
   
-  if (!session.userId) {
-    return false;
+  if (!session.userId || !session.access_token) {
+    return { isAdmin: false, userId: null };
   }
 
-  // Check if user has admin role in the database
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  
-  if (!supabaseUrl || !serviceRoleKey) {
-    console.error('Missing Supabase credentials for admin verification');
-    return false;
-  }
-
+  // Use authenticated client with user's session token
+  // This works in all contexts (edge, server, etc.) without SERVICE_ROLE_KEY
   const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      },
+    }
+  );
 
   const { data: user, error } = await supabase
     .from('users')
@@ -159,11 +164,12 @@ async function verifyAdminOrServiceRole(): Promise<boolean> {
   
   if (error) {
     console.error('Failed to verify admin role:', error.message);
-    return false;
+    return { isAdmin: false, userId: null };
   }
 
   // Only allow users with 'admin' role to execute these operations
-  return user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
+  return { isAdmin, userId: isAdmin ? session.userId : null };
 }
 
 /**
@@ -178,8 +184,8 @@ export async function addCashbackToLedger(
   metadata?: Record<string, any>
 ) {
   // SECURITY: Verify admin privileges
-  const isAuthorized = await verifyAdminOrServiceRole();
-  if (!isAuthorized) {
+  const auth = await verifyAdminOrServiceRole();
+  if (!auth.isAdmin || !auth.userId) {
     return { 
       success: false, 
       error: 'Unauthorized: Admin privileges required for this operation' 
@@ -191,7 +197,12 @@ export async function addCashbackToLedger(
       userId,
       amount,
       referenceId,
-      metadata,
+      // Include admin actor in metadata for audit trail
+      metadata: {
+        ...(metadata || {}),
+        _actor_id: auth.userId,
+        _actor_action: 'admin_add_cashback',
+      },
       ipAddress: await getClientIp(),
       userAgent: await getUserAgent(),
     });
@@ -218,8 +229,8 @@ export async function addReferralCommissionToLedger(
   metadata?: Record<string, any>
 ) {
   // SECURITY: Verify admin privileges
-  const isAuthorized = await verifyAdminOrServiceRole();
-  if (!isAuthorized) {
+  const auth = await verifyAdminOrServiceRole();
+  if (!auth.isAdmin || !auth.userId) {
     return { 
       success: false, 
       error: 'Unauthorized: Admin privileges required for this operation' 
@@ -231,7 +242,11 @@ export async function addReferralCommissionToLedger(
       userId,
       amount,
       referenceId,
-      metadata,
+      metadata: {
+        ...(metadata || {}),
+        _actor_id: auth.userId,
+        _actor_action: 'admin_add_referral_commission',
+      },
       ipAddress: await getClientIp(),
       userAgent: await getUserAgent(),
     });
@@ -258,8 +273,8 @@ export async function reverseReferralCommissionInLedger(
   metadata?: Record<string, any>
 ) {
   // SECURITY: Verify admin privileges
-  const isAuthorized = await verifyAdminOrServiceRole();
-  if (!isAuthorized) {
+  const auth = await verifyAdminOrServiceRole();
+  if (!auth.isAdmin || !auth.userId) {
     return { 
       success: false, 
       error: 'Unauthorized: Admin privileges required for this operation' 
@@ -271,7 +286,11 @@ export async function reverseReferralCommissionInLedger(
       userId,
       amount,
       referenceId,
-      metadata,
+      metadata: {
+        ...(metadata || {}),
+        _actor_id: auth.userId,
+        _actor_action: 'admin_reverse_referral_commission',
+      },
       ipAddress: await getClientIp(),
       userAgent: await getUserAgent(),
     });
@@ -298,8 +317,8 @@ export async function createWithdrawalInLedger(
   metadata?: Record<string, any>
 ) {
   // SECURITY: Verify admin privileges
-  const isAuthorized = await verifyAdminOrServiceRole();
-  if (!isAuthorized) {
+  const auth = await verifyAdminOrServiceRole();
+  if (!auth.isAdmin || !auth.userId) {
     return { 
       success: false, 
       error: 'Unauthorized: Admin privileges required for this operation' 
@@ -311,7 +330,11 @@ export async function createWithdrawalInLedger(
       userId,
       amount,
       referenceId,
-      metadata,
+      metadata: {
+        ...(metadata || {}),
+        _actor_id: auth.userId,
+        _actor_action: 'admin_create_withdrawal',
+      },
       ipAddress: await getClientIp(),
       userAgent: await getUserAgent(),
     });
@@ -340,8 +363,8 @@ export async function changeWithdrawalStatusInLedger(
   metadata?: Record<string, any>
 ) {
   // SECURITY: Verify admin privileges
-  const isAuthorized = await verifyAdminOrServiceRole();
-  if (!isAuthorized) {
+  const auth = await verifyAdminOrServiceRole();
+  if (!auth.isAdmin || !auth.userId) {
     return { 
       success: false, 
       error: 'Unauthorized: Admin privileges required for this operation' 
@@ -355,7 +378,11 @@ export async function changeWithdrawalStatusInLedger(
       oldStatus,
       newStatus,
       amount,
-      metadata,
+      metadata: {
+        ...(metadata || {}),
+        _actor_id: auth.userId,
+        _actor_action: 'admin_change_withdrawal_status',
+      },
       ipAddress: await getClientIp(),
       userAgent: await getUserAgent(),
     });
@@ -382,8 +409,8 @@ export async function createOrderInLedger(
   metadata?: Record<string, any>
 ) {
   // SECURITY: Verify admin privileges
-  const isAuthorized = await verifyAdminOrServiceRole();
-  if (!isAuthorized) {
+  const auth = await verifyAdminOrServiceRole();
+  if (!auth.isAdmin || !auth.userId) {
     return { 
       success: false, 
       error: 'Unauthorized: Admin privileges required for this operation' 
@@ -395,7 +422,11 @@ export async function createOrderInLedger(
       userId,
       amount,
       referenceId,
-      metadata,
+      metadata: {
+        ...(metadata || {}),
+        _actor_id: auth.userId,
+        _actor_action: 'admin_create_order',
+      },
       ipAddress: await getClientIp(),
       userAgent: await getUserAgent(),
     });
@@ -424,8 +455,8 @@ export async function changeOrderStatusInLedger(
   metadata?: Record<string, any>
 ) {
   // SECURITY: Verify admin privileges
-  const isAuthorized = await verifyAdminOrServiceRole();
-  if (!isAuthorized) {
+  const auth = await verifyAdminOrServiceRole();
+  if (!auth.isAdmin || !auth.userId) {
     return { 
       success: false, 
       error: 'Unauthorized: Admin privileges required for this operation' 
@@ -439,7 +470,11 @@ export async function changeOrderStatusInLedger(
       oldStatus,
       newStatus,
       amount,
-      metadata,
+      metadata: {
+        ...(metadata || {}),
+        _actor_id: auth.userId,
+        _actor_action: 'admin_change_order_status',
+      },
       ipAddress: await getClientIp(),
       userAgent: await getUserAgent(),
     });

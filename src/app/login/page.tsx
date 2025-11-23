@@ -44,9 +44,6 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   const handleLoginSuccess = async (userId: string) => {
-    // Trigger user data refetch
-    window.dispatchEvent(new CustomEvent('refetchUser'));
-
     // Log login activity
     await logLoginActivity(userId);
 
@@ -55,11 +52,8 @@ export default function LoginPage() {
       description: "Logged in successfully.",
     });
 
-    // Refresh the router to update server components with new session
-    router.refresh();
-
     // Small delay to let session propagate
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Fetch user profile to check role
     const supabase = createClient();
@@ -69,11 +63,11 @@ export default function LoginPage() {
       .eq('id', userId)
       .single();
 
-    // Redirect based on role
+    // Use window.location.href for full page redirect (ensures session is picked up)
     if (profile?.role === 'admin') {
-      router.push('/admin/dashboard');
+      window.location.href = '/admin/dashboard';
     } else {
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }
   }
 

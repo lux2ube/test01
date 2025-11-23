@@ -90,10 +90,24 @@ function RegisterForm() {
                 throw error;
             }
             
-            router.push(`/phone-verification?userId=${result.userId}`);
+            // Sync session on server
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData.session) {
+                await fetch('/auth/sync-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        access_token: sessionData.session.access_token,
+                        refresh_token: sessionData.session.refresh_token,
+                    }),
+                });
+            }
+            
+            // Use window.location.href for full page redirect
+            window.location.href = `/phone-verification?userId=${result.userId}`;
         } catch (loginError) {
             toast({ variant: 'destructive', title: "فشل تسجيل الدخول التلقائي", description: "يرجى تسجيل الدخول يدويًا." });
-            router.push('/login');
+            window.location.href = '/login';
         }
     } else {
         toast({ variant: 'destructive', title: "فشل التسجيل", description: result.error });

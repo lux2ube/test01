@@ -74,41 +74,31 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      const supabase = createClient();
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
-        throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
       }
 
-      if (!data.user || !data.session) {
-        throw new Error('Authentication failed');
+      if (data.success) {
+        // Log activity
+        await logLoginActivity(data.userId);
+
+        toast({
+          title: "Success",
+          description: "Logged in successfully. Redirecting...",
+        });
+
+        // Server has set cookies, redirect
+        await new Promise(resolve => setTimeout(resolve, 200));
+        window.location.href = data.redirectUrl;
       }
-
-      // Log activity
-      await logLoginActivity(data.user.id);
-
-      // Get user role
-      const { data: profile } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-
-      const redirectUrl = profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
-
-      toast({
-        title: "Success",
-        description: "Logged in successfully. Redirecting...",
-      });
-
-      // Wait for cookies to be set, then redirect
-      await new Promise(resolve => setTimeout(resolve, 100));
-      window.location.href = redirectUrl;
     } catch (error: any) {
       toast({
         variant: "destructive",

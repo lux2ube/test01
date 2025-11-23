@@ -1,52 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateSession } from './lib/supabase/middleware';
-import { createServerClient } from '@supabase/ssr';
+import { getIronSession } from 'iron-session';
+import { SessionData } from './lib/auth/session';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, {
-              ...options,
-              secure: false, // Disable for Replit proxy compatibility
-              httpOnly: false,
-            })
-          )
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-  
   const protectedPaths = ['/dashboard', '/admin', '/phone-verification'];
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
   
-  if (isProtectedPath && !user) {
-    const redirectUrl = new URL('/login', request.url);
-    return NextResponse.redirect(redirectUrl);
+  if (isProtectedPath) {
+    try {
+      // Read our custom session cookie
+      const session = await getIronSession<SessionData>(request.cookies, {
+        password: process.env.SESSION_SECRET!,
+        cookieName: 'auth_session',
+      });
+
+      // Check if session exists and is valid
+      if (!session.userId || !session.access_token) {
+        const redirectUrl = new URL('/login', request.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+
+      // Check if session is expired
+      if (session.expires_at && session.expires_at < Date.now() / 1000) {
+        const redirectUrl = new URL('/login', request.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+
+      // Session is valid, allow request
+      return NextResponse.next();
+    } catch (error) {
+      console.error('Middleware session error:', error);
+      const redirectUrl = new URL('/login', request.url);
+      return NextResponse.redirect(redirectUrl);
+    }
   }
   
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {

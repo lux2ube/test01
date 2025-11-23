@@ -51,6 +51,7 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^11.3.11",
     "genkit": "^1.13.0",
+    "iron-session": "^8.0.4",
     "libphonenumber-js": "^1.11.4",
     "lucide-react": "^0.475.0",
     "micromark": "^4.0.0",

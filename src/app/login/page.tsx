@@ -72,42 +72,38 @@ export default function LoginPage() {
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Call server-side login route
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
-        throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
       }
 
-      if (data.user && data.session) {
-        // Sync session to server and wait for completion
-        const syncResponse = await fetch('/auth/sync-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          }),
+      if (data.success) {
+        // Log activity on client
+        await logLoginActivity(data.userId);
+        
+        toast({
+          title: "Success",
+          description: "Logged in successfully. Redirecting...",
         });
 
-        if (!syncResponse.ok) {
-          throw new Error('Failed to sync session');
-        }
-
-        // Wait a bit longer for cookies to propagate
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        await handleLoginSuccess(data.user.id);
+        // Redirect to dashboard - cookies are already set by the server
+        window.location.href = data.redirectUrl;
       }
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Incorrect email or password.",
+        description: error.message || "Incorrect email or password.",
       });
     } finally {
       setIsLoading(false);

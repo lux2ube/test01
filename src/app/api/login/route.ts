@@ -61,12 +61,29 @@ export async function POST(request: NextRequest) {
       userId: data.user.id,
     });
 
-    // Manually set the session cookie on the response
+    // Set iron-session cookie for server-side auth
     response.cookies.set('auth_session', sealedSession, {
       httpOnly: true,
       sameSite: 'lax',
       secure: false, // Disabled for Replit development
       maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    // Also set Supabase auth session so client-side checks work
+    response.cookies.set('sb-access-token', data.session.access_token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+
+    response.cookies.set('sb-refresh-token', data.session.refresh_token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
 

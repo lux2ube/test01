@@ -19,11 +19,23 @@ import type {
 
 // Create Supabase client with service role for backend operations
 const getServiceClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing Supabase credentials');
+  if (!supabaseUrl) {
+    throw new Error(
+      'CONFIGURATION ERROR: NEXT_PUBLIC_SUPABASE_URL environment variable is not set. ' +
+      'This is required for all Supabase operations.'
+    );
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error(
+      'CONFIGURATION ERROR: SUPABASE_SERVICE_ROLE_KEY environment variable is not set. ' +
+      'This is MANDATORY for ledger operations to function. ' +
+      'Please set this environment variable in your deployment settings. ' +
+      'Find your service role key in Supabase Dashboard → Settings → API.'
+    );
   }
 
   return createClient(supabaseUrl, serviceRoleKey, {

@@ -217,13 +217,38 @@ const result = await getMyBalance();
 ## Production Deployment Checklist
 
 - [ ] All 8 migrations applied to database
-- [ ] SUPABASE_SERVICE_ROLE_KEY environment variable set
+- [ ] **REQUIRED:** SUPABASE_SERVICE_ROLE_KEY environment variable set (mandatory for admin authorization)
 - [ ] At least one admin user created (`UPDATE users SET role='admin'`)
 - [ ] RLS policies tested (users can only see their own data)
 - [ ] Admin authorization tested (only admins can mutate ledger)
 - [ ] Audit logs monitored (set up alerts for suspicious activity)
 - [ ] Balance validation tested (withdrawals/orders check available balance)
 - [ ] ACID compliance verified (concurrent operations don't cause race conditions)
+
+### Required Environment Variables
+
+```bash
+# MANDATORY - Required for admin authorization in ledger mutations
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+
+# Standard Supabase credentials
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Session management
+SESSION_SECRET=your-secret-32-chars-min
+```
+
+**Why SERVICE_ROLE_KEY is required:**
+- Admin authorization checks query the users table to verify role='admin'
+- RLS policies prevent regular clients from querying other users' roles
+- Service role client bypasses RLS to perform the authorization check
+- Without it, all ledger mutations will fail with "Unauthorized" errors
+
+**Fallback behavior:**
+- If SERVICE_ROLE_KEY is missing, system attempts to use user's access_token
+- This fallback is less reliable (tokens can expire, refresh can fail)
+- For production deployments, always set SERVICE_ROLE_KEY
 
 ## Support
 

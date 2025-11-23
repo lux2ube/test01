@@ -126,50 +126,87 @@ export async function getMyAccount() {
  * This prevents unauthorized users from manipulating balances
  * 
  * SECURITY: Checks if the user has 'admin' role in the users table
- * Uses authenticated Supabase client (session-based) to avoid SERVICE_ROLE_KEY dependency
+ * Uses Supabase service role to bypass RLS and verify admin status
+ * 
+ * REQUIRED ENV VAR: SUPABASE_SERVICE_ROLE_KEY must be set in production
  * 
  * @returns Object with isAdmin flag and userId if authorized
  */
 async function verifyAdminOrServiceRole(): Promise<{ isAdmin: boolean; userId: string | null }> {
   const session = await getSession();
   
-  if (!session.userId || !session.access_token) {
+  if (!session.userId) {
     return { isAdmin: false, userId: null };
   }
 
-  // Use authenticated client with user's session token
-  // This works in all contexts (edge, server, etc.) without SERVICE_ROLE_KEY
   const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  // Primary path: Use service role key (bypasses RLS, works reliably)
+  if (serviceRoleKey) {
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
-      global: {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      },
-    }
-  );
+    });
 
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', session.userId)
-    .single();
-  
-  if (error) {
-    console.error('Failed to verify admin role:', error.message);
-    return { isAdmin: false, userId: null };
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.userId)
+      .single();
+    
+    if (error) {
+      console.error('Failed to verify admin role:', error.message);
+      return { isAdmin: false, userId: null };
+    }
+
+    const isAdmin = user?.role === 'admin';
+    return { isAdmin, userId: isAdmin ? session.userId : null };
   }
 
-  // Only allow users with 'admin' role to execute these operations
-  const isAdmin = user?.role === 'admin';
-  return { isAdmin, userId: isAdmin ? session.userId : null };
+  // Fallback path: Try using user's access token (when service key unavailable)
+  if (session.access_token) {
+    const supabase = createClient(
+      supabaseUrl,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        global: {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        },
+      }
+    );
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.userId)
+      .single();
+    
+    if (error) {
+      console.error('Failed to verify admin role via access token:', error.message);
+      return { isAdmin: false, userId: null };
+    }
+
+    const isAdmin = user?.role === 'admin';
+    return { isAdmin, userId: isAdmin ? session.userId : null };
+  }
+
+  // Configuration error: Neither service key nor access token available
+  console.error(
+    'CONFIGURATION ERROR: Cannot verify admin role. ' +
+    'SUPABASE_SERVICE_ROLE_KEY is not set and session has no access_token. ' +
+    'Please set SUPABASE_SERVICE_ROLE_KEY environment variable.'
+  );
+  return { isAdmin: false, userId: null };
 }
 
 /**

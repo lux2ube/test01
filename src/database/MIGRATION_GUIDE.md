@@ -6,6 +6,20 @@ This guide will help you apply the financial-grade ledger system migrations to y
 ## Prerequisites
 - Supabase project with PostgreSQL database
 - Database access via Supabase SQL Editor (Dashboard → SQL Editor)
+- **REQUIRED:** Environment variables configured:
+  ```bash
+  # MANDATORY - Required for admin authorization
+  SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+  
+  # Standard Supabase credentials
+  NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+  
+  # Session management
+  SESSION_SECRET=your-secret-32-chars-min
+  ```
+
+**Note:** `SUPABASE_SERVICE_ROLE_KEY` is mandatory for ledger operations to function. Without it, all admin ledger mutations will fail with "Unauthorized" errors.
 
 ## Migration Steps
 

@@ -1,5 +1,6 @@
 import { getIronSession, IronSession } from 'iron-session';
 import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 
 export interface SessionData {
   userId: string;
@@ -51,4 +52,46 @@ export async function isSessionValid(): Promise<boolean> {
   }
   
   return true;
+}
+
+export async function refreshSession(): Promise<boolean> {
+  const session = await getSession();
+  
+  if (!session.refresh_token) {
+    return false;
+  }
+
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: session.refresh_token,
+    });
+
+    if (error || !data.session) {
+      console.error('Token refresh failed:', error?.message);
+      return false;
+    }
+
+    // Update session with new tokens
+    session.access_token = data.session.access_token;
+    session.refresh_token = data.session.refresh_token;
+    session.expires_at = data.session.expires_at || 0;
+    await session.save();
+
+    console.log('✅ Session tokens refreshed successfully');
+    return true;
+  } catch (error) {
+    console.error('Session refresh exception:', error);
+    return false;
+  }
 }

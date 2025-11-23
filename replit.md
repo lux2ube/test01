@@ -21,6 +21,7 @@ The platform is built with Next.js 15.3.3 and Turbopack, using TypeScript and st
 - Trading account management, including broker integration and a submission/approval workflow.
 - Cashback calculation, tracking, and a loyalty points/tier system.
 - Referral program with commission tracking.
+- **Financial-Grade Ledger System:** ACID-compliant double-entry accounting with PostgreSQL stored procedures, immutable audit trail, and running balance totals. All financial operations (cashback, referrals, withdrawals, orders) use stored procedures with row-level locking. Admin-only server actions with role-based authorization.
 - Admin dashboard for comprehensive management of users, brokers, and transactions, including an admin KYC review system with data extraction capabilities.
 - Content management features including a blog system with Markdown support.
 - E-commerce functionality with a store/marketplace.
@@ -28,10 +29,11 @@ The platform is built with Next.js 15.3.3 and Turbopack, using TypeScript and st
 - Geo-location services for user registration via IP detection.
 
 **System Design Choices:**
-- **Security-first approach:** Row Level Security (RLS) policies on all 19 database tables, Supabase Auth with SSR, and secure server actions. Implemented production-grade cookie security (`httpOnly: true`, `sameSite: 'strict'`, `secure: true`) and server-side token validation.
-- **Server Actions:** All critical user-scoped operations use secure server actions with proper authentication.
+- **Security-first approach:** Row Level Security (RLS) policies on all database tables, Supabase Auth with SSR, and secure server actions. Implemented production-grade cookie security (`httpOnly: true`, `sameSite: 'strict'`, `secure: true`) and server-side token validation.
+- **Server Actions:** All critical user-scoped operations use secure server actions with proper authentication. Mutating ledger operations require admin role verification.
 - **Database Design:** PostgreSQL with proper indexing, foreign keys, and ENUM types for data integrity. Schema includes specific column names like `is_active` for `feedback_forms`, `is_enabled` for `offers`, and `status` enums for `users`, `trading_accounts`, and `withdrawals`.
-- **Project Structure:** Organized into `src/app` for routes, `src/components` for UI, `src/lib` for utilities, `src/hooks` for custom hooks, and `src/types` for TypeScript definitions.
+- **Ledger Architecture:** 4 core tables (accounts, transactions, immutable_events, audit_logs) with 8 ACID-safe stored procedures. Available balance formula: `total_earned - total_withdrawn - total_pending_withdrawals - total_orders`. Immutable audit trail prevents modification/deletion of financial records.
+- **Project Structure:** Organized into `src/app` for routes, `src/components` for UI, `src/lib` for utilities, `src/hooks` for custom hooks, `src/types` for TypeScript definitions, and `src/database` for migrations.
 - **Authentication System:** Custom session-based authentication with iron-session, automatic token refresh with 5-minute expiry buffer, and session integrity validation.
 
 ## External Dependencies

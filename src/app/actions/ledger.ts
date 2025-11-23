@@ -124,30 +124,46 @@ export async function getMyAccount() {
 /**
  * INTERNAL USE ONLY - Verify the caller has admin privileges
  * This prevents unauthorized users from manipulating balances
+ * 
+ * SECURITY: Checks if the user has 'admin' role in the users table
  */
 async function verifyAdminOrServiceRole(): Promise<boolean> {
   const session = await getSession();
-  
-  // For now, this check prevents direct client calls
-  // In production, you should check if the user has admin role from your users table
-  // Example: Check if session.userId is in admins table or has admin role
   
   if (!session.userId) {
     return false;
   }
 
-  // TODO: Add actual admin role verification
-  // const { data: user } = await supabase
-  //   .from('users')
-  //   .select('role')
-  //   .eq('id', session.userId)
-  //   .single();
-  // 
-  // return user?.role === 'admin';
+  // Check if user has admin role in the database
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   
-  // For now, we prevent all direct calls by returning false
-  // These functions should only be called from trusted server-side code
-  return false;
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('Missing Supabase credentials for admin verification');
+    return false;
+  }
+
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', session.userId)
+    .single();
+  
+  if (error) {
+    console.error('Failed to verify admin role:', error.message);
+    return false;
+  }
+
+  // Only allow users with 'admin' role to execute these operations
+  return user?.role === 'admin';
 }
 
 /**

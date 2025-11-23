@@ -74,29 +74,26 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      // Call server-side login route
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const { loginWithEmail } = await import('./login-action');
+      const result = await loginWithEmail(email, password);
+      
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      
+      // If we reach here without redirect, something went wrong
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Unexpected error occurred.",
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      if (data.success) {
-        toast({
-          title: "Success",
-          description: "Logged in successfully. Redirecting...",
-        });
-
-        // Redirect to dashboard - cookies are already set by the server
-        window.location.href = data.redirectUrl;
-      }
     } catch (error: any) {
+      // Check if it's a Next.js redirect (expected behavior)
+      if (error?.message?.includes('NEXT_REDIRECT')) {
+        // This is expected - the server action is redirecting us
+        return;
+      }
+      
       toast({
         variant: "destructive",
         title: "Login Failed",

@@ -15,9 +15,7 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          const cookies = request.cookies.getAll()
-          console.log('🔍 Middleware cookies:', cookies.map(c => c.name).join(', '))
-          return cookies
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
@@ -35,7 +33,6 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  console.log('🔍 Middleware user:', user ? user.id : 'NO USER')
   
   const protectedPaths = ['/dashboard', '/admin', '/phone-verification'];
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));

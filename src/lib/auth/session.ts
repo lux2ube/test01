@@ -9,21 +9,31 @@ export interface SessionData {
   expires_at: number;
 }
 
-const sessionOptions = {
-  password: process.env.SESSION_SECRET!,
-  cookieName: 'auth_session',
-  cookieOptions: {
-    secure: false, // Disabled for Replit development environment
-    httpOnly: true,
-    sameSite: 'lax' as const,
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-    path: '/',
-  },
-};
+/**
+ * Get session options with secure-by-default cookie configuration
+ * SECURITY: Secure cookies by default (financial-grade requirement)
+ * Only allows insecure cookies when EXPLICITLY enabled for local development
+ */
+function getSessionOptions() {
+  // Default to secure cookies, only allow insecure when explicitly enabled
+  const allowInsecure = process.env.DEV_ALLOW_INSECURE_COOKIES === 'true';
+  
+  return {
+    password: process.env.SESSION_SECRET!,
+    cookieName: 'auth_session',
+    cookieOptions: {
+      secure: !allowInsecure, // Secure by default, insecure only when explicitly allowed
+      httpOnly: true,
+      sameSite: 'strict' as const, // Strict for financial-grade security
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    },
+  };
+}
 
 export async function getSession(): Promise<IronSession<SessionData>> {
   const cookieStore = await cookies();
-  return getIronSession<SessionData>(cookieStore, sessionOptions);
+  return getIronSession<SessionData>(cookieStore, getSessionOptions());
 }
 
 export async function createSessionCookie(userId: string, access_token: string, refresh_token: string, expires_at: number): Promise<string> {

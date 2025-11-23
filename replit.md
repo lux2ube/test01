@@ -78,6 +78,29 @@ The following environment variables must be configured in Replit Secrets:
 **Run validation:** `bash scripts/validate-database-schema.sh`
 
 ### Recent Changes
+- **2025-11-23:** Production-Grade Session Management with Anti-Session-Mixing Protection
+  - Implemented secure-by-default cookie configuration (financial-grade requirement)
+  - **Security Architecture:**
+    - Server-side token validation: `/api/set-session` validates iron-session user ID matches Supabase user ID
+    - Prevents token swap attacks: Server validates tokens before returning to client
+    - Client-server session sync: Client calls `supabase.auth.setSession()` with server-validated tokens
+    - Eliminates session mixing bug where admin sees previous user's cached data
+  - **Cookie Security (Financial-Grade):**
+    - `httpOnly: true` - Prevents XSS access to tokens
+    - `sameSite: 'strict'` - Prevents CSRF attacks
+    - `secure: !allowInsecure` - SECURE BY DEFAULT (HTTPS-only in production)
+    - Only insecure when `DEV_ALLOW_INSECURE_COOKIES=true` explicitly set
+    - Environment-agnostic: Secure regardless of NODE_ENV, staging configs, or proxy setups
+  - **Implementation Details:**
+    - Login flow: `/api/login` → iron-session created → `/api/set-session` validates → client updates Supabase cache
+    - Server validates session integrity before any client-side token usage
+    - Both server and client sessions properly synchronized
+    - Automated test script confirms admin dashboard routing works correctly
+  - **Admin Credentials:** alsabhibassem@gmail.com / alsabhi0 (User ID: a2155791-24c1-47c6-a8b8-424c42206218)
+  - **Required Environment Variables:**
+    - `SESSION_SECRET` - 32+ character random string for iron-session encryption
+    - `DEV_ALLOW_INSECURE_COOKIES=true` - ONLY in development for HTTP testing
+
 - **2025-11-23:** Production-Ready Custom Authentication System
   - Implemented custom session-based authentication using iron-session to bypass Replit proxy cookie issues
   - Created `/api/login` endpoint using Supabase admin client for reliable authentication
@@ -88,10 +111,8 @@ The following environment variables must be configured in Replit Secrets:
   - Updated middleware to validate session fields (userId, access_token, refresh_token) and clear invalid sessions
   - Called `supabase.auth.setSession()` after refresh to ensure auth helpers (getUser, etc.) work correctly
   - System handles all edge cases: missing fields, expired tokens, refresh failures, invalid sessions
-  - **Architect Approved:** Production-ready for financial-grade ledger application
-  - **Test Credentials:** Yemen1@gmail.com / Yemen1
   - **Documentation:** See `AUTHENTICATION_SYSTEM.md` for complete technical details
-  - **Required:** `SESSION_SECRET` environment variable (32+ character random string)
+  - **Test Credentials:** Yemen1@gmail.com / Yemen1
 
 - **2025-10-04:** Admin KYC Review System with Data Extraction
   - Created new KycReviewForm component for admin verification workflow

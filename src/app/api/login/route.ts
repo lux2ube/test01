@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
       success: true,
       redirectUrl,
       userId: data.user.id,
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
+      // NOTE: Tokens are NOT sent to client for security
+      // They're stored securely in iron-session cookies server-side
     });
 
     // CRITICAL: Clear ALL old session cookies first to prevent session mixing
@@ -71,31 +71,25 @@ export async function POST(request: NextRequest) {
     response.cookies.delete('sb-refresh-token');
     response.cookies.delete('sb-session');
 
-    // Set new iron-session cookie for server-side auth
-    response.cookies.set('auth_session', sealedSession, {
+    // SECURITY: Secure cookies by default (financial-grade requirement)
+    // Only allow insecure cookies when EXPLICITLY enabled for local development
+    const allowInsecure = process.env.DEV_ALLOW_INSECURE_COOKIES === 'true';
+    
+    const cookieOptions = {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false, // Disabled for Replit development
+      sameSite: 'strict' as const, // Strict for financial-grade security
+      secure: !allowInsecure, // Secure by default, insecure only when explicitly allowed
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
-    });
+    };
+
+    // Set new iron-session cookie for server-side auth
+    response.cookies.set('auth_session', sealedSession, cookieOptions);
 
     // Set new Supabase auth session so client-side checks work
-    response.cookies.set('sb-access-token', data.session.access_token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    response.cookies.set('sb-access-token', data.session.access_token, cookieOptions);
 
-    response.cookies.set('sb-refresh-token', data.session.refresh_token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    response.cookies.set('sb-refresh-token', data.session.refresh_token, cookieOptions);
 
     return response;
   } catch (error) {

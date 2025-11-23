@@ -1,52 +1,42 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { getSession } from '@/lib/auth/session';
 
+// Server-side Supabase client that uses session tokens
 export async function createClient() {
-  const cookieStore = await cookies()
+  const session = await getSession();
+  
+  if (!session.access_token) {
+    // Return unauthenticated client
+    return createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }
 
-  return createServerClient(
+  // Return authenticated client with session tokens
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              // CRITICAL: Disable secure flag in development for Replit proxy compatibility
-              const cookieOptions = {
-                ...options,
-                path: '/',
-                sameSite: 'lax' as const,
-                secure: false, // Always false - Replit proxy strips Secure cookies
-                httpOnly: false, // Allow client-side access for Supabase client
-              }
-              cookieStore.set(name, value, cookieOptions)
-            })
-          } catch (error) {
-            console.error('Error setting cookies:', error)
-          }
+      global: {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
         },
       },
     }
-  )
+  );
 }
 
+// Admin client for server-side operations (doesn't require user session)
 export async function createAdminClient() {
-  return createServerClient(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return []
-        },
-        setAll() {
-          // Admin client doesn't need to set cookies
-        },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
-  )
+  );
 }

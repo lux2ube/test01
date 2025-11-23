@@ -1,20 +1,20 @@
-import { createClient } from '@/lib/supabase/server'
+import { destroySession, getSession } from '@/lib/auth/session'
 import { NextResponse } from 'next/server'
 import { logUserActivity } from '@/app/admin/actions'
 import { getServerSessionInfo } from '@/lib/server-session-info'
 
 export async function POST() {
   try {
-    const supabase = await createClient()
+    // Get current session before destroying
+    const session = await getSession()
     
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (user) {
+    if (session.userId) {
       const clientInfo = await getServerSessionInfo()
-      await logUserActivity(user.id, 'logout', clientInfo)
+      await logUserActivity(session.userId, 'logout', clientInfo)
     }
     
-    await supabase.auth.signOut()
+    // Destroy the custom session cookie
+    await destroySession()
     
     return NextResponse.json({ success: true })
   } catch (error) {

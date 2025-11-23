@@ -57,7 +57,6 @@ externalPort = 3001
 [userenv]
 
 [userenv.shared]
-COOKIE_SIGNATURE_KEYS = "[\"3lVu2hzE2DQFpb7MUVHBajikgI2ljaKwVj2S5m2ArrA=\",\"fr5BRsd0SU7etpvDXqOU9ieadkAd6MGZaGIlrzeEpus=\"]"
 IPINFO_TOKEN = "124a4928df09aa"
 NEXT_PUBLIC_SUPABASE_URL = "https://erhfmgmyfnhcpxkjdkvt.supabase.co"
 S3_SECRET_ACCESS_KEY = "5c5735d5d768734d1e55cc93bef86d3fa99072fb5bec0e5cde4b84d5e6d7e0e0"

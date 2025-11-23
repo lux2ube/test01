@@ -56,26 +56,25 @@ export default function LoginPage() {
       description: "Logged in successfully.",
     });
 
-    // Fetch user profile to check role
-    try {
-      const supabase = createClient();
-      const { data: profile, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', userId)
-        .single();
+    // Refresh the router to update server components with new session
+    router.refresh();
 
-      // Use hard navigation (window.location) to ensure cookies are sent
-      // This forces a full page reload with the new session
-      if (profile?.role === 'admin') {
-        window.location.href = '/admin/dashboard';
-      } else {
-        window.location.href = '/dashboard';
-      }
-    } catch (error) {
-      // If profile fetch fails, default to regular dashboard
-      console.error('Error fetching user profile:', error);
-      window.location.href = '/dashboard';
+    // Small delay to let session propagate
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Fetch user profile to check role
+    const supabase = createClient();
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    // Redirect based on role
+    if (profile?.role === 'admin') {
+      router.push('/admin/dashboard');
+    } else {
+      router.push('/dashboard');
     }
   }
 
@@ -94,7 +93,7 @@ export default function LoginPage() {
       }
 
       if (data.user && data.session) {
-        const syncResponse = await fetch('/auth/sync-session', {
+        await fetch('/auth/sync-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -102,13 +101,6 @@ export default function LoginPage() {
             refresh_token: data.session.refresh_token,
           }),
         });
-
-        if (!syncResponse.ok) {
-          throw new Error('Session sync failed');
-        }
-
-        // Wait for session to propagate
-        await new Promise(resolve => setTimeout(resolve, 500));
 
         await handleLoginSuccess(data.user.id);
       }

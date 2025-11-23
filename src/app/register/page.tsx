@@ -84,6 +84,7 @@ function RegisterForm() {
             const loginResponse = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // CRITICAL: Allow cookies to be set
                 body: JSON.stringify({ email, password }),
             });
 

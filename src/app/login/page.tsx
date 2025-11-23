@@ -106,8 +106,9 @@ export default function LoginPage() {
         description: "Logged in successfully. Redirecting...",
       });
 
-      // Force hard redirect through callback to ensure cookies are set
-      window.location.href = `/auth/callback?next=${encodeURIComponent(redirectUrl)}`;
+      // Wait for cookies to be set, then redirect
+      await new Promise(resolve => setTimeout(resolve, 100));
+      window.location.href = redirectUrl;
     } catch (error: any) {
       toast({
         variant: "destructive",

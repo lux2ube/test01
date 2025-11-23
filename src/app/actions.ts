@@ -82,6 +82,10 @@ export async function handleRegisterUser(formData: { name: string, email: string
             password,
             options: {
                 emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:5000'}/auth/callback`,
+                data: {
+                    name,
+                    full_name: name,
+                }
             },
         });
 
@@ -90,12 +94,16 @@ export async function handleRegisterUser(formData: { name: string, email: string
             if (signUpError?.message?.includes('already registered')) {
                 return { success: false, error: "This email is already in use. Please log in." };
             }
+            if (signUpError?.message?.includes('rate limit')) {
+                return { success: false, error: "Too many registration attempts. Please try again in a few minutes." };
+            }
             return { success: false, error: "An unexpected error occurred during registration. Please try again." };
         }
 
         const userId = authData.user.id;
 
-        const { data: userData, error: insertError } = await supabaseAdmin
+        // Create user record using the admin client (now properly configured)
+        const { error: insertError } = await supabaseAdmin
             .from('users')
             .insert({
                 id: userId,
@@ -109,17 +117,13 @@ export async function handleRegisterUser(formData: { name: string, email: string
                 level: 1,
                 monthly_earnings: 0,
                 country: detectedCountry,
-            })
-            .select()
-            .single();
+            });
 
         if (insertError) {
-            await supabaseAdmin.auth.admin.deleteUser(userId);
             console.error("Error creating user record:", insertError);
-            return { success: false, error: "An unexpected error occurred during registration. Please try again." };
+            return { success: false, error: "Registration successful but profile creation failed. Please contact support." };
         }
 
-        
         return { success: true, userId: userId };
 
     } catch (error: any) {

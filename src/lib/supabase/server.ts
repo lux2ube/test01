@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
@@ -29,18 +30,20 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return []
-        },
-        setAll() {
-          // Admin client doesn't need to set cookies
-        },
-      },
+  // Use the plain Supabase client with service role key for admin operations
+  // This ensures REST API calls include the authorization header
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!url || !key) {
+    console.error('Missing Supabase credentials:', { url: !!url, key: !!key });
+    throw new Error('Missing Supabase admin credentials');
+  }
+  
+  return createSupabaseClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
     }
-  )
+  });
 }

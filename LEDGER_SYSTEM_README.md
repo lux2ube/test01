@@ -162,12 +162,12 @@ All services are located in `src/lib/ledger/`:
 
 ---
 
-## Server Actions
+## API Endpoints
 
-All server actions are in `src/app/ledger-actions.ts`. These use Next.js 15 server actions instead of API routes for better type safety and performance.
+All endpoints are in `src/app/api/ledger/`:
 
-### `getUserBalance()`
-Get available balance for authenticated user.
+### GET `/api/ledger/balance?userId={uuid}`
+Get available balance for a user.
 
 **Response:**
 ```json
@@ -184,106 +184,91 @@ Get available balance for authenticated user.
 }
 ```
 
-### `addCashback(params)`
-Add cashback transaction (admin only).
+### POST `/api/ledger/cashback`
+Add cashback transaction.
 
-**Usage:**
-```typescript
-import { addCashback } from '@/app/ledger-actions';
-
-const result = await addCashback({
-  userId: "...",
-  amount: 50.00,
-  referenceId: "...",
-  metadata: { order_id: "12345" }
-});
+**Request:**
+```json
+{
+  "userId": "...",
+  "amount": 50.00,
+  "referenceId": "...",
+  "metadata": { "order_id": "12345" }
+}
 ```
 
-### `addReferralCommissionAction(params)`
-Add referral commission (admin only).
+### POST `/api/ledger/referral`
+Add or reverse referral commission.
 
-**Usage:**
-```typescript
-import { addReferralCommissionAction } from '@/app/ledger-actions';
-
-const result = await addReferralCommissionAction({
-  userId: "...",
-  amount: 25.00,
-  referenceId: "..."
-});
+**Add Commission:**
+```json
+{
+  "action": "add",
+  "userId": "...",
+  "amount": 25.00,
+  "referenceId": "..."
+}
 ```
 
-### `reverseReferralCommissionAction(params)`
-Reverse referral commission (admin only).
-
-**Usage:**
-```typescript
-import { reverseReferralCommissionAction } from '@/app/ledger-actions';
-
-const result = await reverseReferralCommissionAction({
-  userId: "...",
-  amount: 25.00,
-  referenceId: "...",
-  reason: "Fraud detected"
-});
+**Reverse Commission:**
+```json
+{
+  "action": "reverse",
+  "userId": "...",
+  "amount": 25.00,
+  "referenceId": "...",
+  "reason": "Fraud detected"
+}
 ```
 
-### `createWithdrawalAction(params)`
-Create withdrawal (authenticated user).
+### POST `/api/ledger/withdrawal`
+Create or change withdrawal status.
 
-**Usage:**
-```typescript
-import { createWithdrawalAction } from '@/app/ledger-actions';
-
-const result = await createWithdrawalAction({
-  amount: 200.00,
-  referenceId: "..."
-});
+**Create Withdrawal:**
+```json
+{
+  "action": "create",
+  "userId": "...",
+  "amount": 200.00,
+  "referenceId": "..."
+}
 ```
 
-### `changeWithdrawalStatusAction(params)`
-Change withdrawal status (admin only).
-
-**Usage:**
-```typescript
-import { changeWithdrawalStatusAction } from '@/app/ledger-actions';
-
-const result = await changeWithdrawalStatusAction({
-  userId: "...",
-  referenceId: "...",
-  oldStatus: "processing",
-  newStatus: "completed",
-  amount: 200.00
-});
+**Change Status:**
+```json
+{
+  "action": "changeStatus",
+  "userId": "...",
+  "referenceId": "...",
+  "oldStatus": "processing",
+  "newStatus": "completed",
+  "amount": 200.00
+}
 ```
 
-### `createOrderAction(params)`
-Create order (authenticated user).
+### POST `/api/ledger/order`
+Create or change order status.
 
-**Usage:**
-```typescript
-import { createOrderAction } from '@/app/ledger-actions';
-
-const result = await createOrderAction({
-  amount: 300.00,
-  referenceId: "..."
-});
+**Create Order:**
+```json
+{
+  "action": "create",
+  "userId": "...",
+  "amount": 300.00,
+  "referenceId": "..."
+}
 ```
 
-### `changeOrderStatusAction(params)`
-Change order status (admin only).
-
-**Usage:**
-```typescript
-import { changeOrderStatusAction } from '@/app/ledger-actions';
-
-const result = await changeOrderStatusAction({
-  userId: "...",
-  referenceId: "...",
-  oldStatus: "pending",
-  newStatus: "cancelled",
-  amount: 300.00
-});
+**Change Status:**
+```json
+{
+  "action": "changeStatus",
+  "userId": "...",
+  "referenceId": "...",
+  "oldStatus": "pending",
+  "newStatus": "cancelled",
+  "amount": 300.00
+}
 ```
 
 ---

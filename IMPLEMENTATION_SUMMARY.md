@@ -56,14 +56,17 @@ All services in `src/lib/ledger/`:
 - `withdrawal-service.ts` - Create and manage withdrawals
 - `order-service.ts` - Create and manage orders
 
-### 5. API Endpoints
+### 5. Server Actions
 
-All endpoints in `src/app/api/ledger/`:
-- `GET /api/ledger/balance` - Get user balance (authenticated)
-- `POST /api/ledger/cashback` - Add cashback (admin only)
-- `POST /api/ledger/referral` - Add/reverse referral (admin only)
-- `POST /api/ledger/withdrawal` - Create/update withdrawal
-- `POST /api/ledger/order` - Create/update order
+All server actions in `src/app/ledger-actions.ts`:
+- `getUserBalance()` - Get user balance (authenticated)
+- `addCashback()` - Add cashback (admin only)
+- `addReferralCommissionAction()` - Add referral commission (admin only)
+- `reverseReferralCommissionAction()` - Reverse referral commission (admin only)
+- `createWithdrawalAction()` - Create withdrawal (authenticated)
+- `changeWithdrawalStatusAction()` - Change withdrawal status (admin only)
+- `createOrderAction()` - Create order (authenticated)
+- `changeOrderStatusAction()` - Change order status (admin only)
 
 ## Business Logic
 

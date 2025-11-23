@@ -76,6 +76,20 @@ The following environment variables must be configured in Replit Secrets:
 **Run validation:** `bash scripts/validate-database-schema.sh`
 
 ### Recent Changes
+- **2025-11-23:** Ledger System Refactored to Server Actions
+  - Replaced all API routes (`/api/ledger/*`) with Next.js server actions
+  - Created `src/app/ledger-actions.ts` with 8 server actions:
+    - `getUserBalance()` - Get authenticated user's balance
+    - `addCashback()` - Add cashback (admin only)
+    - `addReferralCommissionAction()` / `reverseReferralCommissionAction()` - Manage referrals (admin only)
+    - `createWithdrawalAction()` / `changeWithdrawalStatusAction()` - Manage withdrawals
+    - `createOrderAction()` / `changeOrderStatusAction()` - Manage orders
+  - All server actions include proper authentication/authorization checks
+  - Better type safety with TypeScript and automatic client-side validation
+  - Follows Next.js 15 best practices for server-side operations
+  - Updated documentation in LEDGER_SYSTEM_README.md and IMPLEMENTATION_SUMMARY.md
+
+### Recent Changes (Previous)
 - **2025-10-04:** Admin KYC Review System with Data Extraction
   - Created new KycReviewForm component for admin verification workflow
   - Displays ALL uploaded documents (front, back, selfie) in side-by-side layout

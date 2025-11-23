@@ -1,5 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { logLoginActivity } from '@/app/login/actions';
 
 export async function POST(request: NextRequest) {
@@ -13,7 +14,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch (error) {
+              console.error('Error setting cookies:', error);
+            }
+          },
+        },
+      }
+    );
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -52,8 +74,9 @@ export async function POST(request: NextRequest) {
     const redirectUrl = profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
     console.log('✅ Login successful for user:', data.user.id, '→ redirecting to:', redirectUrl);
+    console.log('🍪 Cookies set in response');
 
-    // Return success with redirect URL - cookies are automatically set by Supabase
+    // Return success with redirect URL - cookies are now properly set
     return NextResponse.json({
       success: true,
       redirectUrl,

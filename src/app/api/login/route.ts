@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server';
-import { createSession } from '@/lib/auth/session';
+import { createSessionCookie } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create our own session cookie with Supabase tokens
-    await createSession(
+    // Create sealed session cookie
+    const sealedSession = await createSessionCookie(
       data.user.id,
       data.session.access_token,
       data.session.refresh_token,
@@ -55,11 +55,22 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Login successful, session created for user:', data.user.id);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       redirectUrl,
       userId: data.user.id,
     });
+
+    // Manually set the session cookie on the response
+    response.cookies.set('auth_session', sealedSession, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false, // Disabled for Replit development
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('❌ Login exception:', error);
     return NextResponse.json(

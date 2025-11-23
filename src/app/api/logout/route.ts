@@ -1,4 +1,4 @@
-import { destroySession, getSession } from '@/lib/auth/session'
+import { getSession } from '@/lib/auth/session'
 import { NextResponse } from 'next/server'
 import { logUserActivity } from '@/app/admin/actions'
 import { getServerSessionInfo } from '@/lib/server-session-info'
@@ -13,10 +13,12 @@ export async function POST() {
       await logUserActivity(session.userId, 'logout', clientInfo)
     }
     
-    // Destroy the custom session cookie
-    await destroySession()
+    const response = NextResponse.json({ success: true })
     
-    return NextResponse.json({ success: true })
+    // Delete the session cookie
+    response.cookies.delete('auth_session')
+    
+    return response
   } catch (error) {
     console.error('Logout error:', error)
     return NextResponse.json({ error: 'Failed to logout' }, { status: 500 })

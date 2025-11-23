@@ -1,4 +1,4 @@
-import { getIronSession, IronSession } from 'iron-session';
+import { getIronSession, IronSession, sealData, unsealData } from 'iron-session';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 
@@ -26,13 +26,18 @@ export async function getSession(): Promise<IronSession<SessionData>> {
   return getIronSession<SessionData>(cookieStore, sessionOptions);
 }
 
-export async function createSession(userId: string, access_token: string, refresh_token: string, expires_at: number) {
-  const session = await getSession();
-  session.userId = userId;
-  session.access_token = access_token;
-  session.refresh_token = refresh_token;
-  session.expires_at = expires_at;
-  await session.save();
+export async function createSessionCookie(userId: string, access_token: string, refresh_token: string, expires_at: number): Promise<string> {
+  const sessionData: SessionData = {
+    userId,
+    access_token,
+    refresh_token,
+    expires_at,
+  };
+  
+  // Manually seal the session data
+  return await sealData(sessionData, {
+    password: process.env.SESSION_SECRET!,
+  });
 }
 
 export async function destroySession() {

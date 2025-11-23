@@ -117,11 +117,43 @@ export async function getMyAccount() {
 // ==================================================
 // Backend Actions (Admin/System use only)
 // ==================================================
-// These should ONLY be called from backend workflows, not directly from the client
+// CRITICAL SECURITY: These functions are for server-side/admin use ONLY
+// They should NEVER be exported or called from client components
+// Only backend cron jobs, admin actions, or trusted server code should use these
+
+/**
+ * INTERNAL USE ONLY - Verify the caller has admin privileges
+ * This prevents unauthorized users from manipulating balances
+ */
+async function verifyAdminOrServiceRole(): Promise<boolean> {
+  const session = await getSession();
+  
+  // For now, this check prevents direct client calls
+  // In production, you should check if the user has admin role from your users table
+  // Example: Check if session.userId is in admins table or has admin role
+  
+  if (!session.userId) {
+    return false;
+  }
+
+  // TODO: Add actual admin role verification
+  // const { data: user } = await supabase
+  //   .from('users')
+  //   .select('role')
+  //   .eq('id', session.userId)
+  //   .single();
+  // 
+  // return user?.role === 'admin';
+  
+  // For now, we prevent all direct calls by returning false
+  // These functions should only be called from trusted server-side code
+  return false;
+}
 
 /**
  * Add cashback to a user's account
- * BACKEND USE ONLY - Called when cashback is calculated from trades
+ * ADMIN/BACKEND USE ONLY - Called when cashback is calculated from trades
+ * SECURITY: Requires admin privileges or service role
  */
 export async function addCashbackToLedger(
   userId: string,
@@ -129,6 +161,15 @@ export async function addCashbackToLedger(
   referenceId: string,
   metadata?: Record<string, any>
 ) {
+  // SECURITY: Verify admin privileges
+  const isAuthorized = await verifyAdminOrServiceRole();
+  if (!isAuthorized) {
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
   try {
     const result = await ledgerService.addCashback({
       userId,
@@ -151,7 +192,8 @@ export async function addCashbackToLedger(
 
 /**
  * Add referral commission to a user's account
- * BACKEND USE ONLY - Called when referral earns commission
+ * ADMIN/BACKEND USE ONLY - Called when referral earns commission
+ * SECURITY: Requires admin privileges or service role
  */
 export async function addReferralCommissionToLedger(
   userId: string,
@@ -159,6 +201,15 @@ export async function addReferralCommissionToLedger(
   referenceId: string,
   metadata?: Record<string, any>
 ) {
+  // SECURITY: Verify admin privileges
+  const isAuthorized = await verifyAdminOrServiceRole();
+  if (!isAuthorized) {
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
   try {
     const result = await ledgerService.addReferralCommission({
       userId,
@@ -181,7 +232,8 @@ export async function addReferralCommissionToLedger(
 
 /**
  * Reverse a referral commission
- * BACKEND USE ONLY - Called when referral is reversed/cancelled
+ * ADMIN/BACKEND USE ONLY - Called when referral is reversed/cancelled
+ * SECURITY: Requires admin privileges or service role
  */
 export async function reverseReferralCommissionInLedger(
   userId: string,
@@ -189,6 +241,15 @@ export async function reverseReferralCommissionInLedger(
   referenceId: string,
   metadata?: Record<string, any>
 ) {
+  // SECURITY: Verify admin privileges
+  const isAuthorized = await verifyAdminOrServiceRole();
+  if (!isAuthorized) {
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
   try {
     const result = await ledgerService.reverseReferralCommission({
       userId,
@@ -211,7 +272,8 @@ export async function reverseReferralCommissionInLedger(
 
 /**
  * Create a withdrawal in the ledger
- * BACKEND USE ONLY - Called when withdrawal is submitted
+ * ADMIN/BACKEND USE ONLY - Called when withdrawal is submitted
+ * SECURITY: Requires admin privileges or service role
  */
 export async function createWithdrawalInLedger(
   userId: string,
@@ -219,6 +281,15 @@ export async function createWithdrawalInLedger(
   referenceId: string,
   metadata?: Record<string, any>
 ) {
+  // SECURITY: Verify admin privileges
+  const isAuthorized = await verifyAdminOrServiceRole();
+  if (!isAuthorized) {
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
   try {
     const result = await ledgerService.createWithdrawal({
       userId,
@@ -241,7 +312,8 @@ export async function createWithdrawalInLedger(
 
 /**
  * Change withdrawal status in the ledger
- * BACKEND USE ONLY - Called when admin approves/rejects withdrawal
+ * ADMIN/BACKEND USE ONLY - Called when admin approves/rejects withdrawal
+ * SECURITY: Requires admin privileges or service role
  */
 export async function changeWithdrawalStatusInLedger(
   userId: string,
@@ -251,6 +323,15 @@ export async function changeWithdrawalStatusInLedger(
   amount: number,
   metadata?: Record<string, any>
 ) {
+  // SECURITY: Verify admin privileges
+  const isAuthorized = await verifyAdminOrServiceRole();
+  if (!isAuthorized) {
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
   try {
     const result = await ledgerService.changeWithdrawalStatus({
       userId,
@@ -275,7 +356,8 @@ export async function changeWithdrawalStatusInLedger(
 
 /**
  * Create an order in the ledger
- * BACKEND USE ONLY - Called when order is placed from store
+ * ADMIN/BACKEND USE ONLY - Called when order is placed from store
+ * SECURITY: Requires admin privileges or service role
  */
 export async function createOrderInLedger(
   userId: string,
@@ -283,6 +365,15 @@ export async function createOrderInLedger(
   referenceId: string,
   metadata?: Record<string, any>
 ) {
+  // SECURITY: Verify admin privileges
+  const isAuthorized = await verifyAdminOrServiceRole();
+  if (!isAuthorized) {
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
   try {
     const result = await ledgerService.createOrder({
       userId,
@@ -305,7 +396,8 @@ export async function createOrderInLedger(
 
 /**
  * Change order status in the ledger
- * BACKEND USE ONLY - Called when order is cancelled
+ * ADMIN/BACKEND USE ONLY - Called when order is cancelled
+ * SECURITY: Requires admin privileges or service role
  */
 export async function changeOrderStatusInLedger(
   userId: string,
@@ -315,6 +407,15 @@ export async function changeOrderStatusInLedger(
   amount: number,
   metadata?: Record<string, any>
 ) {
+  // SECURITY: Verify admin privileges
+  const isAuthorized = await verifyAdminOrServiceRole();
+  if (!isAuthorized) {
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
   try {
     const result = await ledgerService.changeOrderStatus({
       userId,

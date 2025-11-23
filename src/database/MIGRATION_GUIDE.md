@@ -22,7 +22,7 @@ Copy and paste the contents of: src/database/migrations/001_create_accounts_tabl
 
 #### Migration 002: Create Account Auto-Creation Trigger
 ```bash
-Copy and paste the contents of: src/database/migrations/002_create_account_trigger.sql
+Copy and paste the contents of: src/database/migrations/002_create_auto_account_trigger.sql
 ```
 
 #### Migration 003: Add RLS Policies for Accounts

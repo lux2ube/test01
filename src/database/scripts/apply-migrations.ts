@@ -28,7 +28,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 
 const migrations = [
   '001_create_accounts_table.sql',
-  '002_create_account_trigger.sql',
+  '002_create_auto_account_trigger.sql',
   '003_create_accounts_rls.sql',
   '004_create_transactions_table.sql',
   '005_create_immutable_events_table.sql',

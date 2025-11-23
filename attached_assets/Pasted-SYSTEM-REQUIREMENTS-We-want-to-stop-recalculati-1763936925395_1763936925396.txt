@@ -1,0 +1,149 @@
+SYSTEM REQUIREMENTS
+---------------------------------------------------
+
+We want to stop recalculating balances from all transactions every time.
+Instead, we will store running totals in an "accounts" table.
+Available balance will always be CALCULATED from these totals, not stored directly.
+
+AVAILABLE_BALANCE = 
+    total_earned 
+  - total_withdrawn 
+  - total_pending_withdrawals 
+  - total_orders
+
+---------------------------------------------------
+TABLES THAT ALREADY EXIST (KEEP THEM)
+---------------------------------------------------
+Do not delete these, only integrate them:
+
+1) users (PK: id)
+2) cashback_transactions (PK: id)
+3) referral_commissions (PK: id)
+4) withdrawals (PK: id)
+5) orders (PK: id)
+
+These stay as raw operational tables.
+
+
+---------------------------------------------------
+NEW TABLES TO CREATE
+---------------------------------------------------
+
+1) accounts
+Whenever a new user is created in the "users" table, automatically create a matching row in an "accounts" table using a PostgreSQL trigger.
+- id (PK)
+- user_id (FK references users.id)
+- total_earned
+- total_withdrawn
+- total_pending_withdrawals
+- total_orders
+All totals are numeric and default to 0.
+Frontend must NEVER send or edit totals.
+- totals can only be updated internally (ledger logic, triggers).
+- Add RLS: users can only READ their own account, only backend service-role can UPDATE totals.
+- Trigger must be AFTER INSERT ON users and must prevent duplicate accounts.
+- User creation + account creation must happen in the same ACID transaction.
+- Generate SQL migration for accounts table, trigger function + trigger, RLS policies, and backend code to fetch account balance.
+
+2) transactions
+A unified ledger for all types:
+- id (PK)
+- user_id (FK)
+- type ENUM (cashback, referral, referral_reversed, withdrawal_completed, withdrawal_processing, withdrawal_cancelled, order_created, order_cancelled)
+- amount NUMERIC
+- reference_id (links to original table record)
+- created_at
+
+3) immutable_events
+A permanent audit history.
+- id (PK)
+- transaction_id (FK)
+- event_type
+- event_data (JSON)
+- created_at
+
+4) audit_logs
+Tracks admin or system actions.
+- id (PK)
+- user_id (FK)
+- action
+- before JSON
+- after JSON
+- created_at
+
+---------------------------------------------------
+BUSINESS LOGIC (IMPLEMENT EXACTLY)
+---------------------------------------------------
+
+1) TEarned:
+Increase when:
+- cashback_transactions added
+- referral_commissions added
+
+Decrease when:
+- referral commission reversed
+
+2) TWithdrawals:
+Increase when:
+- withdrawals.status becomes "completed"
+
+3) TPendingWithdrawals:
+Increase when:
+- withdrawals.status = "processing"
+
+Decrease when:
+- status changes from processing → completed
+- status changes from processing → cancelled
+
+4) TOrders:
+Increase when:
+- order created with not-cancelled status
+
+Decrease when:
+- order changes to cancelled
+
+---------------------------------------------------
+CODING TASKS — GENERATE ALL CODE
+---------------------------------------------------
+
+1) Generate SQL schema for all tables (new + existing).
+2) Generate SQL migrations for modifying/removing tables.
+3) Generate backend models (TypeScript or Python).
+4) Generate service functions:
+   - addCashback()
+   - addReferralCommission()
+   - reverseReferralCommission()
+   - createWithdrawal()
+   - changeWithdrawalStatus()
+   - createOrder()
+   - changeOrderStatus()
+5) Each function must:
+   - update original table
+   - insert into transactions table
+   - update accounts running totals
+   - insert immutable event
+   - insert audit log
+
+6) Generate function:
+   getAvailableBalance(user_id)
+   → returns calculated balance from totals only.
+
+7) Ensure ACID safety:
+   - Wrap each operation in DB transaction.
+
+8) Generate example tests for each function.
+
+---------------------------------------------------
+FINAL OUTPUT FORMAT
+---------------------------------------------------
+Return your answer in FULL code blocks:
+- SQL schema
+- Backend logic
+- CRUD services
+- Totals update logic
+- Balance calculation logic
+- Example API endpoints
+- Example test cases
+
+DO NOT skip any part.
+Write the system as if it is a financial-grade ledger.

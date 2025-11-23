@@ -63,7 +63,13 @@ export async function POST(request: NextRequest) {
       userId: data.user.id,
     });
 
-    // Set iron-session cookie for server-side auth
+    // CRITICAL: Clear ALL old session cookies first to prevent session mixing
+    response.cookies.delete('auth_session');
+    response.cookies.delete('sb-access-token');
+    response.cookies.delete('sb-refresh-token');
+    response.cookies.delete('sb-session');
+
+    // Set new iron-session cookie for server-side auth
     response.cookies.set('auth_session', sealedSession, {
       httpOnly: true,
       sameSite: 'lax',
@@ -72,7 +78,7 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
-    // Also set Supabase auth session so client-side checks work
+    // Set new Supabase auth session so client-side checks work
     response.cookies.set('sb-access-token', data.session.access_token, {
       httpOnly: true,
       sameSite: 'lax',

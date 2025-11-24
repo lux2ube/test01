@@ -662,20 +662,22 @@ export async function requestWithdrawal(
         
         if (error || !withdrawal) throw error || new Error('Failed to create withdrawal');
         
-        const { createWithdrawalInLedger } = await import('@/app/actions/ledger');
-        const ledgerResult = await createWithdrawalInLedger(
+        const { createWithdrawal } = await import('@/lib/ledger/service');
+        const ledgerResult = await createWithdrawal({
             userId,
-            payload.amount,
-            withdrawal.id,
-            {
+            amount: payload.amount,
+            referenceId: withdrawal.id,
+            metadata: {
                 payment_method: payload.paymentMethod,
-                withdrawal_details: payload.withdrawalDetails
+                withdrawal_details: payload.withdrawalDetails,
+                _actor_id: userId,
+                _actor_action: 'user_request_withdrawal'
             }
-        );
+        });
         
-        if (!ledgerResult.success) {
+        if (!ledgerResult) {
             await supabase.from('withdrawals').delete().eq('id', withdrawal.id);
-            throw new Error(ledgerResult.error || 'Failed to update ledger');
+            throw new Error('Failed to update ledger');
         }
         
         return { success: true, message: 'Withdrawal request submitted successfully.' };

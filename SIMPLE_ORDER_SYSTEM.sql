@@ -132,6 +132,14 @@ GRANT EXECUTE ON FUNCTION public.ledger_change_order_status TO service_role;
 -- ============================================================================
 -- Update ledger_place_order to use "Processing" status
 -- ============================================================================
+-- Drop all versions of ledger_place_order
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT, TEXT);
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT);
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID);
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS ledger_place_order;
+
 CREATE OR REPLACE FUNCTION ledger_place_order(
   p_user_id UUID,
   p_product_id UUID,

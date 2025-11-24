@@ -4,9 +4,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuthContext } from "@/hooks/useAuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, ArrowUpCircle, ArrowDownCircle, Gift, ShoppingBag, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import type { CashbackTransaction } from "@/types";
 import {
   Table,
   TableBody,
@@ -17,11 +16,46 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { getCashbackTransactions } from "@/app/actions";
+import { Badge } from "@/components/ui/badge";
+import { getUnifiedTransactionHistory, type UnifiedTransaction } from "@/app/actions";
+
+const getTransactionIcon = (type: UnifiedTransaction['type']) => {
+    switch (type) {
+        case 'cashback':
+            return <ArrowUpCircle className="h-4 w-4 text-green-500" />;
+        case 'referral_commission':
+            return <Gift className="h-4 w-4 text-purple-500" />;
+        case 'referral_reversal':
+            return <Gift className="h-4 w-4 text-red-500" />;
+        case 'withdrawal':
+            return <Wallet className="h-4 w-4 text-orange-500" />;
+        case 'order':
+            return <ShoppingBag className="h-4 w-4 text-blue-500" />;
+        default:
+            return <ArrowDownCircle className="h-4 w-4" />;
+    }
+};
+
+const getTransactionBadgeVariant = (type: UnifiedTransaction['type']) => {
+    switch (type) {
+        case 'cashback':
+            return 'default';
+        case 'referral_commission':
+            return 'secondary';
+        case 'referral_reversal':
+            return 'destructive';
+        case 'withdrawal':
+            return 'outline';
+        case 'order':
+            return 'outline';
+        default:
+            return 'secondary';
+    }
+};
 
 export default function TransactionsPage() {
     const { user } = useAuthContext();
-    const [transactions, setTransactions] = useState<CashbackTransaction[]>([]);
+    const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState('');
 
@@ -34,7 +68,7 @@ export default function TransactionsPage() {
             
             setIsLoading(true);
             try {
-                const userTransactions = await getCashbackTransactions();
+                const userTransactions = await getUnifiedTransactionHistory();
                 setTransactions(userTransactions);
             } catch (error) {
                 console.error("Error fetching transactions: ", error);
@@ -52,14 +86,20 @@ export default function TransactionsPage() {
         if (!filter) return transactions;
         const lowerCaseFilter = filter.toLowerCase();
         return transactions.filter(tx => 
-            tx.broker.toLowerCase().includes(lowerCaseFilter) ||
-            tx.accountNumber.toLowerCase().includes(lowerCaseFilter) ||
-            tx.tradeDetails.toLowerCase().includes(lowerCaseFilter)
+            tx.description.toLowerCase().includes(lowerCaseFilter) ||
+            tx.details.toLowerCase().includes(lowerCaseFilter) ||
+            tx.type.toLowerCase().includes(lowerCaseFilter)
         );
     }, [transactions, filter]);
 
-    const totalEarned = useMemo(() => {
-        return transactions.reduce((sum, tx) => sum + tx.cashbackAmount, 0);
+    const stats = useMemo(() => {
+        const earned = transactions
+            .filter(tx => tx.amount > 0)
+            .reduce((sum, tx) => sum + tx.amount, 0);
+        const spent = transactions
+            .filter(tx => tx.amount < 0)
+            .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+        return { earned, spent };
     }, [transactions]);
 
     if (isLoading) {
@@ -74,15 +114,27 @@ export default function TransactionsPage() {
         <div className="container mx-auto px-4 py-4 max-w-4xl space-y-6">
             <PageHeader
                 title="المعاملات"
-                description="سجل كامل بجميع الكاش باك الذي كسبته."
+                description="سجل كامل بجميع المعاملات المالية الخاصة بك."
             />
             
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-right">إجمالي المكتسب</CardTitle>
-                    <CardDescription className="text-3xl font-bold text-primary text-right">${totalEarned.toFixed(2)}</CardDescription>
-                </CardHeader>
-            </Card>
+            <div className="grid grid-cols-2 gap-4">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-right text-sm text-muted-foreground">إجمالي المكتسب</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-primary text-right">${stats.earned.toFixed(2)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-right text-sm text-muted-foreground">إجمالي المصروف</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-orange-500 text-right">${stats.spent.toFixed(2)}</p>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Card>
                 <CardHeader>
@@ -91,7 +143,7 @@ export default function TransactionsPage() {
                         <div className="relative">
                             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
-                                placeholder="فلترة حسب الوسيط، الحساب، التفاصيل..."
+                                placeholder="فلترة حسب النوع، التفاصيل..."
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
                                 className="w-full sm:w-auto pr-10"
@@ -104,7 +156,7 @@ export default function TransactionsPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="text-right">التاريخ</TableHead>
-                                <TableHead className="text-right">الحساب</TableHead>
+                                <TableHead className="text-right">النوع</TableHead>
                                 <TableHead className="text-right">التفاصيل</TableHead>
                                 <TableHead className="text-left">المبلغ</TableHead>
                             </TableRow>
@@ -117,15 +169,21 @@ export default function TransactionsPage() {
                                           {format(tx.date, "PP")}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="font-medium">{tx.broker}</div>
-                                            <div className="text-xs text-muted-foreground">{tx.accountNumber}</div>
+                                            <div className="flex items-center gap-2">
+                                                {getTransactionIcon(tx.type)}
+                                                <Badge variant={getTransactionBadgeVariant(tx.type) as any}>
+                                                    {tx.description}
+                                                </Badge>
+                                            </div>
                                         </TableCell>
                                         <TableCell>
-                                            <p className="max-w-[250px] truncate md:max-w-none md:whitespace-normal">
-                                                {tx.tradeDetails}
+                                            <p className="max-w-[250px] truncate md:max-w-none md:whitespace-normal text-sm">
+                                                {tx.details || '-'}
                                             </p>
                                         </TableCell>
-                                        <TableCell className="text-left font-semibold text-primary">${tx.cashbackAmount.toFixed(2)}</TableCell>
+                                        <TableCell className={`text-left font-semibold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                            {tx.amount >= 0 ? '+' : ''}{tx.amount.toFixed(2)}$
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
@@ -142,5 +200,3 @@ export default function TransactionsPage() {
         </div>
     );
 }
-
-    

@@ -404,6 +404,116 @@ export async function getCashbackTransactions(): Promise<CashbackTransaction[]> 
     }));
 }
 
+export type UnifiedTransaction = {
+    id: string;
+    type: 'cashback' | 'referral_commission' | 'referral_reversal' | 'withdrawal' | 'order';
+    amount: number;
+    date: Date;
+    description: string;
+    details: string;
+    metadata?: Record<string, any>;
+};
+
+export async function getUnifiedTransactionHistory(): Promise<UnifiedTransaction[]> {
+    const user = await getAuthenticatedUser();
+    const userId = user.id;
+    
+    const supabase = await createAdminClient();
+    
+    // Fetch all ledger transactions
+    const { data: ledgerData, error: ledgerError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+    
+    if (ledgerError) {
+        console.error("Error fetching ledger transactions:", ledgerError);
+    }
+    
+    // Fetch legacy cashback transactions (for backwards compatibility)
+    const { data: cashbackData, error: cashbackError } = await supabase
+        .from('cashback_transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+    
+    if (cashbackError) {
+        console.error("Error fetching cashback transactions:", cashbackError);
+    }
+    
+    const transactions: UnifiedTransaction[] = [];
+    
+    // Map ledger transactions
+    (ledgerData || []).forEach(tx => {
+        const metadata = tx.metadata || {};
+        let description = '';
+        let details = '';
+        
+        switch (tx.type) {
+            case 'cashback':
+                description = 'كاش باك';
+                details = metadata.broker ? `${metadata.broker} - ${metadata.account_number || ''}` : 'من التداول';
+                break;
+            case 'referral_commission':
+                description = 'عمولة إحالة';
+                details = metadata.invitee_name ? `من ${metadata.invitee_name}` : 'عمولة من مُحال';
+                break;
+            case 'referral_reversal':
+                description = 'عكس عمولة إحالة';
+                details = metadata.reason || 'تم إلغاء العمولة';
+                break;
+            case 'withdrawal':
+                description = 'سحب';
+                details = metadata.payment_method || 'طلب سحب';
+                break;
+            case 'order':
+                description = 'شراء من المتجر';
+                details = metadata.product_name || 'طلب من المتجر';
+                break;
+            default:
+                description = 'معاملة';
+                details = '';
+        }
+        
+        transactions.push({
+            id: tx.id,
+            type: tx.type,
+            amount: parseFloat(tx.amount),
+            date: new Date(tx.created_at),
+            description,
+            details,
+            metadata,
+        });
+    });
+    
+    // Map legacy cashback transactions (only if not already in ledger)
+    const ledgerIds = new Set((ledgerData || []).map(tx => tx.reference_id));
+    (cashbackData || []).forEach(item => {
+        // Skip if this cashback is already represented in ledger
+        if (ledgerIds.has(item.id)) return;
+        
+        transactions.push({
+            id: item.id,
+            type: 'cashback',
+            amount: parseFloat(item.cashback_amount),
+            date: new Date(item.date),
+            description: 'كاش باك',
+            details: `${item.broker || ''} - ${item.account_number || ''}`.trim(),
+            metadata: {
+                broker: item.broker,
+                account_number: item.account_number,
+                trade_details: item.trade_details,
+            },
+        });
+    });
+    
+    // Sort by date descending
+    transactions.sort((a, b) => b.date.getTime() - a.date.getTime());
+    
+    return transactions;
+}
+
 export async function placeOrder(
     productId: string,
     formData: { userName: string; userEmail: string; deliveryPhoneNumber: string },
@@ -837,17 +947,21 @@ export async function getUserReferralData() {
     }));
     
     // Fetch referral commissions from the ledger transactions table
-    const { data: ledgerCommissions } = await supabase
+    const { data: ledgerCommissions, error: ledgerError } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', userId)
-        .in('transaction_type', ['referral_commission', 'referral_reversal'])
+        .in('type', ['referral_commission', 'referral_reversal'])
         .order('created_at', { ascending: false });
+    
+    if (ledgerError) {
+        console.error('Error fetching referral commissions from ledger:', ledgerError);
+    }
     
     // Map ledger transactions to the expected CashbackTransaction format for the frontend
     const commissionHistory = (ledgerCommissions || []).map(tx => {
         const metadata = tx.metadata || {};
-        const isReversal = tx.transaction_type === 'referral_reversal';
+        const isReversal = tx.type === 'referral_reversal';
         
         // Determine source type from metadata
         let sourceType: 'cashback' | 'store_purchase' = 'cashback';

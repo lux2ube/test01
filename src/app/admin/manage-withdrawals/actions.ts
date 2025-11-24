@@ -27,42 +27,32 @@ async function createNotification(
   }
 }
 
-type EnrichedWithdrawal = Withdrawal & { userProfile?: { name: string; email: string; clientId: number } };
-
-export async function getWithdrawals(): Promise<EnrichedWithdrawal[]> {
+export async function getWithdrawals(): Promise<Withdrawal[]> {
   const supabase = await createAdminClient();
   
-  const [withdrawalsResult, usersResult] = await Promise.all([
-    supabase.from('withdrawals').select('*').order('requested_at', { ascending: false }),
-    supabase.from('users').select('id, name, email, client_id'),
-  ]);
+  const { data, error } = await supabase
+    .from('withdrawals')
+    .select('*')
+    .order('requested_at', { ascending: false });
 
-  if (withdrawalsResult.error) {
-    console.error('Error fetching withdrawals:', withdrawalsResult.error);
+  if (error) {
+    console.error('Error fetching withdrawals:', error);
     return [];
   }
 
-  const usersMap = new Map(
-    (usersResult.data || []).map((user) => [user.id, user])
-  );
-
-  return (withdrawalsResult.data || []).map((row) => {
-    const user = usersMap.get(row.user_id);
-    return {
-      id: row.id,
-      userId: row.user_id,
-      amount: row.amount,
-      status: row.status,
-      paymentMethod: row.payment_method,
-      withdrawalDetails: row.withdrawal_details,
-      requestedAt: new Date(row.requested_at),
-      completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
-      txId: row.tx_id,
-      rejectionReason: row.rejection_reason,
-      previousWithdrawalDetails: row.previous_withdrawal_details,
-      userProfile: user ? { name: user.name, email: user.email, clientId: user.client_id } : undefined,
-    };
-  });
+  return (data || []).map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    amount: row.amount,
+    status: row.status,
+    paymentMethod: row.payment_method,
+    withdrawalDetails: row.withdrawal_details,
+    requestedAt: new Date(row.requested_at),
+    completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
+    txId: row.tx_id,
+    rejectionReason: row.rejection_reason,
+    previousWithdrawalDetails: row.previous_withdrawal_details,
+  }));
 }
 
 export async function approveWithdrawal(withdrawalId: string, txId: string) {

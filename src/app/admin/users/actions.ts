@@ -294,7 +294,7 @@ export async function getUserDetails(userId: string) {
     }
 
     const userProfile: UserProfile = {
-      id: user.id,
+      uid: user.id,
       email: user.email,
       name: user.name,
       role: user.role,

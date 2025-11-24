@@ -6,9 +6,8 @@ import type { ActivityLog } from "@/types"
 import { format } from "date-fns"
 
 const getEventText = (event: ActivityLog['event']) => {
-    const texts: Record<ActivityLog['event'], string> = {
+    const texts = {
         'login': 'تسجيل دخول',
-        'logout': 'تسجيل خروج',
         'signup': 'تسجيل جديد',
         'withdrawal_request': 'طلب سحب',
         'store_purchase': 'شراء من المتجر',
@@ -19,7 +18,6 @@ const getEventText = (event: ActivityLog['event']) => {
 const getEventVariant = (event: ActivityLog['event']) => {
     switch (event) {
         case 'login': return 'default';
-        case 'logout': return 'destructive';
         case 'signup': return 'secondary';
         case 'withdrawal_request': return 'outline';
         case 'store_purchase': return 'outline';

@@ -1,5 +1,7 @@
 # Cashback Trading Platform (رفيق الكاش باك)
 
+> **For complete technical documentation, see [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md)**
+
 ## Overview
 A Next.js-based cashback platform for traders, designed to reward users with cashback on every trade. The platform includes a comprehensive loyalty and referral system, robust authentication, and trading account management. The business vision is to capture a significant market share in the trading cashback sector by offering a secure, feature-rich, and user-friendly experience.
 

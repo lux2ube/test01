@@ -34,7 +34,7 @@ export async function addCashbackTransaction(
   try {
     const supabase = await createAdminClient();
     
-    const { error: insertError } = await supabase
+    const { data: insertedTransaction, error: insertError } = await supabase
       .from('cashback_transactions')
       .insert({
         user_id: data.userId,
@@ -44,9 +44,29 @@ export async function addCashbackTransaction(
         date: new Date().toISOString(),
         trade_details: data.tradeDetails,
         cashback_amount: data.cashbackAmount,
-      });
+      })
+      .select()
+      .single();
 
     if (insertError) throw insertError;
+    if (!insertedTransaction) throw new Error('Failed to get cashback transaction ID');
+
+    const { addCashbackToLedger } = await import('@/app/actions/ledger');
+    const ledgerResult = await addCashbackToLedger(
+      data.userId,
+      data.cashbackAmount,
+      insertedTransaction.id,
+      {
+        account_number: data.accountNumber,
+        broker: data.broker,
+        trade_details: data.tradeDetails,
+      }
+    );
+
+    if (!ledgerResult.success) {
+      console.error('Ledger update failed:', ledgerResult.error);
+      throw new Error(`Failed to update ledger: ${ledgerResult.error}`);
+    }
 
     const { data: user, error: userError } = await supabase
       .from('users')
@@ -72,6 +92,8 @@ export async function addCashbackTransaction(
     await createNotification(data.userId, message, 'cashback', '/dashboard/transactions');
 
     await awardReferralCommission(data.userId, 'cashback', data.cashbackAmount);
+
+    console.log(`✅ Cashback added successfully. Ledger updated: total_earned increased by ${data.cashbackAmount}`);
 
     return { success: true, message: 'تمت إضافة معاملة الكاش باك بنجاح.' };
   } catch (error) {

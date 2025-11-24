@@ -1,5 +1,5 @@
 -- ============================================================================
--- SIMPLIFIED ORDER SYSTEM: 3 Statuses Only (COMPLETE FIX)
+-- SIMPLIFIED ORDER SYSTEM: 3 Statuses Only (BASED ON ACTUAL SCHEMA)
 -- ============================================================================
 -- Statuses: Processing, Confirmed, Cancelled
 -- 
@@ -93,7 +93,7 @@ BEGIN
         v_transaction_amount := 0.01;
     END IF;
 
-    -- Insert transaction
+    -- Insert transaction (reference_id is UUID, no casting needed)
     INSERT INTO public.transactions (user_id, type, amount, reference_id, metadata)
     VALUES (
         p_user_id,
@@ -142,7 +142,7 @@ $$;
 GRANT EXECUTE ON FUNCTION public.ledger_change_order_status TO service_role;
 
 -- ============================================================================
--- PART 3: CREATE ledger_place_order (with ALL required columns)
+-- PART 3: CREATE ledger_place_order (EXACT SCHEMA MATCH)
 -- ============================================================================
 CREATE OR REPLACE FUNCTION ledger_place_order(
   p_user_id UUID,
@@ -177,12 +177,7 @@ DECLARE
   v_audit_id UUID;
   v_account_before JSONB;
   v_account_after JSONB;
-  v_quantity INTEGER := 1;
-  v_total_price NUMERIC;
 BEGIN
-  -- Calculate total price (price * quantity)
-  v_total_price := p_product_price * v_quantity;
-
   -- Check product stock
   SELECT stock INTO v_product_stock
   FROM products
@@ -207,7 +202,7 @@ BEGIN
   WHERE user_id = p_user_id
   FOR UPDATE;
   
-  IF v_available_balance IS NULL OR v_available_balance < v_total_price THEN
+  IF v_available_balance IS NULL OR v_available_balance < p_product_price THEN
     RETURN QUERY SELECT NULL::UUID, NULL::UUID, NULL::UUID, FALSE, 'Insufficient balance';
     RETURN;
   END IF;
@@ -219,12 +214,7 @@ BEGIN
   
   v_new_order_id := gen_random_uuid();
   
-  -- Get account state before
-  SELECT to_jsonb(a.*) INTO v_account_before
-  FROM accounts a
-  WHERE a.user_id = p_user_id;
-  
-  -- Insert order with ALL required columns
+  -- Insert order (CHANGED STATUS FROM 'Pending' TO 'Processing')
   INSERT INTO orders (
     id,
     user_id,
@@ -232,8 +222,6 @@ BEGIN
     product_name,
     product_image,
     product_price,
-    quantity,
-    total_price,
     status,
     user_name,
     user_email,
@@ -248,8 +236,6 @@ BEGIN
     p_product_name,
     p_product_image,
     p_product_price,
-    v_quantity,
-    v_total_price,
     'Processing',
     p_user_name,
     p_user_email,
@@ -258,19 +244,22 @@ BEGIN
     NOW()
   );
   
-  -- Create transaction
+  -- Get account state before transaction
+  SELECT to_jsonb(a.*) INTO v_account_before
+  FROM accounts a
+  WHERE a.user_id = p_user_id;
+  
+  -- Create transaction (reference_id is TEXT in transactions table)
   INSERT INTO transactions (user_id, type, amount, reference_id, metadata, created_at)
   VALUES (
     p_user_id,
     'order_created',
-    -v_total_price,
+    -p_product_price,
     v_new_order_id::TEXT,
     jsonb_build_object(
       'product_id', p_product_id,
       'product_name', p_product_name,
       'order_status', 'Processing',
-      'quantity', v_quantity,
-      'total_price', v_total_price,
       '_actor_id', p_actor_id,
       '_actor_action', p_actor_action
     ),
@@ -285,11 +274,10 @@ BEGIN
     'ORDER_CREATED',
     jsonb_build_object(
       'user_id', p_user_id,
-      'amount', v_total_price,
+      'amount', p_product_price,
       'reference_id', v_new_order_id::TEXT,
       'product_id', p_product_id,
-      'product_name', p_product_name,
-      'quantity', v_quantity
+      'product_name', p_product_name
     ),
     NOW()
   )
@@ -298,7 +286,7 @@ BEGIN
   -- Update account balances
   UPDATE accounts
   SET 
-    total_orders = total_orders + v_total_price,
+    total_orders = total_orders + p_product_price,
     updated_at = NOW()
   WHERE user_id = p_user_id;
   
@@ -343,15 +331,9 @@ $$;
 
 GRANT EXECUTE ON FUNCTION ledger_place_order TO service_role;
 
-COMMENT ON FUNCTION ledger_place_order IS 'Atomically places an order with Processing status, includes all required columns (quantity, total_price, timestamps)';
+COMMENT ON FUNCTION ledger_place_order IS 'Atomically places an order with Processing status: verifies stock and balance, decrements inventory, creates order record, and records ledger entry';
 COMMENT ON FUNCTION public.ledger_change_order_status IS 'Changes order status with balance/stock management: Processing→Confirmed (no change), Processing→Cancelled (refund+restore stock)';
 
 -- ============================================================================
 -- MIGRATION COMPLETE
--- ============================================================================
--- Next steps:
--- 1. Test order placement (should work without NULL errors)
--- 2. Test order confirmation (balance stays same, commission awarded)
--- 3. Test order cancellation (balance restored, stock restored)
--- 4. Verify cannot cancel confirmed orders
 -- ============================================================================

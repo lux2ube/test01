@@ -180,4 +180,43 @@ BEGIN
 END;
 $$;
 
--- DONE! Store orders fixed.
+-- Fix Procedure 8: Change Order Status (Refund on Cancellation)
+CREATE OR REPLACE FUNCTION public.ledger_change_order_status(
+    p_user_id UUID,
+    p_order_id UUID,
+    p_old_status VARCHAR,
+    p_new_status VARCHAR,
+    p_amount NUMERIC,
+    p_actor_id UUID DEFAULT NULL,
+    p_actor_action VARCHAR DEFAULT NULL
+)
+RETURNS TABLE(success BOOLEAN, error_message TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Refund balance if order is cancelled (from ANY status)
+    IF p_new_status = 'Cancelled' THEN
+        UPDATE public.accounts
+        SET total_orders = GREATEST(0, total_orders - p_amount),
+            updated_at = NOW()
+        WHERE user_id = p_user_id;
+    END IF;
+
+    INSERT INTO public.immutable_events (event_type, event_data)
+    VALUES ('order_status_changed', jsonb_build_object(
+        'user_id', p_user_id,
+        'order_id', p_order_id,
+        'old_status', p_old_status,
+        'new_status', p_new_status,
+        'amount', p_amount,
+        'actor_id', p_actor_id,
+        'actor_action', p_actor_action,
+        'timestamp', NOW()
+    ));
+
+    RETURN QUERY SELECT TRUE, NULL::TEXT;
+END;
+$$;
+
+-- DONE! Store orders fixed + Cancellation refunds now work.

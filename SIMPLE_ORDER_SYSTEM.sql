@@ -93,13 +93,13 @@ BEGIN
         v_transaction_amount := 0.01;
     END IF;
 
-    -- Insert transaction (reference_id is TEXT in transactions table)
+    -- Insert transaction (reference_id is UUID in transactions table)
     INSERT INTO public.transactions (user_id, type, amount, reference_id, metadata)
     VALUES (
         p_user_id,
         v_transaction_type::transaction_type,
         v_transaction_amount,
-        p_reference_id::TEXT,
+        p_reference_id,
         coalesce(p_metadata, '{}'::jsonb) || jsonb_build_object(
             'old_status', p_old_status,
             'new_status', p_new_status,
@@ -253,13 +253,13 @@ BEGIN
   FROM accounts a
   WHERE a.user_id = p_user_id;
   
-  -- Create transaction (reference_id is TEXT in transactions table)
+  -- Create transaction (reference_id is UUID in transactions table)
   INSERT INTO transactions (user_id, type, amount, reference_id, metadata, created_at)
   VALUES (
     p_user_id,
     'order_created',
     -p_product_price,
-    v_new_order_id::TEXT,
+    v_new_order_id,
     jsonb_build_object(
       'product_id', p_product_id,
       'product_name', p_product_name,

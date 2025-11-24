@@ -634,39 +634,20 @@ export async function requestWithdrawal(
     try {
         const supabase = await createAdminClient();
         
-        const [
-            { data: transactions },
-            { data: withdrawals },
-            { data: orders }
-        ] = await Promise.all([
-            supabase.from('cashback_transactions').select('cashback_amount').eq('user_id', userId),
-            supabase.from('withdrawals').select('amount, status').eq('user_id', userId),
-            supabase.from('orders').select('product_price, status').eq('user_id', userId)
-        ]);
-
-        const totalEarned = (transactions || []).reduce((sum, t) => sum + t.cashback_amount, 0);
+        const { getMyBalance } = await import('@/app/actions/ledger');
+        const balanceResult = await getMyBalance();
         
-        let pendingWithdrawals = 0;
-        let completedWithdrawals = 0;
-        (withdrawals || []).forEach(w => {
-            if (w.status === 'Processing') {
-                pendingWithdrawals += w.amount;
-            } else if (w.status === 'Completed') {
-                completedWithdrawals += w.amount;
-            }
-        });
-
-        const totalSpentOnOrders = (orders || [])
-            .filter(o => o.status !== 'Cancelled')
-            .reduce((sum, o) => sum + o.product_price, 0);
+        if (!balanceResult.success) {
+            throw new Error('Failed to fetch balance');
+        }
         
-        const availableBalance = totalEarned - completedWithdrawals - pendingWithdrawals - totalSpentOnOrders;
+        const availableBalance = balanceResult.balance.available_balance;
         
         if (payload.amount > availableBalance) {
             throw new Error("Insufficient available balance for this withdrawal.");
         }
         
-        const { error } = await supabase
+        const { data: withdrawal, error } = await supabase
             .from('withdrawals')
             .insert({
                 user_id: userId,
@@ -675,9 +656,27 @@ export async function requestWithdrawal(
                 payment_method: payload.paymentMethod,
                 withdrawal_details: payload.withdrawalDetails,
                 requested_at: new Date().toISOString()
-            });
+            })
+            .select()
+            .single();
         
-        if (error) throw error;
+        if (error || !withdrawal) throw error || new Error('Failed to create withdrawal');
+        
+        const { createWithdrawalInLedger } = await import('@/app/actions/ledger');
+        const ledgerResult = await createWithdrawalInLedger(
+            userId,
+            payload.amount,
+            withdrawal.id,
+            {
+                payment_method: payload.paymentMethod,
+                withdrawal_details: payload.withdrawalDetails
+            }
+        );
+        
+        if (!ledgerResult.success) {
+            await supabase.from('withdrawals').delete().eq('id', withdrawal.id);
+            throw new Error(ledgerResult.error || 'Failed to update ledger');
+        }
         
         return { success: true, message: 'Withdrawal request submitted successfully.' };
     } catch (error) {

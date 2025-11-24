@@ -11,7 +11,10 @@
 -- 5. Cannot confirm "Cancelled" orders
 -- ============================================================================
 
+-- Drop all versions of the function
+DROP FUNCTION IF EXISTS public.ledger_change_order_status(p_user_id UUID, p_reference_id UUID, p_old_status VARCHAR, p_new_status VARCHAR, p_amount NUMERIC, p_metadata JSONB, p_actor_id UUID, p_actor_action VARCHAR);
 DROP FUNCTION IF EXISTS public.ledger_change_order_status(UUID, UUID, VARCHAR, VARCHAR, NUMERIC, JSONB, UUID, VARCHAR);
+DROP FUNCTION IF EXISTS public.ledger_change_order_status;
 
 CREATE OR REPLACE FUNCTION public.ledger_change_order_status(
     p_user_id UUID,

@@ -9,13 +9,14 @@
 
 ---
 
-## 💰 Balance Logic
+## 💰 Balance & Stock Logic
 
 ### When User Submits Order:
 ```
 Status: "Processing"
 total_orders: +$amount
 Available balance: -$amount
+Product stock: -1 (DECREASED)
 ```
 
 ### When Admin Confirms Order:
@@ -23,6 +24,7 @@ Available balance: -$amount
 Status: "Confirmed"  
 total_orders: NO CHANGE (still +$amount)
 Available balance: NO CHANGE
+Product stock: NO CHANGE
 Referral commission: AWARDED
 ```
 
@@ -31,6 +33,7 @@ Referral commission: AWARDED
 Status: "Cancelled"
 total_orders: -$amount (DECREASE)
 Available balance: +$amount (RESTORED)
+Product stock: +1 (INCREASED/RESTORED)
 Referral commission: CLAWED BACK (if was awarded)
 ```
 

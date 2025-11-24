@@ -31,6 +31,7 @@ DECLARE
     v_transaction_id UUID;
     v_transaction_type TEXT;
     v_transaction_amount NUMERIC;
+    v_product_id UUID;
 BEGIN
     -- Validate status change
     IF p_old_status = p_new_status THEN
@@ -50,11 +51,23 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Get product_id from the order
+    SELECT product_id INTO v_product_id
+    FROM orders
+    WHERE id = p_reference_id;
+
     -- Determine transaction type and amount
     IF p_new_status IN ('Cancelled', 'cancelled') AND p_old_status NOT IN ('Cancelled', 'cancelled') THEN
         -- Cancelling order: return funds (positive transaction)
         v_transaction_type := 'order_cancelled';
         v_transaction_amount := p_amount;
+        
+        -- STOCK MANAGEMENT: Restore stock when cancelling
+        IF v_product_id IS NOT NULL THEN
+            UPDATE products
+            SET stock = stock + 1
+            WHERE id = v_product_id;
+        END IF;
     ELSIF p_new_status IN ('Confirmed', 'confirmed') AND p_old_status NOT IN ('Confirmed', 'confirmed') THEN
         -- Confirming order: no balance change, just log it
         v_transaction_type := 'order_created';
@@ -78,7 +91,8 @@ BEGIN
             'original_amount', p_amount,
             'actor_id', p_actor_id,
             'actor_action', p_actor_action,
-            'is_status_change_only', (v_transaction_amount = 0.01)
+            'is_status_change_only', (v_transaction_amount = 0.01),
+            'stock_restored', (v_product_id IS NOT NULL AND p_new_status IN ('Cancelled', 'cancelled'))
         )
     )
     RETURNING id INTO v_transaction_id;
@@ -101,6 +115,8 @@ BEGIN
         'amount', p_amount,
         'actor_id', p_actor_id,
         'actor_action', p_actor_action,
+        'product_id', v_product_id,
+        'stock_restored', (v_product_id IS NOT NULL AND p_new_status IN ('Cancelled', 'cancelled')),
         'timestamp', NOW()
     ));
 

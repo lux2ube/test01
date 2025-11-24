@@ -56,10 +56,6 @@ export default function ManageOrdersPage() {
             <DataTable 
                 columns={columns} 
                 data={orders}
-                searchableColumns={[
-                    { id: 'userName', title: 'العميل' },
-                    { id: 'productName', title: 'المنتج' },
-                ]}
                 filterableColumns={[
                     {
                       id: 'status',

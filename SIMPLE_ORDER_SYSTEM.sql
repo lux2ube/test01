@@ -93,13 +93,13 @@ BEGIN
         v_transaction_amount := 0.01;
     END IF;
 
-    -- Insert transaction (reference_id is UUID, no casting needed)
+    -- Insert transaction (reference_id is TEXT in transactions table)
     INSERT INTO public.transactions (user_id, type, amount, reference_id, metadata)
     VALUES (
         p_user_id,
         v_transaction_type::transaction_type,
         v_transaction_amount,
-        p_reference_id,
+        p_reference_id::TEXT,
         coalesce(p_metadata, '{}'::jsonb) || jsonb_build_object(
             'old_status', p_old_status,
             'new_status', p_new_status,

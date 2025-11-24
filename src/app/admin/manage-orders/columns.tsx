@@ -18,9 +18,8 @@ import type { Order } from "@/types"
 
 const getStatusVariant = (status: Order['status']) => {
     switch (status) {
-        case 'Delivered': return 'default';
-        case 'Pending': return 'secondary';
-        case 'Shipped': return 'outline';
+        case 'Processing': return 'secondary';
+        case 'Confirmed': return 'default';
         case 'Cancelled': return 'destructive';
         default: return 'outline';
     }
@@ -28,18 +27,16 @@ const getStatusVariant = (status: Order['status']) => {
     
 const getStatusText = (status: Order['status']) => {
     switch (status) {
-        case 'Delivered': return 'تم التوصيل';
-        case 'Pending': return 'قيد الانتظار';
-        case 'Shipped': return 'تم الشحن';
+        case 'Processing': return 'قيد المعالجة';
+        case 'Confirmed': return 'مؤكد';
         case 'Cancelled': return 'ملغي';
         default: return status;
     }
 };
 
 const statusOptions: { [key in Order['status']]: string } = {
-    'Pending': 'تحديد كـ قيد الانتظار',
-    'Shipped': 'تحديد كـ تم الشحن',
-    'Delivered': 'تحديد كـ تم التوصيل',
+    'Processing': 'تحديد كـ قيد المعالجة',
+    'Confirmed': 'تحديد كـ مؤكد',
     'Cancelled': 'تحديد كـ ملغي',
 }
 

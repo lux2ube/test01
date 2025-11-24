@@ -350,7 +350,7 @@ export interface Order {
     productImage: string;
     price: number;
     deliveryPhoneNumber: string;
-    status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled';
+    status: 'Processing' | 'Confirmed' | 'Cancelled';
     createdAt: Date;
     userEmail?: string;
     userName?: string;

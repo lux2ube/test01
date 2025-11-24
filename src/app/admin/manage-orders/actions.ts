@@ -67,6 +67,15 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
             referralCommissionAwarded: orderData.referral_commission_awarded || false,
         } as Order;
 
+        // Validate status transition rules
+        if (order.status === 'Confirmed' && status === 'Cancelled') {
+            throw new Error('لا يمكن إلغاء طلب تم تأكيده.');
+        }
+        
+        if (order.status === 'Cancelled' && status === 'Confirmed') {
+            throw new Error('لا يمكن تأكيد طلب ملغى.');
+        }
+
         // Call ledger function to track order status change
         const { data: ledgerResult, error: ledgerError } = await supabase.rpc('ledger_change_order_status', {
             p_user_id: order.userId,
@@ -90,7 +99,8 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
 
         let updateData: any = { status };
 
-        if (status === 'Delivered' && !order.referralCommissionAwarded) {
+        // Award referral commission when order is confirmed
+        if (status === 'Confirmed' && !order.referralCommissionAwarded) {
             await awardReferralCommission(order.userId, 'store_purchase', order.price);
             updateData.referral_commission_awarded = true;
         } else if (status === 'Cancelled' && order.referralCommissionAwarded) {

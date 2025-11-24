@@ -94,9 +94,8 @@ function MyOrdersList() {
 
     const getStatusVariant = (status: Order['status']) => {
         switch (status) {
-            case 'Delivered': return 'default';
-            case 'Pending': return 'secondary';
-            case 'Shipped': return 'outline';
+            case 'Processing': return 'secondary';
+            case 'Confirmed': return 'default';
             case 'Cancelled': return 'destructive';
             default: return 'outline';
         }
@@ -104,9 +103,8 @@ function MyOrdersList() {
 
     const getStatusText = (status: Order['status']) => {
         switch (status) {
-            case 'Delivered': return 'تم التوصيل';
-            case 'Pending': return 'قيد الانتظار';
-            case 'Shipped': return 'تم الشحن';
+            case 'Processing': return 'قيد المعالجة';
+            case 'Confirmed': return 'مؤكد';
             case 'Cancelled': return 'ملغي';
             default: return status;
         }

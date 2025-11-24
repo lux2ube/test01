@@ -65,9 +65,8 @@ export default function ManageOrdersPage() {
                       id: 'status',
                       title: 'الحالة',
                       options: [
-                        { value: 'Pending', label: 'قيد الانتظar' },
-                        { value: 'Shipped', label: 'تم الشحن' },
-                        { value: 'Delivered', label: 'تم التوصيل' },
+                        { value: 'Processing', label: 'قيد المعالجة' },
+                        { value: 'Confirmed', label: 'مؤكد' },
                         { value: 'Cancelled', label: 'ملغي' },
                       ],
                     },

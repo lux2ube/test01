@@ -220,9 +220,14 @@ export async function addCashbackToLedger(
   referenceId: string,
   metadata?: Record<string, any>
 ) {
+  console.log('🟡 [ACTION] addCashbackToLedger called:', { userId, amount, referenceId });
+  
   // SECURITY: Verify admin privileges
   const auth = await verifyAdminOrServiceRole();
+  console.log('🟡 [ACTION] Admin verification result:', { isAdmin: auth.isAdmin, userId: auth.userId });
+  
   if (!auth.isAdmin || !auth.userId) {
+    console.error('🔴 [ACTION] Unauthorized: Not admin');
     return { 
       success: false, 
       error: 'Unauthorized: Admin privileges required for this operation' 
@@ -230,6 +235,7 @@ export async function addCashbackToLedger(
   }
 
   try {
+    console.log('🟡 [ACTION] Calling ledgerService.addCashback');
     const result = await ledgerService.addCashback({
       userId,
       amount,
@@ -244,9 +250,10 @@ export async function addCashbackToLedger(
       userAgent: await getUserAgent(),
     });
 
+    console.log('🟢 [ACTION] Ledger service returned success');
     return { success: true, result };
   } catch (error) {
-    console.error('Failed to add cashback:', error);
+    console.error('🔴 [ACTION] Failed to add cashback:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to add cashback' 

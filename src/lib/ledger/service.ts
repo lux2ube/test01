@@ -107,6 +107,12 @@ export interface AddCashbackParams {
 export async function addCashback(params: AddCashbackParams): Promise<TransactionResult> {
   const supabase = getServiceClient();
 
+  console.log('🔵 [LEDGER] Calling ledger_add_cashback with params:', {
+    userId: params.userId,
+    amount: params.amount,
+    referenceId: params.referenceId,
+  });
+
   const { data, error } = await supabase.rpc('ledger_add_cashback', {
     p_user_id: params.userId,
     p_amount: params.amount,
@@ -116,15 +122,20 @@ export async function addCashback(params: AddCashbackParams): Promise<Transactio
     p_user_agent: params.userAgent || null,
   });
 
+  console.log('🔵 [LEDGER] RPC response:', { data, error });
+
   if (error) {
+    console.error('🔴 [LEDGER] RPC error:', error);
     throw new Error(`Failed to add cashback: ${error.message}`);
   }
 
   if (!data || data.length === 0) {
+    console.error('🔴 [LEDGER] No data returned from stored procedure');
     throw new Error('No data returned from ledger_add_cashback');
   }
 
   const result = data[0];
+  console.log('🟢 [LEDGER] Stored procedure returned:', result);
 
   // Fetch the created records
   const [transaction, event, audit, account] = await Promise.all([

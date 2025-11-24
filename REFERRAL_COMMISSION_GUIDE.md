@@ -1,9 +1,10 @@
 # 📘 Referral Commission System Guide
 
 ## Overview
-This system automatically awards commission to referrers when their invitees:
-1. **Get cashback** from trading
-2. **Place orders** in the store
+This system automatically **awards and reverses** commission to referrers when their invitees:
+1. **Get cashback** from trading → Commission awarded
+2. **Place orders** in the store → Commission awarded
+3. **Order is cancelled** → Commission reversed automatically
 
 Commission rates are based on the **referrer's loyalty level**, using:
 - `advantage_referral_cashback` - % when invitee gets cashback
@@ -19,11 +20,16 @@ Commission rates are based on the **referrer's loyalty level**, using:
 3. Click **RUN**
 4. Wait for success message
 
+### What Gets Installed:
+- ✅ New column: `orders.referral_commission_transaction_id` (UUID)
+- ✅ Function: `award_referral_commission_if_applicable`
+- ✅ Function: `reverse_referral_commission_for_order`
+
 ---
 
 ## 🔧 How It Works
 
-### Function Signature:
+### Award Function Signature:
 ```sql
 award_referral_commission_if_applicable(
   p_invitee_user_id UUID,       -- User who got cashback/placed order
@@ -112,6 +118,26 @@ SELECT * FROM award_referral_commission_if_applicable(
 -- error_message: 'No referrer found'
 ```
 
+### Example 4: REVERSE Commission When Order is Cancelled
+
+```sql
+-- Order was cancelled, need to reverse the referral commission
+SELECT * FROM reverse_referral_commission_for_order(
+  'order-uuid',            -- order ID that was cancelled
+  '192.168.1.1'::INET,     -- IP address
+  'Mozilla/5.0...'         -- User agent
+);
+
+-- Returns:
+-- commission_reversed: TRUE
+-- referrer_user_id: 'referrer-uuid' (who lost the commission)
+-- commission_amount: 1.00 (amount reversed)
+-- reversal_transaction_id: UUID
+-- event_id: UUID
+-- audit_id: UUID
+-- error_message: NULL
+```
+
 ---
 
 ## 🔗 Integration Points
@@ -156,11 +182,34 @@ const { data: commissionResult } = await supabase.rpc(
 );
 
 if (commissionResult?.commission_awarded) {
-  // Update order.referral_commission_awarded = true
+  // Update order with commission tracking info
   await supabase
     .from('orders')
-    .update({ referral_commission_awarded: true })
+    .update({ 
+      referral_commission_awarded: true,
+      referral_commission_transaction_id: commissionResult.transaction_id
+    })
     .eq('id', orderId);
+}
+```
+
+### 3. When Order is Cancelled (REVERSAL)
+In your order cancellation function:
+
+```typescript
+// When cancelling an order, reverse the referral commission
+const { data: reversalResult } = await supabase.rpc(
+  'reverse_referral_commission_for_order',
+  {
+    p_order_id: orderId,
+    p_ip_address: ipAddress,
+    p_user_agent: userAgent
+  }
+);
+
+if (reversalResult?.commission_reversed) {
+  console.log(`Referral commission reversed: $${reversalResult.commission_amount}`);
+  // The function automatically clears referral_commission_awarded and transaction_id
 }
 ```
 
@@ -168,12 +217,26 @@ if (commissionResult?.commission_awarded) {
 
 ## 📋 Return Values
 
+### Award Function Returns:
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `commission_awarded` | BOOLEAN | TRUE if commission was awarded |
 | `referrer_user_id` | UUID | ID of the referrer who got commission |
 | `commission_amount` | NUMERIC | Amount of commission awarded |
 | `transaction_id` | UUID | ID of the transaction record |
+| `event_id` | UUID | ID of the immutable event |
+| `audit_id` | UUID | ID of the audit log |
+| `error_message` | TEXT | NULL if success, error description if failed |
+
+### Reversal Function Returns:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `commission_reversed` | BOOLEAN | TRUE if commission was reversed |
+| `referrer_user_id` | UUID | ID of the referrer who lost commission |
+| `commission_amount` | NUMERIC | Amount of commission reversed |
+| `reversal_transaction_id` | UUID | ID of the reversal transaction |
 | `event_id` | UUID | ID of the immutable event |
 | `audit_id` | UUID | ID of the audit log |
 | `error_message` | TEXT | NULL if success, error description if failed |

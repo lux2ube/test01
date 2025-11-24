@@ -1,13 +1,22 @@
-# ✅ Referral Commission Function - COMPLETED
+# ✅ Referral Commission System - COMPLETED
 
 ## What Was Created
 
-### 1. New SQL Function: `award_referral_commission_if_applicable`
-**File**: `REFERRAL_COMMISSION_FUNCTION.sql` (120 lines)
+**File**: `REFERRAL_COMMISSION_FUNCTION.sql` (260 lines)
 
-This function automatically awards commission to referrers when their invitees:
+### 1. New Column: `orders.referral_commission_transaction_id`
+Tracks the ledger transaction ID so we can reverse commission on cancellation.
+
+### 2. Award Function: `award_referral_commission_if_applicable`
+Awards commission to referrers when their invitees:
 - ✅ Get cashback from trading
 - ✅ Place orders in the store
+
+### 3. Reversal Function: `reverse_referral_commission_for_order`
+Reverses commission when orders are cancelled:
+- ✅ Reads stored transaction ID from order
+- ✅ Calls `ledger_reverse_referral` to reverse the commission
+- ✅ Clears the order's commission flags
 
 ---
 
@@ -73,12 +82,29 @@ const { data } = await supabase.rpc('award_referral_commission_if_applicable', {
 });
 
 if (data?.commission_awarded) {
-  // Update order record
+  // Update order with commission tracking info
   await supabase
     .from('orders')
-    .update({ referral_commission_awarded: true })
+    .update({ 
+      referral_commission_awarded: true,
+      referral_commission_transaction_id: data.transaction_id
+    })
     .eq('id', orderId);
 }
+```
+
+### Scenario 3: When Order is Cancelled (REVERSAL)
+
+```typescript
+const { data } = await supabase.rpc('reverse_referral_commission_for_order', {
+  p_order_id: orderId,
+  p_ip_address: ipAddress,
+  p_user_agent: userAgent
+});
+
+// data.commission_reversed = true/false
+// data.commission_amount = amount that was reversed
+// The function automatically clears the order flags
 ```
 
 ---

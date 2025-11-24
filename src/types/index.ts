@@ -355,7 +355,6 @@ export interface Order {
     userEmail?: string;
     userName?: string;
     referralCommissionAwarded?: boolean;
-    referralCommissionTransactionId?: string | null;
 }
 
 /**

@@ -66,7 +66,6 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
             userEmail: orderData.user_email,
             userName: orderData.user_name,
             referralCommissionAwarded: orderData.referral_commission_awarded || false,
-            referralCommissionTransactionId: orderData.referral_commission_transaction_id || null,
         } as Order;
 
         // Validate status transition rules
@@ -102,33 +101,12 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
         let updateData: Record<string, any> = { status };
 
         // Award referral commission when order is confirmed
+        // Note: Confirmed orders cannot be cancelled, so no reversal logic needed
         if (status === 'Confirmed' && !order.referralCommissionAwarded) {
             const commissionResult = await awardReferralCommission(order.userId, 'store_purchase', order.price);
-            if (commissionResult.success && commissionResult.transactionId) {
+            if (commissionResult.success) {
                 updateData.referral_commission_awarded = true;
-                updateData.referral_commission_transaction_id = commissionResult.transactionId;
-                console.log(`✅ Referral commission transaction saved: ${commissionResult.transactionId}`);
-            }
-        } else if (status === 'Cancelled' && order.referralCommissionAwarded && order.referralCommissionTransactionId) {
-            // Reverse the referral commission using the stored transaction ID
-            const { reverseReferralCommissionInLedger } = await import('@/app/actions/ledger');
-            const reversalResult = await reverseReferralCommissionInLedger(
-                order.userId,
-                order.price,
-                order.referralCommissionTransactionId,
-                {
-                    order_id: orderId,
-                    product_name: order.productName,
-                    reason: 'Order cancelled'
-                }
-            );
-            
-            if (reversalResult.success) {
-                updateData.referral_commission_awarded = false;
-                updateData.referral_commission_transaction_id = null;
-                console.log(`✅ Referral commission reversed for order: ${orderId}`);
-            } else {
-                console.error('Failed to reverse referral commission:', reversalResult.error);
+                console.log(`✅ Referral commission awarded for order: ${orderId}`);
             }
         }
 

@@ -299,7 +299,7 @@ BEGIN
   FROM accounts a
   WHERE a.user_id = p_user_id;
   
-  -- Create audit log
+  -- Create audit log (resource_id is UUID in audit_logs table)
   INSERT INTO audit_logs (
     user_id,
     action,
@@ -315,7 +315,7 @@ BEGIN
     p_user_id,
     'ORDER_CREATED',
     'orders',
-    v_new_order_id::TEXT,
+    v_new_order_id,
     v_account_before,
     v_account_after,
     p_ip_address,

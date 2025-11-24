@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { ActivityLog, BannerSettings, BlogPost, Broker, CashbackTransaction, DeviceInfo, Notification, Order, PaymentMethod, ProductCategory, Product, TradingAccount, UserProfile, Withdrawal, GeoInfo, ClientLevel, AdminNotification, Offer } from '@/types';
 import { getClientLevels } from '@/app/actions';
@@ -186,12 +187,13 @@ export async function awardReferralCommission(
     }
 
     const commissionAmount = (amountValue * commissionPercent) / 100;
+    const referenceId = randomUUID();
 
     const { addReferralCommissionToLedger } = await import('@/app/actions/ledger');
     const ledgerResult = await addReferralCommissionToLedger(
       referrerId,
       commissionAmount,
-      `referral-${userId}-${sourceType}-${Date.now()}`,
+      referenceId,
       {
         source_user_id: userId,
         source_user_name: user.name,
@@ -259,12 +261,13 @@ export async function clawbackReferralCommission(
     if (commissionPercent <= 0) return;
 
     const commissionAmountToClawback = (originalAmount * commissionPercent) / 100;
+    const clawbackReferenceId = randomUUID();
 
     const { reverseReferralCommissionInLedger } = await import('@/app/actions/ledger');
     const ledgerResult = await reverseReferralCommissionInLedger(
       referrerId,
       commissionAmountToClawback,
-      `clawback-${originalUserId}-${sourceType}-${Date.now()}`,
+      clawbackReferenceId,
       {
         source_user_id: originalUserId,
         source_user_name: user.name,

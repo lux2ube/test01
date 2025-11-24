@@ -1,21 +1,33 @@
 -- ============================================================================
--- SIMPLIFIED ORDER SYSTEM: 3 Statuses Only
+-- SIMPLIFIED ORDER SYSTEM: 3 Statuses Only (COMPLETE FIX)
 -- ============================================================================
 -- Statuses: Processing, Confirmed, Cancelled
 -- 
 -- Logic:
--- 1. User submits order → "Processing" → total_orders INCREASES
--- 2. Admin confirms → "Confirmed" → NO CHANGE to total_orders
--- 3. Admin cancels → "Cancelled" → total_orders DECREASES
+-- 1. User submits order → "Processing" → total_orders INCREASES, stock DECREASES
+-- 2. Admin confirms → "Confirmed" → NO CHANGE to total_orders or stock
+-- 3. Admin cancels → "Cancelled" → total_orders DECREASES, stock INCREASES (restored)
 -- 4. Cannot cancel "Confirmed" orders
 -- 5. Cannot confirm "Cancelled" orders
 -- ============================================================================
 
--- Drop all versions of the function
+-- ============================================================================
+-- PART 1: DROP ALL EXISTING FUNCTION VERSIONS
+-- ============================================================================
 DROP FUNCTION IF EXISTS public.ledger_change_order_status(p_user_id UUID, p_reference_id UUID, p_old_status VARCHAR, p_new_status VARCHAR, p_amount NUMERIC, p_metadata JSONB, p_actor_id UUID, p_actor_action VARCHAR);
 DROP FUNCTION IF EXISTS public.ledger_change_order_status(UUID, UUID, VARCHAR, VARCHAR, NUMERIC, JSONB, UUID, VARCHAR);
 DROP FUNCTION IF EXISTS public.ledger_change_order_status;
 
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT, TEXT);
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT);
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID);
+DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS ledger_place_order;
+
+-- ============================================================================
+-- PART 2: CREATE ledger_change_order_status (with stock management)
+-- ============================================================================
 CREATE OR REPLACE FUNCTION public.ledger_change_order_status(
     p_user_id UUID,
     p_reference_id UUID,
@@ -130,16 +142,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.ledger_change_order_status TO service_role;
 
 -- ============================================================================
--- Update ledger_place_order to use "Processing" status
+-- PART 3: CREATE ledger_place_order (with ALL required columns)
 -- ============================================================================
--- Drop all versions of ledger_place_order
-DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, TEXT);
-DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT, TEXT);
-DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT);
-DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT, UUID);
-DROP FUNCTION IF EXISTS ledger_place_order(UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, TEXT, TEXT);
-DROP FUNCTION IF EXISTS ledger_place_order;
-
 CREATE OR REPLACE FUNCTION ledger_place_order(
   p_user_id UUID,
   p_product_id UUID,
@@ -173,7 +177,13 @@ DECLARE
   v_audit_id UUID;
   v_account_before JSONB;
   v_account_after JSONB;
+  v_quantity INTEGER := 1;
+  v_total_price NUMERIC;
 BEGIN
+  -- Calculate total price (price * quantity)
+  v_total_price := p_product_price * v_quantity;
+
+  -- Check product stock
   SELECT stock INTO v_product_stock
   FROM products
   WHERE id = p_product_id
@@ -189,6 +199,7 @@ BEGIN
     RETURN;
   END IF;
   
+  -- Check user balance
   SELECT 
     total_earned - total_withdrawn - total_pending_withdrawals - total_orders
   INTO v_available_balance
@@ -196,18 +207,24 @@ BEGIN
   WHERE user_id = p_user_id
   FOR UPDATE;
   
-  IF v_available_balance IS NULL OR v_available_balance < p_product_price THEN
+  IF v_available_balance IS NULL OR v_available_balance < v_total_price THEN
     RETURN QUERY SELECT NULL::UUID, NULL::UUID, NULL::UUID, FALSE, 'Insufficient balance';
     RETURN;
   END IF;
   
+  -- Decrease stock
   UPDATE products
   SET stock = stock - 1
   WHERE id = p_product_id;
   
   v_new_order_id := gen_random_uuid();
   
-  -- Change status from 'Pending' to 'Processing'
+  -- Get account state before
+  SELECT to_jsonb(a.*) INTO v_account_before
+  FROM accounts a
+  WHERE a.user_id = p_user_id;
+  
+  -- Insert order with ALL required columns
   INSERT INTO orders (
     id,
     user_id,
@@ -215,12 +232,15 @@ BEGIN
     product_name,
     product_image,
     product_price,
+    quantity,
+    total_price,
     status,
     user_name,
     user_email,
     delivery_phone_number,
     referral_commission_awarded,
-    created_at
+    created_at,
+    updated_at
   )
   VALUES (
     v_new_order_id,
@@ -229,28 +249,30 @@ BEGIN
     p_product_name,
     p_product_image,
     p_product_price,
-    'Processing',  -- Changed from 'Pending' to 'Processing'
+    v_quantity,
+    v_total_price,
+    'Processing',
     p_user_name,
     p_user_email,
     p_delivery_phone,
     FALSE,
+    NOW(),
     NOW()
   );
   
-  SELECT to_jsonb(a.*) INTO v_account_before
-  FROM accounts a
-  WHERE a.user_id = p_user_id;
-  
+  -- Create transaction
   INSERT INTO transactions (user_id, type, amount, reference_id, metadata, created_at)
   VALUES (
     p_user_id,
     'order_created',
-    -p_product_price,
+    -v_total_price,
     v_new_order_id::TEXT,
     jsonb_build_object(
       'product_id', p_product_id,
       'product_name', p_product_name,
       'order_status', 'Processing',
+      'quantity', v_quantity,
+      'total_price', v_total_price,
       '_actor_id', p_actor_id,
       '_actor_action', p_actor_action
     ),
@@ -258,31 +280,36 @@ BEGIN
   )
   RETURNING id INTO v_transaction_id;
   
+  -- Create immutable event
   INSERT INTO immutable_events (transaction_id, event_type, event_data, created_at)
   VALUES (
     v_transaction_id,
     'ORDER_CREATED',
     jsonb_build_object(
       'user_id', p_user_id,
-      'amount', p_product_price,
+      'amount', v_total_price,
       'reference_id', v_new_order_id::TEXT,
       'product_id', p_product_id,
-      'product_name', p_product_name
+      'product_name', p_product_name,
+      'quantity', v_quantity
     ),
     NOW()
   )
   RETURNING id INTO v_event_id;
   
+  -- Update account balances
   UPDATE accounts
   SET 
-    total_orders = total_orders + p_product_price,
+    total_orders = total_orders + v_total_price,
     updated_at = NOW()
   WHERE user_id = p_user_id;
   
+  -- Get account state after
   SELECT to_jsonb(a.*) INTO v_account_after
   FROM accounts a
   WHERE a.user_id = p_user_id;
   
+  -- Create audit log
   INSERT INTO audit_logs (
     user_id,
     action,
@@ -316,4 +343,17 @@ EXCEPTION
 END;
 $$;
 
-COMMENT ON FUNCTION ledger_place_order IS 'Atomically places an order with Processing status';
+GRANT EXECUTE ON FUNCTION ledger_place_order TO service_role;
+
+COMMENT ON FUNCTION ledger_place_order IS 'Atomically places an order with Processing status, includes all required columns (quantity, total_price, timestamps)';
+COMMENT ON FUNCTION public.ledger_change_order_status IS 'Changes order status with balance/stock management: Processing→Confirmed (no change), Processing→Cancelled (refund+restore stock)';
+
+-- ============================================================================
+-- MIGRATION COMPLETE
+-- ============================================================================
+-- Next steps:
+-- 1. Test order placement (should work without NULL errors)
+-- 2. Test order confirmation (balance stays same, commission awarded)
+-- 3. Test order cancellation (balance restored, stock restored)
+-- 4. Verify cannot cancel confirmed orders
+-- ============================================================================

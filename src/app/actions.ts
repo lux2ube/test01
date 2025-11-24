@@ -421,14 +421,20 @@ export async function getUnifiedTransactionHistory(): Promise<UnifiedTransaction
     const supabase = await createAdminClient();
     
     // Fetch all ledger transactions
-    const { data: ledgerData, error: ledgerError } = await supabase
+    let ledgerData: any[] | null = null;
+    const { data: ledgerResult, error: ledgerError } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
     
     if (ledgerError) {
-        console.error("Error fetching ledger transactions:", ledgerError);
+        // Table may not exist yet if migrations haven't been applied
+        if (ledgerError.code !== '42P01') {
+            console.error("Error fetching ledger transactions:", ledgerError);
+        }
+    } else {
+        ledgerData = ledgerResult;
     }
     
     // Fetch legacy cashback transactions (for backwards compatibility)
@@ -457,7 +463,7 @@ export async function getUnifiedTransactionHistory(): Promise<UnifiedTransaction
                 break;
             case 'referral_commission':
                 description = 'عمولة إحالة';
-                details = metadata.invitee_name ? `من ${metadata.invitee_name}` : 'عمولة من مُحال';
+                details = metadata.source_user_name ? `من ${metadata.source_user_name}` : 'عمولة من مُحال';
                 break;
             case 'referral_reversal':
                 description = 'عكس عمولة إحالة';
@@ -971,8 +977,8 @@ export async function getUserReferralData() {
         
         // Build trade details description
         let tradeDetails = isReversal ? 'عكس عمولة إحالة' : 'عمولة إحالة';
-        if (metadata.invitee_name) {
-            tradeDetails += ` - ${metadata.invitee_name}`;
+        if (metadata.source_user_name) {
+            tradeDetails += ` - ${metadata.source_user_name}`;
         }
         if (metadata.product_name) {
             tradeDetails += ` (${metadata.product_name})`;
@@ -989,7 +995,7 @@ export async function getUserReferralData() {
             cashbackAmount: isReversal ? -Math.abs(tx.amount) : tx.amount,
             referralBonusTo: undefined,
             referralBonusAmount: 0,
-            sourceUserId: metadata.invitee_id || undefined,
+            sourceUserId: metadata.source_user_id || undefined,
             sourceType,
             transactionId: tx.id,
             note: metadata.reason || undefined,

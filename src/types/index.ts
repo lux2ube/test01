@@ -71,15 +71,15 @@ export interface UserProfile {
 
 
 export interface KycData {
-    documentType: 'id_card' | 'passport' | 'driver_license';
-    documentNumber: string;
-    fullName: string;
-    dateOfBirth: Date;
-    nationality: string;
-    documentIssueDate: Date;
-    documentExpiryDate: Date;
-    gender: 'male' | 'female';
-    documentFrontUrl: string;
+    documentType?: 'id_card' | 'passport' | 'driver_license';
+    documentNumber?: string;
+    fullName?: string;
+    dateOfBirth?: Date;
+    nationality?: string;
+    documentIssueDate?: Date;
+    documentExpiryDate?: Date;
+    gender?: 'male' | 'female';
+    documentFrontUrl?: string;
     documentBackUrl?: string;
     selfieUrl?: string;
     status: 'Pending' | 'Verified' | 'Rejected';
@@ -88,12 +88,12 @@ export interface KycData {
 }
 
 export interface AddressData {
-    country: string;
-    city: string;
-    streetAddress: string;
+    country?: string;
+    city?: string;
+    streetAddress?: string;
     stateProvince?: string;
-    postalCode: string;
-    documentUrl: string;
+    postalCode?: string;
+    documentUrl?: string;
     status: 'Pending' | 'Verified' | 'Rejected';
     submittedAt: Date;
     rejectionReason?: string;
@@ -406,7 +406,9 @@ export interface BlogPost {
     excerpt: string;
     content: string; // Markdown content
     author: string;
-    isPublished: boolean;
+    authorName?: string;
+    status: 'draft' | 'published';
+    tags?: string[];
     createdAt: Date;
     updatedAt: Date;
 }

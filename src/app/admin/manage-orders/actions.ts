@@ -31,7 +31,6 @@ export async function getAllOrders(): Promise<Order[]> {
             userEmail: order.user_email,
             userName: order.user_name,
             referralCommissionAwarded: order.referral_commission_awarded || false,
-            referralCommissionTransactionId: order.referral_commission_transaction_id || null,
         })) as Order[];
     } catch (error) {
         console.error("Error fetching all orders:", error);

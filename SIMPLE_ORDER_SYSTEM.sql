@@ -155,7 +155,7 @@ CREATE OR REPLACE FUNCTION ledger_place_order(
   p_delivery_phone TEXT,
   p_actor_id UUID DEFAULT NULL,
   p_actor_action TEXT DEFAULT 'user_place_order',
-  p_ip_address TEXT DEFAULT NULL,
+  p_ip_address INET DEFAULT NULL,
   p_user_agent TEXT DEFAULT NULL
 )
 RETURNS TABLE(
@@ -299,7 +299,7 @@ BEGIN
   FROM accounts a
   WHERE a.user_id = p_user_id;
   
-  -- Create audit log (resource_id is UUID in audit_logs table)
+  -- Create audit log (resource_id is UUID, ip_address is INET)
   INSERT INTO audit_logs (
     user_id,
     action,

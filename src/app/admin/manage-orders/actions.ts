@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server';
 import type { Order } from '@/types';
-import { awardReferralCommission, clawbackReferralCommission } from '../actions';
+import { awardReferralCommission } from '../actions';
 
 export async function getAllOrders(): Promise<Order[]> {
     try {
@@ -31,6 +31,7 @@ export async function getAllOrders(): Promise<Order[]> {
             userEmail: order.user_email,
             userName: order.user_name,
             referralCommissionAwarded: order.referral_commission_awarded || false,
+            referralCommissionTransactionId: order.referral_commission_transaction_id || null,
         })) as Order[];
     } catch (error) {
         console.error("Error fetching all orders:", error);
@@ -65,6 +66,7 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
             userEmail: orderData.user_email,
             userName: orderData.user_name,
             referralCommissionAwarded: orderData.referral_commission_awarded || false,
+            referralCommissionTransactionId: orderData.referral_commission_transaction_id || null,
         } as Order;
 
         // Validate status transition rules
@@ -84,7 +86,7 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
             p_new_status: status,
             p_amount: order.price,
             p_metadata: { product_name: order.productName },
-            p_actor_id: null, // Admin action
+            p_actor_id: null,
             p_actor_action: 'admin_change_order_status'
         });
 
@@ -97,15 +99,37 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
             throw new Error(errorMsg);
         }
 
-        let updateData: any = { status };
+        let updateData: Record<string, any> = { status };
 
         // Award referral commission when order is confirmed
         if (status === 'Confirmed' && !order.referralCommissionAwarded) {
-            await awardReferralCommission(order.userId, 'store_purchase', order.price);
-            updateData.referral_commission_awarded = true;
-        } else if (status === 'Cancelled' && order.referralCommissionAwarded) {
-            await clawbackReferralCommission(order.userId, 'store_purchase', order.price);
-            updateData.referral_commission_awarded = false;
+            const commissionResult = await awardReferralCommission(order.userId, 'store_purchase', order.price);
+            if (commissionResult.success && commissionResult.transactionId) {
+                updateData.referral_commission_awarded = true;
+                updateData.referral_commission_transaction_id = commissionResult.transactionId;
+                console.log(`✅ Referral commission transaction saved: ${commissionResult.transactionId}`);
+            }
+        } else if (status === 'Cancelled' && order.referralCommissionAwarded && order.referralCommissionTransactionId) {
+            // Reverse the referral commission using the stored transaction ID
+            const { reverseReferralCommissionInLedger } = await import('@/app/actions/ledger');
+            const reversalResult = await reverseReferralCommissionInLedger(
+                order.userId,
+                order.price,
+                order.referralCommissionTransactionId,
+                {
+                    order_id: orderId,
+                    product_name: order.productName,
+                    reason: 'Order cancelled'
+                }
+            );
+            
+            if (reversalResult.success) {
+                updateData.referral_commission_awarded = false;
+                updateData.referral_commission_transaction_id = null;
+                console.log(`✅ Referral commission reversed for order: ${orderId}`);
+            } else {
+                console.error('Failed to reverse referral commission:', reversalResult.error);
+            }
         }
 
         const { error: updateError } = await supabase

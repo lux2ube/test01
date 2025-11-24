@@ -128,12 +128,12 @@ export async function getUserBalance(userId: string) {
   };
 }
 
-// Point Awarding Engine
+// Point Awarding Engine - Returns transaction ID for tracking/reversal
 export async function awardReferralCommission(
   userId: string,
   sourceType: 'cashback' | 'store_purchase',
   amountValue: number
-) {
+): Promise<{ success: boolean; transactionId?: string; commissionAmount?: number }> {
   try {
     const supabase = await createAdminClient();
     
@@ -145,14 +145,14 @@ export async function awardReferralCommission(
 
     if (userError || !user || !user.referred_by) {
       console.log(`User ${userId} has no referrer. Skipping commission.`);
-      return;
+      return { success: false };
     }
     
     if (amountValue <= 0) {
       console.log(
         `Commission source amount is zero or negative for user ${userId}. Skipping.`
       );
-      return;
+      return { success: false };
     }
 
     const referrerId = user.referred_by;
@@ -164,7 +164,7 @@ export async function awardReferralCommission(
 
     if (referrerError || !referrer) {
       console.log(`Referrer ${referrerId} does not exist. Skipping commission.`);
-      return;
+      return { success: false };
     }
 
     const referrerLevel = referrer.level || 1;
@@ -173,7 +173,7 @@ export async function awardReferralCommission(
 
     if (!currentLevelConfig) {
       console.log(`Level config not found for level ${referrerLevel}. Skipping commission.`);
-      return;
+      return { success: false };
     }
 
     const commissionPercent =
@@ -183,7 +183,7 @@ export async function awardReferralCommission(
 
     if (commissionPercent <= 0) {
       console.log(`No commission for level ${referrerLevel} and source ${sourceType}. Skipping.`);
-      return;
+      return { success: false };
     }
 
     const commissionAmount = (amountValue * commissionPercent) / 100;
@@ -203,10 +203,12 @@ export async function awardReferralCommission(
       }
     );
 
-    if (!ledgerResult.success) {
+    if (!ledgerResult.success || !ledgerResult.result) {
       console.error('Error creating commission in ledger:', ledgerResult.error);
-      return;
+      return { success: false };
     }
+
+    const transactionId = ledgerResult.result.transaction?.id;
 
     const message = `لقد ربحت ${commissionAmount.toFixed(2)}$ عمولة إحالة من ${user.name}.`;
     await createNotificationDirect(
@@ -215,8 +217,16 @@ export async function awardReferralCommission(
       'general',
       '/dashboard/referrals'
     );
+
+    console.log(`✅ Referral commission awarded: ${commissionAmount} to ${referrerId}, txId: ${transactionId}`);
+    return { 
+      success: true, 
+      transactionId,
+      commissionAmount 
+    };
   } catch (error) {
     console.error(`Failed to award referral commission to user ${userId}'s referrer:`, error);
+    return { success: false };
   }
 }
 

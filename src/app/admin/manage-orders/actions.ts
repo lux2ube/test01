@@ -67,6 +67,27 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
             referralCommissionAwarded: orderData.referral_commission_awarded || false,
         } as Order;
 
+        // Call ledger function to track order status change
+        const { data: ledgerResult, error: ledgerError } = await supabase.rpc('ledger_change_order_status', {
+            p_user_id: order.userId,
+            p_reference_id: orderId,
+            p_old_status: order.status,
+            p_new_status: status,
+            p_amount: order.price,
+            p_metadata: { product_name: order.productName },
+            p_actor_id: null, // Admin action
+            p_actor_action: 'admin_change_order_status'
+        });
+
+        if (ledgerError) {
+            throw new Error(`فشل تحديث النظام المحاسبي: ${ledgerError.message}`);
+        }
+
+        if (!ledgerResult || ledgerResult.length === 0 || !ledgerResult[0].success) {
+            const errorMsg = ledgerResult?.[0]?.error_message || 'فشل تحديث النظام المحاسبي';
+            throw new Error(errorMsg);
+        }
+
         let updateData: any = { status };
 
         if (status === 'Delivered' && !order.referralCommissionAwarded) {

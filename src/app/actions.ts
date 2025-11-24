@@ -836,29 +836,51 @@ export async function getUserReferralData() {
         status: r.status,
     }));
     
-    const { data: commissions } = await supabase
-        .from('cashback_transactions')
+    // Fetch referral commissions from the ledger transactions table
+    const { data: ledgerCommissions } = await supabase
+        .from('transactions')
         .select('*')
         .eq('user_id', userId)
-        .in('source_type', ['cashback', 'store_purchase'])
-        .order('date', { ascending: false });
+        .in('transaction_type', ['referral_commission', 'referral_reversal'])
+        .order('created_at', { ascending: false });
     
-    const commissionHistory = (commissions || []).map(c => ({
-        id: c.id,
-        userId: c.user_id,
-        accountId: c.account_id,
-        accountNumber: c.account_number,
-        broker: c.broker,
-        date: new Date(c.date),
-        tradeDetails: c.trade_details,
-        cashbackAmount: c.cashback_amount,
-        referralBonusTo: c.referral_bonus_to,
-        referralBonusAmount: c.referral_bonus_amount,
-        sourceUserId: c.source_user_id,
-        sourceType: c.source_type,
-        transactionId: c.transaction_id,
-        note: c.note,
-    }));
+    // Map ledger transactions to the expected CashbackTransaction format for the frontend
+    const commissionHistory = (ledgerCommissions || []).map(tx => {
+        const metadata = tx.metadata || {};
+        const isReversal = tx.transaction_type === 'referral_reversal';
+        
+        // Determine source type from metadata
+        let sourceType: 'cashback' | 'store_purchase' = 'cashback';
+        if (metadata.source_type === 'store_purchase' || metadata.order_id) {
+            sourceType = 'store_purchase';
+        }
+        
+        // Build trade details description
+        let tradeDetails = isReversal ? 'عكس عمولة إحالة' : 'عمولة إحالة';
+        if (metadata.invitee_name) {
+            tradeDetails += ` - ${metadata.invitee_name}`;
+        }
+        if (metadata.product_name) {
+            tradeDetails += ` (${metadata.product_name})`;
+        }
+        
+        return {
+            id: tx.id,
+            userId: tx.user_id,
+            accountId: '',
+            accountNumber: '',
+            broker: '',
+            date: new Date(tx.created_at),
+            tradeDetails,
+            cashbackAmount: isReversal ? -Math.abs(tx.amount) : tx.amount,
+            referralBonusTo: undefined,
+            referralBonusAmount: 0,
+            sourceUserId: metadata.invitee_id || undefined,
+            sourceType,
+            transactionId: tx.id,
+            note: metadata.reason || undefined,
+        };
+    });
     
     return {
         userProfile: {

@@ -1,28 +1,5 @@
 -- Copy this entire file and paste into Supabase SQL Editor, then click Run
 
--- Create accounts table
-CREATE TABLE IF NOT EXISTS accounts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id),
-    total_earned NUMERIC NOT NULL DEFAULT 0.00,
-    total_withdrawn NUMERIC NOT NULL DEFAULT 0.00,
-    total_pending_withdrawals NUMERIC NOT NULL DEFAULT 0.00,
-    total_orders NUMERIC NOT NULL DEFAULT 0.00,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Create transactions table
-CREATE TABLE IF NOT EXISTS transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    type TEXT NOT NULL,
-    amount NUMERIC NOT NULL,
-    reference_id TEXT,
-    metadata JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 -- Create stored procedure for adding cashback
 CREATE OR REPLACE FUNCTION ledger_add_cashback(
     p_user_id UUID,
@@ -49,7 +26,7 @@ BEGIN
     
     -- Create transaction
     INSERT INTO transactions (user_id, type, amount, reference_id, metadata)
-    VALUES (p_user_id, 'cashback', p_amount, p_reference_id, p_metadata)
+    VALUES (p_user_id, 'cashback'::transaction_type, p_amount, p_reference_id::uuid, p_metadata)
     RETURNING id INTO v_transaction_id;
     
     -- Update account totals
@@ -64,7 +41,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Create stored procedure for withdrawal creation
+-- Create stored procedure for withdrawal creation (FIXED: uses withdrawal_processing)
 CREATE OR REPLACE FUNCTION ledger_create_withdrawal(
     p_user_id UUID,
     p_amount NUMERIC,
@@ -92,9 +69,9 @@ BEGIN
         RETURN;
     END IF;
     
-    -- Create transaction
+    -- Create transaction (FIXED: withdrawal_processing)
     INSERT INTO transactions (user_id, type, amount, reference_id, metadata)
-    VALUES (p_user_id, 'withdrawal_pending', p_amount, p_reference_id, p_metadata)
+    VALUES (p_user_id, 'withdrawal_processing'::transaction_type, p_amount, p_reference_id::uuid, p_metadata)
     RETURNING id INTO v_transaction_id;
     
     -- Update pending withdrawals
@@ -126,10 +103,21 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_transaction_id UUID;
+    v_transaction_type transaction_type;
 BEGIN
+    -- Map status to transaction type
+    IF p_new_status = 'completed' THEN
+        v_transaction_type := 'withdrawal_completed'::transaction_type;
+    ELSIF p_new_status = 'cancelled' THEN
+        v_transaction_type := 'withdrawal_cancelled'::transaction_type;
+    ELSE
+        RETURN QUERY SELECT false, NULL::UUID, 'Invalid withdrawal status'::TEXT;
+        RETURN;
+    END IF;
+    
     -- Create transaction
     INSERT INTO transactions (user_id, type, amount, reference_id, metadata)
-    VALUES (p_user_id, 'withdrawal_' || p_new_status, p_amount, p_reference_id, p_metadata)
+    VALUES (p_user_id, v_transaction_type, p_amount, p_reference_id::uuid, p_metadata)
     RETURNING id INTO v_transaction_id;
     
     -- Update account based on status change
@@ -169,7 +157,7 @@ DECLARE
     v_transaction_id UUID;
 BEGIN
     INSERT INTO transactions (user_id, type, amount, reference_id, metadata)
-    VALUES (p_user_id, 'referral', p_amount, p_reference_id, p_metadata)
+    VALUES (p_user_id, 'referral'::transaction_type, p_amount, p_reference_id::uuid, p_metadata)
     RETURNING id INTO v_transaction_id;
     
     UPDATE accounts
@@ -211,7 +199,7 @@ BEGIN
     END IF;
     
     INSERT INTO transactions (user_id, type, amount, reference_id, metadata)
-    VALUES (p_user_id, 'order', p_amount, p_reference_id, p_metadata)
+    VALUES (p_user_id, 'order_created'::transaction_type, p_amount, p_reference_id::uuid, p_metadata)
     RETURNING id INTO v_transaction_id;
     
     UPDATE accounts
@@ -225,4 +213,4 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Done! Now test by creating a withdrawal
+-- Done! All procedures use correct enum values

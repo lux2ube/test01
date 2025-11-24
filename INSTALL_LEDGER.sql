@@ -5,6 +5,25 @@
 -- Copy ALL of this and paste into Supabase SQL Editor, then click Run.
 -- ============================================================================
 
+-- STEP 1: Drop all existing ledger functions (clean slate)
+DROP FUNCTION IF EXISTS ledger_add_cashback(uuid, numeric, uuid, jsonb, inet, text);
+DROP FUNCTION IF EXISTS ledger_add_cashback(uuid, numeric, uuid, jsonb, uuid, varchar);
+DROP FUNCTION IF EXISTS ledger_add_referral(uuid, numeric, uuid, jsonb, inet, text);
+DROP FUNCTION IF EXISTS ledger_add_referral(uuid, numeric, uuid, jsonb, uuid, varchar);
+DROP FUNCTION IF EXISTS ledger_create_withdrawal(uuid, numeric, uuid, jsonb, inet, text);
+DROP FUNCTION IF EXISTS ledger_create_withdrawal(uuid, numeric, uuid, jsonb, uuid, varchar);
+DROP FUNCTION IF EXISTS ledger_change_withdrawal_status(uuid, uuid, text, text, numeric, jsonb, inet, text);
+DROP FUNCTION IF EXISTS ledger_change_withdrawal_status(uuid, uuid, varchar, varchar, numeric, uuid, varchar);
+DROP FUNCTION IF EXISTS ledger_create_order(uuid, numeric, uuid, jsonb, inet, text);
+DROP FUNCTION IF EXISTS ledger_create_order(uuid, numeric, uuid, jsonb, uuid, varchar);
+DROP FUNCTION IF EXISTS ledger_change_order_status(uuid, uuid, text, text, numeric, jsonb, inet, text);
+DROP FUNCTION IF EXISTS ledger_change_order_status(uuid, uuid, varchar, varchar, numeric, uuid, varchar);
+DROP FUNCTION IF EXISTS ledger_place_order(uuid, uuid, text, text, numeric, text, text, text, uuid, varchar);
+DROP FUNCTION IF EXISTS ledger_reverse_referral(uuid, numeric, uuid, jsonb, uuid, varchar);
+DROP FUNCTION IF EXISTS ledger_get_available_balance(uuid);
+
+-- STEP 2: Create fresh procedures with correct signatures
+
 -- Procedure 1: Add Cashback
 CREATE OR REPLACE FUNCTION ledger_add_cashback(
     p_user_id UUID,

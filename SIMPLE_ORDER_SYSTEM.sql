@@ -239,8 +239,7 @@ BEGIN
     user_email,
     delivery_phone_number,
     referral_commission_awarded,
-    created_at,
-    updated_at
+    created_at
   )
   VALUES (
     v_new_order_id,
@@ -256,7 +255,6 @@ BEGIN
     p_user_email,
     p_delivery_phone,
     FALSE,
-    NOW(),
     NOW()
   );
   

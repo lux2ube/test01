@@ -184,8 +184,8 @@ export async function addReferralCommission(params: AddReferralParams): Promise<
     p_amount: params.amount,
     p_reference_id: params.referenceId,
     p_metadata: params.metadata || {},
-    p_ip_address: params.ipAddress || null,
-    p_user_agent: params.userAgent || null,
+    p_actor_id: params.metadata?._actor_id || null,
+    p_actor_action: params.metadata?._actor_action || null,
   });
 
   if (error) {
@@ -198,21 +198,23 @@ export async function addReferralCommission(params: AddReferralParams): Promise<
 
   const result = data[0];
 
-  const [transaction, event, audit, account] = await Promise.all([
+  if (!result.success) {
+    throw new Error(`Stored procedure failed: ${result.error_message}`);
+  }
+
+  const [transaction, account] = await Promise.all([
     supabase.from('transactions').select('*').eq('id', result.transaction_id).single(),
-    supabase.from('immutable_events').select('*').eq('id', result.event_id).single(),
-    supabase.from('audit_logs').select('*').eq('id', result.audit_id).single(),
     supabase.from('accounts').select('*').eq('user_id', params.userId).single(),
   ]);
 
-  if (transaction.error || event.error || audit.error || account.error) {
+  if (transaction.error || account.error) {
     throw new Error('Failed to fetch created records');
   }
 
   return {
     transaction: transaction.data as Transaction,
-    event: event.data as ImmutableEvent,
-    audit_log: audit.data as AuditLog,
+    event: { id: result.transaction_id } as ImmutableEvent,
+    audit_log: { id: result.transaction_id } as AuditLog,
     updated_account: account.data as Account,
   };
 }
@@ -243,8 +245,8 @@ export async function createWithdrawal(params: CreateWithdrawalParams): Promise<
     p_amount: params.amount,
     p_reference_id: params.referenceId,
     p_metadata: params.metadata || {},
-    p_ip_address: params.ipAddress || null,
-    p_user_agent: params.userAgent || null,
+    p_actor_id: params.metadata?._actor_id || null,
+    p_actor_action: params.metadata?._actor_action || null,
   });
 
   if (error) {
@@ -257,21 +259,23 @@ export async function createWithdrawal(params: CreateWithdrawalParams): Promise<
 
   const result = data[0];
 
-  const [transaction, event, audit, account] = await Promise.all([
+  if (!result.success) {
+    throw new Error(`Stored procedure failed: ${result.error_message}`);
+  }
+
+  const [transaction, account] = await Promise.all([
     supabase.from('transactions').select('*').eq('id', result.transaction_id).single(),
-    supabase.from('immutable_events').select('*').eq('id', result.event_id).single(),
-    supabase.from('audit_logs').select('*').eq('id', result.audit_id).single(),
     supabase.from('accounts').select('*').eq('user_id', params.userId).single(),
   ]);
 
-  if (transaction.error || event.error || audit.error || account.error) {
+  if (transaction.error || account.error) {
     throw new Error('Failed to fetch created records');
   }
 
   return {
     transaction: transaction.data as Transaction,
-    event: event.data as ImmutableEvent,
-    audit_log: audit.data as AuditLog,
+    event: { id: result.transaction_id } as ImmutableEvent,
+    audit_log: { id: result.transaction_id } as AuditLog,
     updated_account: account.data as Account,
   };
 }

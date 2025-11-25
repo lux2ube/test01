@@ -971,11 +971,26 @@ export async function getUserReferralData() {
         console.error('Error fetching referral commissions from ledger:', ledgerError);
     }
     
-    // Calculate total commission server-side (sum all commissions once)
-    const totalCommission = (ledgerCommissions || []).reduce((sum, tx) => {
+    // Get current month boundaries for loyalty calculation
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    
+    // Calculate total commission (all time) and monthly commission (current month only)
+    let totalCommission = 0;
+    let monthlyCommission = 0;
+    
+    (ledgerCommissions || []).forEach(tx => {
         const isReversal = tx.type === 'referral_reversal';
-        return sum + (isReversal ? -Math.abs(parseFloat(tx.amount)) : parseFloat(tx.amount));
-    }, 0);
+        const amount = isReversal ? -Math.abs(parseFloat(tx.amount)) : parseFloat(tx.amount);
+        totalCommission += amount;
+        
+        // Check if transaction is in current month for loyalty purposes
+        const txDate = new Date(tx.created_at);
+        if (txDate >= monthStart && txDate <= monthEnd) {
+            monthlyCommission += amount;
+        }
+    });
     
     // Group commissions by source_user_id for per-user earnings lookup
     const earningsByUser: Record<string, number> = {};
@@ -997,6 +1012,7 @@ export async function getUserReferralData() {
         },
         referrals: referralsList,
         totalCommission,
+        monthlyCommission,
         earningsByUser,
     };
 }

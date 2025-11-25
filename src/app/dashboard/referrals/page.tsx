@@ -222,6 +222,7 @@ export default function ReferralsPage() {
     const [levels, setLevels] = useState<ClientLevel[]>([]);
     const [referrals, setReferrals] = useState<ReferralInfo[]>([]);
     const [totalCommission, setTotalCommission] = useState(0);
+    const [monthlyCommission, setMonthlyCommission] = useState(0);
     const [earningsByUser, setEarningsByUser] = useState<Record<string, number>>({});
     const [isLoading, setIsLoading] = useState(true);
     
@@ -245,6 +246,7 @@ export default function ReferralsPage() {
 
                 setLevels(levelsData);
                 setTotalCommission(referralData.totalCommission);
+                setMonthlyCommission(referralData.monthlyCommission);
                 setEarningsByUser(referralData.earningsByUser);
                 setReferrals(referralData.referrals);
             } catch(e) {
@@ -261,8 +263,8 @@ export default function ReferralsPage() {
     const stats = useMemo(() => {
         const totalReferrals = referrals.length;
         const totalActive = referrals.filter(r => r.status === 'Active' || r.status === 'Trader').length;
-        return { totalEarnings: totalCommission, totalReferrals, totalActive };
-    }, [totalCommission, referrals]);
+        return { monthlyEarnings: monthlyCommission, totalReferrals, totalActive };
+    }, [monthlyCommission, referrals]);
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -305,8 +307,8 @@ export default function ReferralsPage() {
 
     const currentLevel = levels.find(l => l.id === user?.profile?.level) || levels[0];
     const nextLevel = levels.find(l => l.id === (user?.profile?.level || 0) + 1);
-    const monthlyEarnings = user?.profile?.monthlyEarnings || 0;
-    const progress = nextLevel && !isLoading ? Math.min((monthlyEarnings / nextLevel.required_total) * 100, 100) : 0;
+    // Use monthly commission for loyalty progress (resets each month)
+    const progress = nextLevel && !isLoading ? Math.min((monthlyCommission / nextLevel.required_total) * 100, 100) : 0;
 
 
     return (
@@ -317,7 +319,7 @@ export default function ReferralsPage() {
             />
             
             <div className="grid grid-cols-3 gap-2">
-                <StatCard title="إجمالي الأرباح" value={`$${stats.totalEarnings.toFixed(2)}`} icon={Gift} />
+                <StatCard title="أرباح هذا الشهر" value={`$${stats.monthlyEarnings.toFixed(2)}`} icon={Gift} />
                 <StatCard title="إجمالي الإحالات" value={stats.totalReferrals} icon={Users} />
                 <StatCard title="النشطون" value={stats.totalActive} icon={UserPlus} />
             </div>

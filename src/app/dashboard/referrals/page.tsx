@@ -318,10 +318,9 @@ export default function ReferralsPage() {
                 description="شارك الحب واحصل على مكافأة مقابل كل صديق تدعوه."
             />
             
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
                 <StatCard title="إجمالي الأرباح" value={`$${stats.totalEarnings.toFixed(2)}`} icon={Gift} />
                 <StatCard title="إجمالي الإحالات" value={stats.totalReferrals} icon={Users} />
-                <StatCard title="النشطون" value={stats.totalActive} icon={UserPlus} />
             </div>
             
             <Card>

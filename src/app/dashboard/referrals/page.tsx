@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthContext } from '@/hooks/useAuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { UserProfile, CashbackTransaction, ClientLevel } from "@/types";
+import type { UserProfile, ClientLevel } from "@/types";
 import { format, subDays, subMonths, isAfter, startOfDay } from 'date-fns';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,11 +29,11 @@ interface ReferralWithEarnings extends ReferralInfo {
 
 function ReferralsListTab({ 
     referrals, 
-    commissionHistory,
+    earningsByUser,
     isLoading 
 }: { 
     referrals: ReferralInfo[], 
-    commissionHistory: CashbackTransaction[],
+    earningsByUser: Record<string, number>,
     isLoading: boolean 
 }) {
     const [searchFilter, setSearchFilter] = useState('');
@@ -41,20 +41,8 @@ function ReferralsListTab({
     const [currentPage, setCurrentPage] = useState(1);
     const recordsPerPage = 10;
 
-    const referralsWithEarnings = useMemo(() => {
-        return referrals.map(ref => {
-            const earnings = commissionHistory
-                .filter(tx => tx.sourceUserId === ref.id)
-                .reduce((sum, tx) => sum + tx.cashbackAmount, 0);
-            return {
-                ...ref,
-                totalEarned: earnings
-            };
-        });
-    }, [referrals, commissionHistory]);
-
     const filteredReferrals = useMemo(() => {
-        let result = referralsWithEarnings;
+        let result = referrals;
         
         if (dateFilter !== 'all') {
             const now = new Date();
@@ -91,13 +79,17 @@ function ReferralsListTab({
         }
         
         return result;
-    }, [referralsWithEarnings, dateFilter, searchFilter]);
+    }, [referrals, dateFilter, searchFilter]);
 
     const totalPages = Math.ceil(filteredReferrals.length / recordsPerPage);
-    const paginatedReferrals = filteredReferrals.slice(
-        (currentPage - 1) * recordsPerPage,
-        currentPage * recordsPerPage
-    );
+    
+    // Only calculate earnings for the paginated records (10 per page)
+    const paginatedReferrals: ReferralWithEarnings[] = filteredReferrals
+        .slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage)
+        .map(ref => ({
+            ...ref,
+            totalEarned: earningsByUser[ref.id] || 0
+        }));
 
     useEffect(() => {
         setCurrentPage(1);
@@ -229,7 +221,8 @@ export default function ReferralsPage() {
     const { toast } = useToast();
     const [levels, setLevels] = useState<ClientLevel[]>([]);
     const [referrals, setReferrals] = useState<ReferralInfo[]>([]);
-    const [commissionHistory, setCommissionHistory] = useState<CashbackTransaction[]>([]);
+    const [totalCommission, setTotalCommission] = useState(0);
+    const [earningsByUser, setEarningsByUser] = useState<Record<string, number>>({});
     const [isLoading, setIsLoading] = useState(true);
     
     const referralLink = user && typeof window !== 'undefined' ? `${window.location.origin}/register?ref=${user.profile?.referralCode}` : '';
@@ -251,7 +244,8 @@ export default function ReferralsPage() {
                 ]);
 
                 setLevels(levelsData);
-                setCommissionHistory(referralData.commissionHistory);
+                setTotalCommission(referralData.totalCommission);
+                setEarningsByUser(referralData.earningsByUser);
                 setReferrals(referralData.referrals);
             } catch(e) {
                 console.error("Failed to fetch referral page data", e);
@@ -265,11 +259,10 @@ export default function ReferralsPage() {
     }, [user, toast]);
 
     const stats = useMemo(() => {
-        const totalEarnings = commissionHistory.reduce((sum, tx) => sum + tx.cashbackAmount, 0);
         const totalReferrals = referrals.length;
         const totalActive = referrals.filter(r => r.status === 'Active' || r.status === 'Trader').length;
-        return { totalEarnings, totalReferrals, totalActive };
-    }, [commissionHistory, referrals]);
+        return { totalEarnings: totalCommission, totalReferrals, totalActive };
+    }, [totalCommission, referrals]);
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -392,7 +385,7 @@ export default function ReferralsPage() {
 
             <ReferralsListTab 
                 referrals={referrals} 
-                commissionHistory={commissionHistory}
+                earningsByUser={earningsByUser}
                 isLoading={isLoading} 
             />
         </div>

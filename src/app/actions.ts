@@ -971,42 +971,22 @@ export async function getUserReferralData() {
         console.error('Error fetching referral commissions from ledger:', ledgerError);
     }
     
-    // Map ledger transactions to the expected CashbackTransaction format for the frontend
-    const commissionHistory = (ledgerCommissions || []).map(tx => {
-        const metadata = tx.metadata || {};
+    // Calculate total commission server-side (sum all commissions once)
+    const totalCommission = (ledgerCommissions || []).reduce((sum, tx) => {
         const isReversal = tx.type === 'referral_reversal';
-        
-        // Determine source type from metadata
-        let sourceType: 'cashback' | 'store_purchase' = 'cashback';
-        if (metadata.source_type === 'store_purchase' || metadata.order_id) {
-            sourceType = 'store_purchase';
+        return sum + (isReversal ? -Math.abs(parseFloat(tx.amount)) : parseFloat(tx.amount));
+    }, 0);
+    
+    // Group commissions by source_user_id for per-user earnings lookup
+    const earningsByUser: Record<string, number> = {};
+    (ledgerCommissions || []).forEach(tx => {
+        const metadata = tx.metadata || {};
+        const sourceUserId = metadata.source_user_id;
+        if (sourceUserId) {
+            const isReversal = tx.type === 'referral_reversal';
+            const amount = isReversal ? -Math.abs(parseFloat(tx.amount)) : parseFloat(tx.amount);
+            earningsByUser[sourceUserId] = (earningsByUser[sourceUserId] || 0) + amount;
         }
-        
-        // Build trade details description
-        let tradeDetails = isReversal ? 'عكس عمولة إحالة' : 'عمولة إحالة';
-        if (metadata.source_user_name) {
-            tradeDetails += ` - ${metadata.source_user_name}`;
-        }
-        if (metadata.product_name) {
-            tradeDetails += ` (${metadata.product_name})`;
-        }
-        
-        return {
-            id: tx.id,
-            userId: tx.user_id,
-            accountId: '',
-            accountNumber: '',
-            broker: '',
-            date: new Date(tx.created_at),
-            tradeDetails,
-            cashbackAmount: isReversal ? -Math.abs(tx.amount) : tx.amount,
-            referralBonusTo: undefined,
-            referralBonusAmount: 0,
-            sourceUserId: metadata.source_user_id || undefined,
-            sourceType,
-            transactionId: tx.id,
-            note: metadata.reason || undefined,
-        };
     });
     
     return {
@@ -1016,7 +996,8 @@ export async function getUserReferralData() {
             referrals: referralsList.map(r => r.id),
         },
         referrals: referralsList,
-        commissionHistory,
+        totalCommission,
+        earningsByUser,
     };
 }
 

@@ -263,8 +263,8 @@ export default function ReferralsPage() {
     const stats = useMemo(() => {
         const totalReferrals = referrals.length;
         const totalActive = referrals.filter(r => r.status === 'Active' || r.status === 'Trader').length;
-        return { monthlyEarnings: monthlyCommission, totalReferrals, totalActive };
-    }, [monthlyCommission, referrals]);
+        return { totalEarnings: totalCommission, totalReferrals, totalActive };
+    }, [totalCommission, referrals]);
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -319,7 +319,7 @@ export default function ReferralsPage() {
             />
             
             <div className="grid grid-cols-3 gap-2">
-                <StatCard title="أرباح هذا الشهر" value={`$${stats.monthlyEarnings.toFixed(2)}`} icon={Gift} />
+                <StatCard title="إجمالي الأرباح" value={`$${stats.totalEarnings.toFixed(2)}`} icon={Gift} />
                 <StatCard title="إجمالي الإحالات" value={stats.totalReferrals} icon={Users} />
                 <StatCard title="النشطون" value={stats.totalActive} icon={UserPlus} />
             </div>

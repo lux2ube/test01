@@ -9,8 +9,8 @@ import { DollarSign, Briefcase, PlusCircle, Landmark, ArrowRight, Users, Gift, C
 import Link from 'next/link';
 import { useEffect, useState, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import type { TradingAccount, CashbackTransaction, FeedbackForm, Offer, BannerSettings, UserProfile } from "@/types";
-import { getUserBalance, getUserTradingAccounts, getCashbackTransactions, getActiveFeedbackFormForUser, submitFeedbackResponse, getEnabledOffers } from "../actions";
+import type { TradingAccount, FeedbackForm, Offer, BannerSettings, UserProfile } from "@/types";
+import { getUserBalance, getUserTradingAccounts, getUnifiedTransactionHistory, getActiveFeedbackFormForUser, submitFeedbackResponse, getEnabledOffers, type UnifiedTransaction } from "../actions";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -280,7 +280,7 @@ export default function UserDashboardPage() {
     referralCommission: 0,
     totalSpentOnOrders: 0,
   });
-  const [transactions, setTransactions] = useState<CashbackTransaction[]>([]);
+  const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeFeedbackForm, setActiveFeedbackForm] = useState<FeedbackForm | null>(null);
 
@@ -337,15 +337,13 @@ export default function UserDashboardPage() {
           const [balanceData, linkedAccounts, allTransactions, feedbackForm] = await Promise.all([
             getUserBalance(),
             getUserTradingAccounts(),
-            getCashbackTransactions(),
+            getUnifiedTransactionHistory(),
             getActiveFeedbackFormForUser()
           ]);
           
-          allTransactions.sort((a,b) => b.date.getTime() - a.date.getTime());
-          
           const referralCommission = allTransactions
-            .filter(tx => tx.sourceType === 'cashback' || tx.sourceType === 'store_purchase')
-            .reduce((sum, tx) => sum + tx.cashbackAmount, 0);
+            .filter(tx => tx.type === 'referral_commission')
+            .reduce((sum, tx) => sum + tx.amount, 0);
 
           setStats({
             ...balanceData,
@@ -505,7 +503,7 @@ export default function UserDashboardPage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="text-right text-xs">التاريخ</TableHead>
-                                            <TableHead className="text-right text-xs">الوسيط/الحساب</TableHead>
+                                            <TableHead className="text-right text-xs">النوع</TableHead>
                                             <TableHead className="text-left text-xs">المبلغ</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -515,10 +513,12 @@ export default function UserDashboardPage() {
                                                 <TableRow key={tx.id}>
                                                     <TableCell className="text-muted-foreground text-xs">{format(tx.date, "PP")}</TableCell>
                                                     <TableCell>
-                                                        <div className="font-medium text-xs">{tx.broker}</div>
-                                                        <div className="text-xs text-muted-foreground">{tx.accountNumber}</div>
+                                                        <div className="font-medium text-xs">{tx.description}</div>
+                                                        <div className="text-xs text-muted-foreground truncate max-w-[120px]">{tx.details}</div>
                                                     </TableCell>
-                                                    <TableCell className="text-left font-semibold text-primary text-xs">${tx.cashbackAmount.toFixed(2)}</TableCell>
+                                                    <TableCell className={`text-left font-semibold text-xs ${tx.amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                        {tx.amount >= 0 ? '+' : ''}{tx.amount.toFixed(2)}$
+                                                    </TableCell>
                                                 </TableRow>
                                             ))
                                         ) : (

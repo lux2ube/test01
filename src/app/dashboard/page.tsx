@@ -515,8 +515,9 @@ export default function UserDashboardPage() {
                                                         case 'cashback': return <ArrowUpCircle className="h-4 w-4 text-green-500" />;
                                                         case 'referral_commission': return <Gift className="h-4 w-4 text-purple-500" />;
                                                         case 'referral_reversal': return <Gift className="h-4 w-4 text-red-500" />;
-                                                        case 'withdrawal': return <Wallet className="h-4 w-4 text-orange-500" />;
-                                                        case 'order': return <ShoppingBag className="h-4 w-4 text-blue-500" />;
+                                                        case 'order':
+                                                        case 'order_created': return <ShoppingBag className="h-4 w-4 text-blue-500" />;
+                                                        case 'order_cancelled': return <ShoppingBag className="h-4 w-4 text-orange-500" />;
                                                         default: return <ArrowDownCircle className="h-4 w-4" />;
                                                     }
                                                 };

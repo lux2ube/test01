@@ -406,7 +406,7 @@ export async function getCashbackTransactions(): Promise<CashbackTransaction[]> 
 
 export type UnifiedTransaction = {
     id: string;
-    type: 'cashback' | 'referral_commission' | 'referral_reversal' | 'withdrawal' | 'order';
+    type: 'cashback' | 'referral_commission' | 'referral_reversal' | 'withdrawal' | 'order' | 'order_created' | 'order_cancelled';
     amount: number;
     date: Date;
     description: string;
@@ -450,8 +450,14 @@ export async function getUnifiedTransactionHistory(): Promise<UnifiedTransaction
     
     const transactions: UnifiedTransaction[] = [];
     
-    // Map ledger transactions
+    // Map ledger transactions (exclude withdrawals - they have their own page)
     (ledgerData || []).forEach(tx => {
+        // Skip withdrawal transactions
+        if (tx.type === 'withdrawal' || tx.type === 'withdrawal_processing' || 
+            tx.type === 'withdrawal_completed' || tx.type === 'withdrawal_cancelled') {
+            return;
+        }
+        
         const metadata = tx.metadata || {};
         let description = '';
         let details = '';
@@ -469,13 +475,14 @@ export async function getUnifiedTransactionHistory(): Promise<UnifiedTransaction
                 description = 'عكس عمولة إحالة';
                 details = metadata.reason || 'تم إلغاء العمولة';
                 break;
-            case 'withdrawal':
-                description = 'سحب';
-                details = metadata.payment_method || 'طلب سحب';
-                break;
             case 'order':
+            case 'order_created':
                 description = 'شراء من المتجر';
                 details = metadata.product_name || 'طلب من المتجر';
+                break;
+            case 'order_cancelled':
+                description = 'إلغاء طلب';
+                details = metadata.product_name || 'تم إلغاء الطلب';
                 break;
             default:
                 description = 'معاملة';

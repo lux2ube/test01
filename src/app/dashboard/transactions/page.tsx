@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuthContext } from "@/hooks/useAuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Search, ArrowUpCircle, ArrowDownCircle, Gift, ShoppingBag, Wallet, Filter } from "lucide-react";
+import { Loader2, Search, ArrowUpCircle, ArrowDownCircle, Gift, ShoppingBag, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import {
   Table,
@@ -32,16 +32,17 @@ const getTransactionIcon = (type: UnifiedTransaction['type']) => {
             return <Gift className="h-4 w-4 text-purple-500" />;
         case 'referral_reversal':
             return <Gift className="h-4 w-4 text-red-500" />;
-        case 'withdrawal':
-            return <Wallet className="h-4 w-4 text-orange-500" />;
         case 'order':
+        case 'order_created':
             return <ShoppingBag className="h-4 w-4 text-blue-500" />;
+        case 'order_cancelled':
+            return <XCircle className="h-4 w-4 text-orange-500" />;
         default:
             return <ArrowDownCircle className="h-4 w-4" />;
     }
 };
 
-type TransactionType = 'all' | 'cashback' | 'referral_commission' | 'referral_reversal' | 'withdrawal' | 'order';
+type TransactionTypeFilter = 'all' | 'cashback' | 'referral_commission' | 'store_orders';
 type DatePeriod = 'all' | '7days' | '30days' | '3months' | '6months' | '1year';
 
 export default function TransactionsPage() {
@@ -49,7 +50,7 @@ export default function TransactionsPage() {
     const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchFilter, setSearchFilter] = useState('');
-    const [typeFilter, setTypeFilter] = useState<TransactionType>('all');
+    const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>('all');
     const [dateFilter, setDateFilter] = useState<DatePeriod>('all');
 
     useEffect(() => {
@@ -79,7 +80,13 @@ export default function TransactionsPage() {
         let result = transactions;
         
         if (typeFilter !== 'all') {
-            result = result.filter(tx => tx.type === typeFilter);
+            if (typeFilter === 'store_orders') {
+                result = result.filter(tx => 
+                    tx.type === 'order' || tx.type === 'order_created' || tx.type === 'order_cancelled'
+                );
+            } else {
+                result = result.filter(tx => tx.type === typeFilter);
+            }
         }
         
         if (dateFilter !== 'all') {
@@ -148,7 +155,7 @@ export default function TransactionsPage() {
                                 className="pr-10"
                             />
                         </div>
-                        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TransactionType)}>
+                        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TransactionTypeFilter)}>
                             <SelectTrigger className="w-full sm:w-[160px]">
                                 <SelectValue placeholder="نوع المعاملة" />
                             </SelectTrigger>
@@ -156,8 +163,7 @@ export default function TransactionsPage() {
                                 <SelectItem value="all">الكل</SelectItem>
                                 <SelectItem value="cashback">كاش باك</SelectItem>
                                 <SelectItem value="referral_commission">عمولة إحالة</SelectItem>
-                                <SelectItem value="withdrawal">سحب</SelectItem>
-                                <SelectItem value="order">طلبات المتجر</SelectItem>
+                                <SelectItem value="store_orders">طلبات المتجر</SelectItem>
                             </SelectContent>
                         </Select>
                         <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DatePeriod)}>

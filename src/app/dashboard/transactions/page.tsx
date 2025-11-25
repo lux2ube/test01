@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
 import { useAuthContext } from "@/hooks/useAuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Search, ArrowUpCircle, ArrowDownCircle, Gift, ShoppingBag, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import {
@@ -16,7 +15,6 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { getUnifiedTransactionHistory, type UnifiedTransaction } from "@/app/actions";
 
 const getTransactionIcon = (type: UnifiedTransaction['type']) => {
@@ -33,23 +31,6 @@ const getTransactionIcon = (type: UnifiedTransaction['type']) => {
             return <ShoppingBag className="h-4 w-4 text-blue-500" />;
         default:
             return <ArrowDownCircle className="h-4 w-4" />;
-    }
-};
-
-const getTransactionBadgeVariant = (type: UnifiedTransaction['type']) => {
-    switch (type) {
-        case 'cashback':
-            return 'default';
-        case 'referral_commission':
-            return 'secondary';
-        case 'referral_reversal':
-            return 'destructive';
-        case 'withdrawal':
-            return 'outline';
-        case 'order':
-            return 'outline';
-        default:
-            return 'secondary';
     }
 };
 
@@ -92,16 +73,6 @@ export default function TransactionsPage() {
         );
     }, [transactions, filter]);
 
-    const stats = useMemo(() => {
-        const earned = transactions
-            .filter(tx => tx.amount > 0)
-            .reduce((sum, tx) => sum + tx.amount, 0);
-        const spent = transactions
-            .filter(tx => tx.amount < 0)
-            .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-        return { earned, spent };
-    }, [transactions]);
-
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[calc(100vh_-_theme(spacing.12))]">
@@ -116,25 +87,6 @@ export default function TransactionsPage() {
                 title="المعاملات"
                 description="سجل كامل بجميع المعاملات المالية الخاصة بك."
             />
-            
-            <div className="grid grid-cols-2 gap-4">
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-right text-sm text-muted-foreground">إجمالي المكتسب</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-primary text-right">${stats.earned.toFixed(2)}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-right text-sm text-muted-foreground">إجمالي المصروف</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-orange-500 text-right">${stats.spent.toFixed(2)}</p>
-                    </CardContent>
-                </Card>
-            </div>
 
             <Card>
                 <CardHeader>
@@ -171,9 +123,7 @@ export default function TransactionsPage() {
                                         <TableCell>
                                             <div className="flex items-center gap-2">
                                                 {getTransactionIcon(tx.type)}
-                                                <Badge variant={getTransactionBadgeVariant(tx.type) as any}>
-                                                    {tx.description}
-                                                </Badge>
+                                                <span className="text-sm">{tx.description}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>

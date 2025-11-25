@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/hooks/useAuthContext";
-import { DollarSign, Briefcase, PlusCircle, Landmark, ArrowRight, Users, Gift, Copy, Wallet, MessageSquare, ChevronLeft, KeyRound, History, Settings, Store, ShoppingBag, Download, BadgePercent } from "lucide-react";
+import { DollarSign, Briefcase, PlusCircle, Landmark, ArrowRight, Users, Gift, Copy, Wallet, MessageSquare, ChevronLeft, KeyRound, History, Settings, Store, ShoppingBag, Download, BadgePercent, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import Link from 'next/link';
 import { useEffect, useState, useRef } from "react";
 import { Loader2 } from "lucide-react";
@@ -509,18 +509,35 @@ export default function UserDashboardPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {transactions.length > 0 ? (
-                                            transactions.slice(0, 5).map(tx => (
-                                                <TableRow key={tx.id}>
-                                                    <TableCell className="text-muted-foreground text-xs">{format(tx.date, "PP")}</TableCell>
-                                                    <TableCell>
-                                                        <div className="font-medium text-xs">{tx.description}</div>
-                                                        <div className="text-xs text-muted-foreground truncate max-w-[120px]">{tx.details}</div>
-                                                    </TableCell>
-                                                    <TableCell className={`text-left font-semibold text-xs ${tx.amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                        {tx.amount >= 0 ? '+' : ''}{tx.amount.toFixed(2)}$
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
+                                            transactions.slice(0, 5).map(tx => {
+                                                const getIcon = () => {
+                                                    switch (tx.type) {
+                                                        case 'cashback': return <ArrowUpCircle className="h-4 w-4 text-green-500" />;
+                                                        case 'referral_commission': return <Gift className="h-4 w-4 text-purple-500" />;
+                                                        case 'referral_reversal': return <Gift className="h-4 w-4 text-red-500" />;
+                                                        case 'withdrawal': return <Wallet className="h-4 w-4 text-orange-500" />;
+                                                        case 'order': return <ShoppingBag className="h-4 w-4 text-blue-500" />;
+                                                        default: return <ArrowDownCircle className="h-4 w-4" />;
+                                                    }
+                                                };
+                                                return (
+                                                    <TableRow key={tx.id}>
+                                                        <TableCell className="text-muted-foreground text-xs">{format(tx.date, "PP")}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                {getIcon()}
+                                                                <div>
+                                                                    <div className="font-medium text-xs">{tx.description}</div>
+                                                                    <div className="text-xs text-muted-foreground truncate max-w-[100px]">{tx.details}</div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className={`text-left font-semibold text-xs ${tx.amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                            {tx.amount >= 0 ? '+' : ''}{tx.amount.toFixed(2)}$
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })
                                         ) : (
                                             <TableRow>
                                                 <TableCell colSpan={3} className="h-24 text-center text-xs text-muted-foreground">

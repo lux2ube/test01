@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthContext } from '@/hooks/useAuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { UserProfile, UserStatus, CashbackTransaction, ClientLevel } from "@/types";
+import type { UserProfile, CashbackTransaction, ClientLevel } from "@/types";
 import { format, subDays, subMonths, isAfter, startOfDay } from 'date-fns';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,24 +20,6 @@ import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
 
 type ReferralInfo = Pick<UserProfile, 'id' | 'name' | 'createdAt' | 'status'>;
-
-const getStatusText = (status: UserStatus) => {
-    switch (status) {
-        case 'NEW': return 'جديد';
-        case 'Active': return 'نشط';
-        case 'Trader': return 'متداول';
-        default: return 'غير معروف';
-    }
-};
-
-const getStatusVariant = (status: UserStatus) => {
-    switch (status) {
-        case 'NEW': return 'secondary';
-        case 'Active': return 'outline';
-        case 'Trader': return 'default';
-        default: return 'secondary';
-    }
-};
 
 type DatePeriod = 'all' | '7days' | '30days' | '3months' | '6months' | '1year';
 
@@ -167,7 +149,6 @@ function ReferralsListTab({
                                 <TableRow>
                                     <TableHead className="text-right">المستخدم</TableHead>
                                     <TableHead className="text-right">تاريخ الانضمام</TableHead>
-                                    <TableHead className="text-right">الحالة</TableHead>
                                     <TableHead className="text-left">الأرباح</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -185,51 +166,44 @@ function ReferralsListTab({
                                         <TableCell className="text-xs text-muted-foreground">
                                             {ref.createdAt ? format(ref.createdAt, 'PP') : '-'}
                                         </TableCell>
-                                        <TableCell>
-                                            <Badge variant={getStatusVariant(ref.status)} className="text-xs">
-                                                {getStatusText(ref.status)}
-                                            </Badge>
-                                        </TableCell>
                                         <TableCell className="text-left font-semibold text-primary text-sm">
                                             ${ref.totalEarned.toFixed(2)}
                                         </TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center h-24 text-sm text-muted-foreground">
+                                        <TableCell colSpan={3} className="text-center h-24 text-sm text-muted-foreground">
                                             لم يتم العثور على إحالات.
                                         </TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-between p-3 border-t">
-                                <p className="text-xs text-muted-foreground">
-                                    صفحة {currentPage} من {totalPages}
-                                </p>
-                                <div className="flex gap-1">
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                        <div className="flex items-center justify-between p-3 border-t">
+                            <p className="text-xs text-muted-foreground">
+                                صفحة {currentPage} من {Math.max(1, totalPages)}
+                            </p>
+                            <div className="flex gap-1">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => setCurrentPage(p => Math.min(Math.max(1, totalPages), p + 1))}
+                                    disabled={currentPage >= totalPages || totalPages === 0}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
                             </div>
-                        )}
+                        </div>
                     </>
                 )}
             </CardContent>

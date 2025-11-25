@@ -51,7 +51,7 @@ export default function TransactionsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchFilter, setSearchFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>('all');
-    const [dateFilter, setDateFilter] = useState<DatePeriod>('all');
+    const [dateFilter, setDateFilter] = useState<DatePeriod>('7days');
 
     useEffect(() => {
         const fetchTransactions = async () => {

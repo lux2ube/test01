@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuthContext } from "@/hooks/useAuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Search, ArrowUpCircle, ArrowDownCircle, Gift, ShoppingBag, Wallet } from "lucide-react";
+import { Loader2, Search, ArrowUpCircle, ArrowDownCircle, Gift, ShoppingBag, Wallet, Filter } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import {
   Table,
@@ -13,8 +13,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, subDays, subMonths, isAfter, startOfDay } from "date-fns";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getUnifiedTransactionHistory, type UnifiedTransaction } from "@/app/actions";
 
 const getTransactionIcon = (type: UnifiedTransaction['type']) => {
@@ -34,11 +41,16 @@ const getTransactionIcon = (type: UnifiedTransaction['type']) => {
     }
 };
 
+type TransactionType = 'all' | 'cashback' | 'referral_commission' | 'referral_reversal' | 'withdrawal' | 'order';
+type DatePeriod = 'all' | '7days' | '30days' | '3months' | '6months' | '1year';
+
 export default function TransactionsPage() {
     const { user } = useAuthContext();
     const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filter, setFilter] = useState('');
+    const [searchFilter, setSearchFilter] = useState('');
+    const [typeFilter, setTypeFilter] = useState<TransactionType>('all');
+    const [dateFilter, setDateFilter] = useState<DatePeriod>('all');
 
     useEffect(() => {
         const fetchTransactions = async () => {
@@ -64,14 +76,49 @@ export default function TransactionsPage() {
     }, [user]);
 
     const filteredTransactions = useMemo(() => {
-        if (!filter) return transactions;
-        const lowerCaseFilter = filter.toLowerCase();
-        return transactions.filter(tx => 
-            tx.description.toLowerCase().includes(lowerCaseFilter) ||
-            tx.details.toLowerCase().includes(lowerCaseFilter) ||
-            tx.type.toLowerCase().includes(lowerCaseFilter)
-        );
-    }, [transactions, filter]);
+        let result = transactions;
+        
+        if (typeFilter !== 'all') {
+            result = result.filter(tx => tx.type === typeFilter);
+        }
+        
+        if (dateFilter !== 'all') {
+            const now = new Date();
+            let startDate: Date;
+            
+            switch (dateFilter) {
+                case '7days':
+                    startDate = startOfDay(subDays(now, 7));
+                    break;
+                case '30days':
+                    startDate = startOfDay(subDays(now, 30));
+                    break;
+                case '3months':
+                    startDate = startOfDay(subMonths(now, 3));
+                    break;
+                case '6months':
+                    startDate = startOfDay(subMonths(now, 6));
+                    break;
+                case '1year':
+                    startDate = startOfDay(subMonths(now, 12));
+                    break;
+                default:
+                    startDate = new Date(0);
+            }
+            
+            result = result.filter(tx => isAfter(tx.date, startDate));
+        }
+        
+        if (searchFilter) {
+            const lowerCaseFilter = searchFilter.toLowerCase();
+            result = result.filter(tx => 
+                tx.description.toLowerCase().includes(lowerCaseFilter) ||
+                tx.details.toLowerCase().includes(lowerCaseFilter)
+            );
+        }
+        
+        return result;
+    }, [transactions, typeFilter, dateFilter, searchFilter]);
 
     if (isLoading) {
         return (
@@ -89,18 +136,43 @@ export default function TransactionsPage() {
             />
 
             <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                        <CardTitle className="text-right">سجل المعاملات</CardTitle>
-                        <div className="relative">
+                <CardHeader className="space-y-4">
+                    <CardTitle className="text-right">سجل المعاملات</CardTitle>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
                             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
-                                placeholder="فلترة حسب النوع، التفاصيل..."
-                                value={filter}
-                                onChange={(e) => setFilter(e.target.value)}
-                                className="w-full sm:w-auto pr-10"
+                                placeholder="بحث..."
+                                value={searchFilter}
+                                onChange={(e) => setSearchFilter(e.target.value)}
+                                className="pr-10"
                             />
                         </div>
+                        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TransactionType)}>
+                            <SelectTrigger className="w-full sm:w-[160px]">
+                                <SelectValue placeholder="نوع المعاملة" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">الكل</SelectItem>
+                                <SelectItem value="cashback">كاش باك</SelectItem>
+                                <SelectItem value="referral_commission">عمولة إحالة</SelectItem>
+                                <SelectItem value="withdrawal">سحب</SelectItem>
+                                <SelectItem value="order">طلبات المتجر</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DatePeriod)}>
+                            <SelectTrigger className="w-full sm:w-[160px]">
+                                <SelectValue placeholder="الفترة الزمنية" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">كل الفترات</SelectItem>
+                                <SelectItem value="7days">آخر 7 أيام</SelectItem>
+                                <SelectItem value="30days">آخر 30 يوم</SelectItem>
+                                <SelectItem value="3months">آخر 3 أشهر</SelectItem>
+                                <SelectItem value="6months">آخر 6 أشهر</SelectItem>
+                                <SelectItem value="1year">آخر سنة</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">

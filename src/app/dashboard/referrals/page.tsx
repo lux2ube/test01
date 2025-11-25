@@ -12,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { UserProfile, UserStatus, CashbackTransaction, ClientLevel } from "@/types";
 import { format, subDays, subMonths, isAfter, startOfDay } from 'date-fns';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from 'next/link';
@@ -41,168 +40,6 @@ const getStatusVariant = (status: UserStatus) => {
 };
 
 type DatePeriod = 'all' | '7days' | '30days' | '3months' | '6months' | '1year';
-
-function CommissionHistoryTab({ history, isLoading }: { history: CashbackTransaction[], isLoading: boolean }) {
-    const [searchFilter, setSearchFilter] = useState('');
-    const [dateFilter, setDateFilter] = useState<DatePeriod>('7days');
-    const [currentPage, setCurrentPage] = useState(1);
-    const recordsPerPage = 10;
-
-    const filteredHistory = useMemo(() => {
-        let result = history;
-        
-        if (dateFilter !== 'all') {
-            const now = new Date();
-            let startDate: Date;
-            
-            switch (dateFilter) {
-                case '7days':
-                    startDate = startOfDay(subDays(now, 7));
-                    break;
-                case '30days':
-                    startDate = startOfDay(subDays(now, 30));
-                    break;
-                case '3months':
-                    startDate = startOfDay(subMonths(now, 3));
-                    break;
-                case '6months':
-                    startDate = startOfDay(subMonths(now, 6));
-                    break;
-                case '1year':
-                    startDate = startOfDay(subMonths(now, 12));
-                    break;
-                default:
-                    startDate = new Date(0);
-            }
-            
-            result = result.filter(tx => isAfter(tx.date, startDate));
-        }
-        
-        if (searchFilter) {
-            const lowerCaseFilter = searchFilter.toLowerCase();
-            result = result.filter(tx => 
-                tx.tradeDetails?.toLowerCase().includes(lowerCaseFilter)
-            );
-        }
-        
-        return result;
-    }, [history, dateFilter, searchFilter]);
-
-    const totalPages = Math.ceil(filteredHistory.length / recordsPerPage);
-    const paginatedHistory = filteredHistory.slice(
-        (currentPage - 1) * recordsPerPage,
-        currentPage * recordsPerPage
-    );
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [dateFilter, searchFilter]);
-
-    if (isLoading) {
-        return (
-            <div className="flex justify-center items-center h-48">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
-    }
-
-    return (
-        <Card>
-            <CardHeader className="p-4 space-y-3">
-                <div className="text-right">
-                    <CardTitle className="text-base">سجل العمولات</CardTitle>
-                    <CardDescription className="text-xs">
-                        جميع العمولات التي كسبتها من إحالاتك.
-                    </CardDescription>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="relative flex-1">
-                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder="بحث بالاسم..."
-                            value={searchFilter}
-                            onChange={(e) => setSearchFilter(e.target.value)}
-                            className="pr-10 h-9"
-                        />
-                    </div>
-                    <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DatePeriod)}>
-                        <SelectTrigger className="w-full sm:w-[140px] h-9">
-                            <SelectValue placeholder="الفترة الزمنية" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">كل الفترات</SelectItem>
-                            <SelectItem value="7days">آخر 7 أيام</SelectItem>
-                            <SelectItem value="30days">آخر 30 يوم</SelectItem>
-                            <SelectItem value="3months">آخر 3 أشهر</SelectItem>
-                            <SelectItem value="6months">آخر 6 أشهر</SelectItem>
-                            <SelectItem value="1year">آخر سنة</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardHeader>
-            <CardContent className="p-0">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="text-right">التاريخ</TableHead>
-                            <TableHead className="text-right">المصدر</TableHead>
-                            <TableHead className="text-left">المبلغ</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {paginatedHistory.length > 0 ? paginatedHistory.map(tx => (
-                            <TableRow key={tx.id}>
-                                <TableCell className="text-xs">{format(tx.date, "PP")}</TableCell>
-                                <TableCell>
-                                    <p className="text-xs font-medium">{tx.tradeDetails}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        من {tx.sourceType === 'cashback' ? 'كاش باك' : 'شراء من المتجر'}
-                                    </p>
-                                </TableCell>
-                                <TableCell className="text-left font-semibold text-primary text-xs">
-                                    +${tx.cashbackAmount.toFixed(2)}
-                                </TableCell>
-                            </TableRow>
-                        )) : (
-                            <TableRow>
-                                <TableCell colSpan={3} className="text-center h-24 text-sm text-muted-foreground">
-                                    لم يتم العثور على عمولات.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between p-3 border-t">
-                        <p className="text-xs text-muted-foreground">
-                            صفحة {currentPage} من {totalPages}
-                        </p>
-                        <div className="flex gap-1">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
 
 interface ReferralWithEarnings extends ReferralInfo {
     totalEarned: number;
@@ -579,22 +416,11 @@ export default function ReferralsPage() {
                 </CardContent>
             </Card>
 
-            <Tabs defaultValue="referrals" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="referrals">إحالاتي</TabsTrigger>
-                    <TabsTrigger value="history">سجل العمولات</TabsTrigger>
-                </TabsList>
-                <TabsContent value="referrals" className="mt-4">
-                    <ReferralsListTab 
-                        referrals={referrals} 
-                        commissionHistory={commissionHistory}
-                        isLoading={isLoading} 
-                    />
-                </TabsContent>
-                <TabsContent value="history" className="mt-4">
-                   <CommissionHistoryTab history={commissionHistory} isLoading={isLoading} />
-                </TabsContent>
-            </Tabs>
+            <ReferralsListTab 
+                referrals={referrals} 
+                commissionHistory={commissionHistory}
+                isLoading={isLoading} 
+            />
         </div>
     );
 }

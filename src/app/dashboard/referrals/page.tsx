@@ -37,7 +37,7 @@ function ReferralsListTab({
     isLoading: boolean 
 }) {
     const [searchFilter, setSearchFilter] = useState('');
-    const [dateFilter, setDateFilter] = useState<DatePeriod>('7days');
+    const [dateFilter, setDateFilter] = useState<DatePeriod>('30days');
     const [currentPage, setCurrentPage] = useState(1);
     const recordsPerPage = 10;
 

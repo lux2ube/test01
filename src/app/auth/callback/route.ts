@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getSession } from '@/lib/auth/session';
 import { generateReferralCode } from '@/lib/referral';
@@ -13,26 +13,44 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin;
 
   if (!code) {
+    console.error('No code provided in OAuth callback');
     return NextResponse.redirect(`${origin}/login?error=no_code`);
   }
 
   try {
-    const supabase = createSupabaseClient(
+    const cookieStore = await cookies();
+    
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Ignore errors in server component
+            }
+          },
         },
       }
     );
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (error || !data.session) {
-      console.error('Auth callback error:', error);
-      return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+    if (error) {
+      console.error('Auth callback error:', error.message, error);
+      return NextResponse.redirect(`${origin}/login?error=auth_callback_failed&message=${encodeURIComponent(error.message)}`);
+    }
+
+    if (!data.session) {
+      console.error('No session returned from code exchange');
+      return NextResponse.redirect(`${origin}/login?error=no_session`);
     }
 
     const { session, user } = data;
@@ -54,6 +72,8 @@ export async function GET(request: Request) {
                        user.user_metadata?.name || 
                        user.email?.split('@')[0] || 
                        'User';
+
+      console.log('Creating new user profile for OAuth user:', user.id, userName);
 
       const { error: insertError } = await supabaseAdmin
         .from('users')
@@ -82,12 +102,14 @@ export async function GET(request: Request) {
     ironSession.expires_at = session.expires_at || 0;
     await ironSession.save();
 
+    console.log('OAuth login successful for user:', user.id);
+
     const userRole = existingProfile?.role || 'user';
     const redirectUrl = userRole === 'admin' ? '/admin/dashboard' : next;
 
     return NextResponse.redirect(`${origin}${redirectUrl}`);
-  } catch (error) {
-    console.error('Auth callback exception:', error);
+  } catch (error: any) {
+    console.error('Auth callback exception:', error?.message || error);
     return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
   }
 }

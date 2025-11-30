@@ -18,8 +18,17 @@ export async function GET(request: Request) {
   const host = headers.get('x-forwarded-host') || headers.get('host') || '';
   const proto = headers.get('x-forwarded-proto') || 'https';
   
+  console.log('🔍 OAuth Callback Origin Detection:', {
+    originalOrigin: requestUrl.origin,
+    host,
+    proto,
+  });
+  
   if (host && !origin.includes(host)) {
     origin = `${proto}://${host}`;
+    console.log('✅ Updated origin to:', origin);
+  } else {
+    console.log('⚠️ Using original origin:', origin);
   }
 
   if (!code) {
@@ -112,13 +121,21 @@ export async function GET(request: Request) {
     ironSession.expires_at = session.expires_at || 0;
     await ironSession.save();
 
-    console.log('OAuth login successful for user:', user.id);
+    console.log('✅ OAuth login successful for user:', user.id);
 
     const userRole = existingProfile?.role || 'user';
     const redirectUrl = userRole === 'admin' ? '/admin/dashboard' : next;
+    const fullRedirectUrl = `${origin}${redirectUrl}`;
+    
+    console.log('🔄 Redirecting to:', {
+      origin,
+      redirectPath: redirectUrl,
+      fullUrl: fullRedirectUrl,
+      userRole,
+    });
 
     // Create response with session cookies set
-    const finalResponse = NextResponse.redirect(`${origin}${redirectUrl}`);
+    const finalResponse = NextResponse.redirect(fullRedirectUrl);
     finalResponse.cookies.set('sb-access-token', session.access_token, {
       httpOnly: true,
       sameSite: 'strict',

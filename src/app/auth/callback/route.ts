@@ -107,7 +107,24 @@ export async function GET(request: Request) {
     const userRole = existingProfile?.role || 'user';
     const redirectUrl = userRole === 'admin' ? '/admin/dashboard' : next;
 
-    return NextResponse.redirect(`${origin}${redirectUrl}`);
+    // Create response with session cookies set
+    const finalResponse = NextResponse.redirect(`${origin}${redirectUrl}`);
+    finalResponse.cookies.set('sb-access-token', session.access_token, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+    finalResponse.cookies.set('sb-refresh-token', session.refresh_token, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+    
+    return finalResponse;
   } catch (error: any) {
     console.error('Auth callback exception:', error?.message || error);
     return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);

@@ -10,7 +10,17 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const next = requestUrl.searchParams.get('next') || '/dashboard';
-  const origin = requestUrl.origin;
+  
+  // Fix for Replit: 0.0.0.0 is internal server address, not valid for browser redirects
+  // Use the Host header or X-Forwarded-Host if available, otherwise fallback to requestUrl
+  let origin = requestUrl.origin;
+  const headers = request.headers;
+  const host = headers.get('x-forwarded-host') || headers.get('host') || '';
+  const proto = headers.get('x-forwarded-proto') || 'https';
+  
+  if (host && !origin.includes(host)) {
+    origin = `${proto}://${host}`;
+  }
 
   if (!code) {
     console.error('No code provided in OAuth callback');

@@ -123,13 +123,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Listen for auth changes - CRITICAL: handle logout events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', _event);
-      setIsLoading(true);
-      if (_event === 'SIGNED_OUT' || !session?.user) {
+      if (_event === 'SIGNED_OUT') {
         console.log('User signed out, clearing user state');
         setUser(null);
         setIsLoading(false);
         return;
       }
+      // Handle all other auth state changes (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, etc.)
       if (session?.user) {
         fetchUserData(session.user);
       } else {

@@ -133,7 +133,7 @@ export function BasicInfoStep({ form }: BasicInfoStepProps) {
               <span className="ltr:inline hidden">Category</span>
               <span className="rtl:inline hidden">الفئة</span>
             </FormLabel>
-            <Select onValueChange={field.onChange} value={field.value}>
+            <Select onValueChange={field.onChange} value={field.value || 'forex'}>
               <FormControl>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />

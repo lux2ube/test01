@@ -75,7 +75,7 @@ export function CashbackStep({ form }: CashbackStepProps) {
                     <span className="ltr:inline hidden">Currency</span>
                     <span className="rtl:inline hidden">العملة</span>
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select currency" />
@@ -105,7 +105,7 @@ export function CashbackStep({ form }: CashbackStepProps) {
                     <span className="ltr:inline hidden">Frequency</span>
                     <span className="rtl:inline hidden">التكرار</span>
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || 'Daily'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select frequency" />

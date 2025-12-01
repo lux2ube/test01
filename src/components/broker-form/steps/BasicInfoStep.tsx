@@ -1,10 +1,11 @@
 "use client";
 
 import { UseFormReturn } from "react-hook-form";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface BasicInfoStepProps {
   form: UseFormReturn<any>;
@@ -119,6 +120,34 @@ export function BasicInfoStep({ form }: BasicInfoStepProps) {
             <FormControl>
               <Input placeholder="Legal company name" {...field} />
             </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="basicInfo.broker_type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              <span className="ltr:inline hidden">Broker Type</span>
+              <span className="rtl:inline hidden">نوع الوسيط</span>
+            </FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || ''}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select broker type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="ECN">ECN</SelectItem>
+                <SelectItem value="STP">STP</SelectItem>
+                <SelectItem value="Market Maker">Market Maker</SelectItem>
+                <SelectItem value="DD">DD (Dealing Desk)</SelectItem>
+                <SelectItem value="NDD">NDD (No Dealing Desk)</SelectItem>
+              </SelectContent>
+            </Select>
             <FormMessage />
           </FormItem>
         )}

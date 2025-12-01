@@ -4,6 +4,7 @@ import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface GlobalReachStepProps {
   form: UseFormReturn<any>;
@@ -84,13 +85,33 @@ export function GlobalReachStep({ form }: GlobalReachStepProps) {
               <span className="ltr:inline hidden">Customer Support Channels</span>
               <span className="rtl:inline hidden">قنوات دعم العملاء</span>
             </FormLabel>
-            <FormControl>
-              <Input placeholder="e.g., Live Chat, Email, Phone, WhatsApp" {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value ? e.target.value.split(',').map((s: string) => s.trim()) : [])} />
-            </FormControl>
-            <FormDescription>
-              <span className="ltr:inline hidden">Comma-separated list of support channels</span>
-              <span className="rtl:inline hidden">قائمة قنوات الدعم مفصولة بفواصل</span>
-            </FormDescription>
+            <div className="space-y-3">
+              {[
+                { id: "LiveChat", label: "Live Chat" },
+                { id: "Email", label: "Email" },
+                { id: "Phone", label: "Phone Support" },
+                { id: "Messaging", label: "Messaging App (WhatsApp/Telegram)" },
+                { id: "Ticketing", label: "Ticketing System" },
+              ].map((channel) => (
+                <div key={channel.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`channel-${channel.id}`}
+                    checked={field.value?.includes(channel.id) || false}
+                    onCheckedChange={(checked) => {
+                      const value = field.value || [];
+                      if (checked) {
+                        field.onChange([...value, channel.id]);
+                      } else {
+                        field.onChange(value.filter((v: string) => v !== channel.id));
+                      }
+                    }}
+                  />
+                  <label htmlFor={`channel-${channel.id}`} className="text-sm cursor-pointer">
+                    {channel.label}
+                  </label>
+                </div>
+              ))}
+            </div>
             <FormMessage />
           </FormItem>
         )}

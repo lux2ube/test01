@@ -4,6 +4,7 @@ import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface DepositsWithdrawalsStepProps {
   form: UseFormReturn<any>;
@@ -21,13 +22,36 @@ export function DepositsWithdrawalsStep({ form }: DepositsWithdrawalsStepProps) 
               <span className="ltr:inline hidden">Payment Methods</span>
               <span className="rtl:inline hidden">طرق الدفع</span>
             </FormLabel>
-            <FormControl>
-              <Input placeholder="e.g., Credit Card, Bank Transfer, PayPal, Crypto" {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value ? e.target.value.split(',').map((s: string) => s.trim()) : [])} />
-            </FormControl>
-            <FormDescription>
-              <span className="ltr:inline hidden">Comma-separated list of payment methods</span>
-              <span className="rtl:inline hidden">قائمة طرق الدفع مفصولة بفواصل</span>
-            </FormDescription>
+            <div className="space-y-3">
+              {[
+                { id: "Crypto", label: "Crypto Wallets" },
+                { id: "Cards", label: "Cards (Visa/Mastercard)" },
+                { id: "Local", label: "Local Payment Systems" },
+                { id: "Wire", label: "Wire Transfer" },
+                { id: "Neteller", label: "Neteller" },
+                { id: "Skrill", label: "Skrill" },
+                { id: "PerfectMoney", label: "Perfect Money" },
+                { id: "WebMoney", label: "WebMoney" },
+              ].map((method) => (
+                <div key={method.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`payment-${method.id}`}
+                    checked={field.value?.includes(method.id) || false}
+                    onCheckedChange={(checked) => {
+                      const value = field.value || [];
+                      if (checked) {
+                        field.onChange([...value, method.id]);
+                      } else {
+                        field.onChange(value.filter((v: string) => v !== method.id));
+                      }
+                    }}
+                  />
+                  <label htmlFor={`payment-${method.id}`} className="text-sm cursor-pointer">
+                    {method.label}
+                  </label>
+                </div>
+              ))}
+            </div>
             <FormMessage />
           </FormItem>
         )}
@@ -80,20 +104,30 @@ export function DepositsWithdrawalsStep({ form }: DepositsWithdrawalsStepProps) 
           control={form.control}
           name="depositsWithdrawals.deposit_fees"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">
-                  <span className="ltr:inline hidden">Deposit Fees</span>
-                  <span className="rtl:inline hidden">رسوم الإيداع</span>
-                </FormLabel>
-                <FormDescription>
-                  <span className="ltr:inline hidden">Charges fees on deposits</span>
-                  <span className="rtl:inline hidden">يفرض رسوم على الإيداعات</span>
-                </FormDescription>
-              </div>
+            <FormItem>
+              <FormLabel>
+                <span className="ltr:inline hidden">Deposit Fees</span>
+                <span className="rtl:inline hidden">رسوم الإيداع</span>
+              </FormLabel>
               <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                <RadioGroup value={field.value ? "yes" : "no"} onValueChange={(val) => field.onChange(val === "yes")}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="yes" id="deposit-fees-yes" />
+                    <label htmlFor="deposit-fees-yes" className="text-sm cursor-pointer">
+                      <span className="ltr:inline hidden">Yes</span>
+                      <span className="rtl:inline hidden">نعم</span>
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="no" id="deposit-fees-no" />
+                    <label htmlFor="deposit-fees-no" className="text-sm cursor-pointer">
+                      <span className="ltr:inline hidden">No</span>
+                      <span className="rtl:inline hidden">لا</span>
+                    </label>
+                  </div>
+                </RadioGroup>
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />
@@ -102,20 +136,30 @@ export function DepositsWithdrawalsStep({ form }: DepositsWithdrawalsStepProps) 
           control={form.control}
           name="depositsWithdrawals.withdrawal_fees"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">
-                  <span className="ltr:inline hidden">Withdrawal Fees</span>
-                  <span className="rtl:inline hidden">رسوم السحب</span>
-                </FormLabel>
-                <FormDescription>
-                  <span className="ltr:inline hidden">Charges fees on withdrawals</span>
-                  <span className="rtl:inline hidden">يفرض رسوم على السحوبات</span>
-                </FormDescription>
-              </div>
+            <FormItem>
+              <FormLabel>
+                <span className="ltr:inline hidden">Withdrawal Fees</span>
+                <span className="rtl:inline hidden">رسوم السحب</span>
+              </FormLabel>
               <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                <RadioGroup value={field.value ? "yes" : "no"} onValueChange={(val) => field.onChange(val === "yes")}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="yes" id="withdrawal-fees-yes" />
+                    <label htmlFor="withdrawal-fees-yes" className="text-sm cursor-pointer">
+                      <span className="ltr:inline hidden">Yes</span>
+                      <span className="rtl:inline hidden">نعم</span>
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="no" id="withdrawal-fees-no" />
+                    <label htmlFor="withdrawal-fees-no" className="text-sm cursor-pointer">
+                      <span className="ltr:inline hidden">No</span>
+                      <span className="rtl:inline hidden">لا</span>
+                    </label>
+                  </div>
+                </RadioGroup>
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />

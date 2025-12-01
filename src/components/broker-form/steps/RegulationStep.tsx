@@ -1,12 +1,13 @@
 "use client";
 
 import { UseFormReturn, useFieldArray } from "react-hook-form";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface RegulationStepProps {
   form: UseFormReturn<any>;
@@ -38,6 +39,59 @@ export function RegulationStep({ form }: RegulationStepProps) {
             <FormControl>
               <Checkbox checked={field.value} onCheckedChange={field.onChange} />
             </FormControl>
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="regulation.risk_level"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              <span className="ltr:inline hidden">Risk Level</span>
+              <span className="rtl:inline hidden">مستوى المخاطرة</span>
+            </FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || ''}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select risk level" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="Low">Low</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="regulation.regulation_status"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              <span className="ltr:inline hidden">Regulation Status</span>
+              <span className="rtl:inline hidden">حالة التنظيم</span>
+            </FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || ''}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select regulation status" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="Regulated">Regulated</SelectItem>
+                <SelectItem value="Unregulated">Unregulated</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="License Revoked">License Revoked</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
           </FormItem>
         )}
       />

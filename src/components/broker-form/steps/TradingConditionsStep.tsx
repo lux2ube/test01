@@ -4,6 +4,8 @@ import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TradingConditionsStepProps {
   form: UseFormReturn<any>;
@@ -102,6 +104,33 @@ export function TradingConditionsStep({ form }: TradingConditionsStepProps) {
 
       <FormField
         control={form.control}
+        name="tradingConditions.spread_type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              <span className="ltr:inline hidden">Spread Type</span>
+              <span className="rtl:inline hidden">نوع الفروق</span>
+            </FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || ''}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select spread type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="Variable">Variable/Floating</SelectItem>
+                <SelectItem value="Fixed">Fixed</SelectItem>
+                <SelectItem value="Zero">Zero/Raw</SelectItem>
+                <SelectItem value="ECN">ECN/Raw</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
         name="tradingConditions.account_types"
         render={({ field }) => (
           <FormItem>
@@ -109,13 +138,34 @@ export function TradingConditionsStep({ form }: TradingConditionsStepProps) {
               <span className="ltr:inline hidden">Account Types</span>
               <span className="rtl:inline hidden">أنواع الحسابات</span>
             </FormLabel>
-            <FormControl>
-              <Input placeholder="e.g., Standard, ECN, Pro" {...field} />
-            </FormControl>
-            <FormDescription>
-              <span className="ltr:inline hidden">Comma-separated list of account types</span>
-              <span className="rtl:inline hidden">قائمة أنواع الحسابات مفصولة بفواصل</span>
-            </FormDescription>
+            <div className="space-y-3">
+              {[
+                { id: "Standard", label: "Standard" },
+                { id: "Micro", label: "Micro/Cent" },
+                { id: "Islamic", label: "Islamic/Swap-Free" },
+                { id: "VIP", label: "VIP" },
+                { id: "ECN", label: "ECN/RAW" },
+                { id: "Demo", label: "Demo" },
+              ].map((type) => (
+                <div key={type.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`account-${type.id}`}
+                    checked={field.value?.includes(type.id) || false}
+                    onCheckedChange={(checked) => {
+                      const value = field.value || [];
+                      if (checked) {
+                        field.onChange([...value, type.id]);
+                      } else {
+                        field.onChange(value.filter((v: string) => v !== type.id));
+                      }
+                    }}
+                  />
+                  <label htmlFor={`account-${type.id}`} className="text-sm cursor-pointer">
+                    {type.label}
+                  </label>
+                </div>
+              ))}
+            </div>
             <FormMessage />
           </FormItem>
         )}

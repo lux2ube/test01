@@ -19,6 +19,31 @@ import { Separator } from '@/components/ui/separator';
 import React from 'react';
 import { TermsBank } from '@/lib/terms-bank';
 
+// Transform database format to TypeScript types (snake_case to camelCase)
+function transformBrokerFromDB(dbBroker: any): Broker {
+  return {
+    id: dbBroker.id,
+    order: dbBroker.order,
+    logoUrl: dbBroker.logo_url || dbBroker.logoUrl || "https://placehold.co/100x100.png",
+    basicInfo: dbBroker.basic_info || dbBroker.basicInfo || {},
+    regulation: dbBroker.regulation || {},
+    tradingConditions: dbBroker.trading_conditions || dbBroker.tradingConditions || {},
+    platforms: dbBroker.platforms || {},
+    instruments: dbBroker.instruments || {},
+    depositsWithdrawals: dbBroker.deposits_withdrawals || dbBroker.depositsWithdrawals || {},
+    cashback: dbBroker.cashback || {},
+    globalReach: dbBroker.global_reach || dbBroker.globalReach || {},
+    reputation: dbBroker.reputation || {},
+    additionalFeatures: dbBroker.additional_features || dbBroker.additionalFeatures || {},
+    name: dbBroker.name || "Unknown Broker",
+    description: dbBroker.description || "",
+    category: dbBroker.category || "other",
+    rating: dbBroker.rating || 0,
+    instructions: dbBroker.instructions || {},
+    existingAccountInstructions: dbBroker.existing_account_instructions || dbBroker.existingAccountInstructions || "",
+  };
+}
+
 function BrokerDetailSkeleton() {
     return (
         <div className="space-y-4 animate-pulse">
@@ -97,7 +122,8 @@ export default function BrokerPreviewPage() {
                 if (error || !data) {
                     notFound();
                 } else {
-                    setBroker({ id: data.id, ...data } as Broker);
+                    const transformedBroker = transformBrokerFromDB(data);
+                    setBroker(transformedBroker);
                 }
             } catch (error) {
                 console.error("Error fetching broker", error);
@@ -122,10 +148,19 @@ export default function BrokerPreviewPage() {
     }
     
     const { 
-        basicInfo, regulation, tradingConditions, platforms, instruments, 
-        depositsWithdrawals, cashback, globalReach, reputation, additionalFeatures, instructions,
-        logoUrl
-    } = broker;
+        basicInfo = {}, 
+        regulation = {}, 
+        tradingConditions = {}, 
+        platforms = {}, 
+        instruments = {}, 
+        depositsWithdrawals = {}, 
+        cashback = {}, 
+        globalReach = {}, 
+        reputation = {}, 
+        additionalFeatures = {}, 
+        instructions = {},
+        logoUrl = "https://placehold.co/100x100.png"
+    } = broker || {};
     
     return (
         <div className="container mx-auto px-4 py-4 max-w-2xl space-y-4">
@@ -136,16 +171,17 @@ export default function BrokerPreviewPage() {
             <Card className="overflow-hidden">
                 <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-4">
                     <Image
-                        src={logoUrl}
-                        alt={`${basicInfo.broker_name} logo`}
+                        src={logoUrl || "https://placehold.co/100x100.png"}
+                        alt={`${basicInfo?.broker_name || 'Broker'} logo`}
                         width={64}
                         height={64}
                         className="w-16 h-16 object-contain rounded-lg border p-1 bg-white flex-shrink-0"
                         data-ai-hint="logo"
+                        onError={(e) => { e.currentTarget.src = "https://placehold.co/100x100.png"; }}
                     />
                     <div className="flex-1 text-center sm:text-left">
-                        <h1 className="text-2xl font-bold font-headline">{basicInfo.broker_name}</h1>
-                        <p className="text-sm text-muted-foreground">{basicInfo.group_entity}</p>
+                        <h1 className="text-2xl font-bold font-headline">{basicInfo?.broker_name || broker?.name || 'Unknown Broker'}</h1>
+                        <p className="text-sm text-muted-foreground">{basicInfo?.group_entity || ""}</p>
                     </div>
                     <Button asChild size="sm">
                         <Link href={`/dashboard/brokers/${brokerId}/link`}>ابدأ في كسب الكاش باك</Link>
@@ -154,10 +190,10 @@ export default function BrokerPreviewPage() {
             </Card>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
-                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Star className="h-4 w-4 text-yellow-500"/> <span className="font-bold">{reputation.wikifx_score?.toFixed(1)}</span><span className="text-xs">تقييم WikiFX</span></Badge>
-                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Users className="h-4 w-4 text-primary"/> <span className="font-bold">{reputation.verified_users?.toLocaleString()}</span><span className="text-xs">مستخدمون موثوقون</span></Badge>
-                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1 capitalize"><ShieldCheck className="h-4 w-4 text-blue-500"/> <span className="font-bold">{regulation.risk_level}</span><span className="text-xs">مستوى المخاطرة</span></Badge>
-                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Award className="h-4 w-4 text-green-500"/> <span className="font-bold">{basicInfo.founded_year}</span><span className="text-xs">تأسست</span></Badge>
+                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Star className="h-4 w-4 text-yellow-500"/> <span className="font-bold">{reputation?.wikifx_score?.toFixed(1) || '0'}</span><span className="text-xs">تقييم WikiFX</span></Badge>
+                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Users className="h-4 w-4 text-primary"/> <span className="font-bold">{reputation?.verified_users?.toLocaleString() || '0'}</span><span className="text-xs">مستخدمون موثوقون</span></Badge>
+                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1 capitalize"><ShieldCheck className="h-4 w-4 text-blue-500"/> <span className="font-bold">{regulation?.risk_level || 'N/A'}</span><span className="text-xs">مستوى المخاطرة</span></Badge>
+                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Award className="h-4 w-4 text-green-500"/> <span className="font-bold">{basicInfo?.founded_year || 'N/A'}</span><span className="text-xs">تأسست</span></Badge>
             </div>
             
             <DetailCard title="المعلومات الأساسية" icon={Briefcase}>

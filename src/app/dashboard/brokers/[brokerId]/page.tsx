@@ -308,6 +308,7 @@ export default function BrokerPreviewPage() {
                             <BooleanPill value={instruments.stocks} text="أسهم" />
                             <BooleanPill value={instruments.commodities} text="سلع" />
                             <BooleanPill value={instruments.indices} text="مؤشرات" />
+                            <BooleanPill value={instruments.crypto_trading} text="تداول العملات المشفرة" />
                          </div>
                     </DetailCard>
                 </TabsContent>
@@ -324,7 +325,6 @@ export default function BrokerPreviewPage() {
                          <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
                             <BooleanPill value={additionalFeatures.welcome_bonus} text="بونص ترحيبي ومكافآت" />
                             <BooleanPill value={additionalFeatures.copy_trading} text="نسخ التداول" />
-                            <BooleanPill value={instruments.crypto_trading} text="تداول العملات المشفرة" />
                             <BooleanPill value={additionalFeatures.swap_free} text="حسابات إسلامية" />
                             <BooleanPill value={additionalFeatures.demo_account} text="حسابات تجريبية" />
                             <BooleanPill value={additionalFeatures.education_center} text="مركز تعليمي" />

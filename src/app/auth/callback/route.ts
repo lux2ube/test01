@@ -136,20 +136,20 @@ export async function GET(request: Request) {
 
     // Create response with session cookies set
     const finalResponse = NextResponse.redirect(fullRedirectUrl);
-    finalResponse.cookies.set('sb-access-token', session.access_token, {
+    
+    // Always use secure in production, but allow insecure in development for Replit
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
       httpOnly: true,
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+      secure: isProduction, // Only true in production
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
-    });
-    finalResponse.cookies.set('sb-refresh-token', session.refresh_token, {
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    };
+    
+    console.log('🍪 Setting session cookies with secure:', isProduction);
+    finalResponse.cookies.set('sb-access-token', session.access_token, cookieOptions);
+    finalResponse.cookies.set('sb-refresh-token', session.refresh_token, cookieOptions);
     
     return finalResponse;
   } catch (error: any) {

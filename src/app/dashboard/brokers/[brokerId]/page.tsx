@@ -77,9 +77,9 @@ function InfoRow({ label, value, children }: { label: string, value?: any, child
     if (value === '' || value === null) return null;
 
     return (
-        <div className="flex justify-between items-center text-xs">
+        <div className="flex justify-between items-center text-xs rtl:flex-row-reverse">
             <span className="text-muted-foreground">{label}</span>
-            <div className="font-medium text-right">
+            <div className="font-medium text-left rtl:text-right">
                 {children || value}
             </div>
         </div>
@@ -173,13 +173,13 @@ export default function BrokerPreviewPage() {
     } = broker || {};
     
     return (
-        <div className="container mx-auto px-4 py-4 max-w-2xl space-y-4">
+        <div className="container mx-auto px-4 py-4 max-w-2xl space-y-4" dir="rtl">
             <Button variant="ghost" asChild className="h-auto p-0 text-sm">
-                <Link href="/dashboard/brokers"><ArrowLeft className="mr-2 h-4 w-4" />العودة إلى الوسطاء</Link>
+                <Link href="/dashboard/brokers"><ArrowLeft className="ml-2 h-4 w-4" />العودة إلى الوسطاء</Link>
             </Button>
             
             <Card className="overflow-hidden">
-                <CardContent className="p-4 flex flex-col sm:flex-row items-start gap-4">
+                <CardContent className="p-4 flex flex-col sm:flex-row-reverse items-start gap-4">
                     <Image
                         src={logoUrl || "https://placehold.co/100x100.png"}
                         alt={`${basicInfo?.broker_name || 'Broker'} logo`}
@@ -189,22 +189,22 @@ export default function BrokerPreviewPage() {
                         data-ai-hint="logo"
                         onError={(e) => { e.currentTarget.src = "https://placehold.co/100x100.png"; }}
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 text-right">
                         <h1 className="text-2xl font-bold font-headline">{basicInfo?.broker_name || broker?.name || 'Unknown Broker'}</h1>
                         <p className="text-sm text-muted-foreground mb-3">{basicInfo?.group_entity || ""}</p>
                         
                         <div className="space-y-2 pb-3 border-b">
                             <p className="text-xs font-semibold text-primary">قسم الكاشباك</p>
                             <div className="grid grid-cols-3 gap-2 text-xs">
-                                <div className="bg-muted p-2 rounded">
+                                <div className="bg-muted p-2 rounded text-center">
                                     <p className="text-muted-foreground">المكافأة</p>
                                     <p className="font-bold text-green-600">${cashback.cashback_per_lot || '0'}</p>
                                 </div>
-                                <div className="bg-muted p-2 rounded">
+                                <div className="bg-muted p-2 rounded text-center">
                                     <p className="text-muted-foreground">التكرار</p>
                                     <p className="font-bold">{findLabel(TermsBank.cashbackFrequency, cashback.cashback_frequency) || 'N/A'}</p>
                                 </div>
-                                <div className="bg-muted p-2 rounded">
+                                <div className="bg-muted p-2 rounded text-center">
                                     <p className="text-muted-foreground">نوع الحساب</p>
                                     <p className="font-bold">{ensureArray(cashback.cashback_account_type).slice(0, 1).map(t => findLabel(TermsBank.accountTypes, t)).join(', ') || 'N/A'}</p>
                                 </div>

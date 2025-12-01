@@ -303,7 +303,7 @@ export default function BrokerPreviewPage() {
                     </DetailCard>
 
                     <DetailCard title="المنتجات المالية" icon={BrainCircuit}>
-                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
+                         <div className="grid md:grid-cols-2 rtl:md:grid-cols-2 gap-x-4 gap-y-2 rtl:gap-x-4">
                             <BooleanPill value={!!instruments.forex_pairs} text="فوركس" />
                             <BooleanPill value={instruments.stocks} text="أسهم" />
                             <BooleanPill value={instruments.commodities} text="سلع" />
@@ -322,7 +322,7 @@ export default function BrokerPreviewPage() {
                     </DetailCard>
 
                     <DetailCard title="ميزات الحساب" icon={Award}>
-                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
+                         <div className="grid md:grid-cols-2 rtl:md:grid-cols-2 gap-x-4 gap-y-2 rtl:gap-x-4">
                             <BooleanPill value={additionalFeatures.welcome_bonus} text="بونص ترحيبي ومكافآت" />
                             <BooleanPill value={additionalFeatures.copy_trading} text="نسخ التداول" />
                             <BooleanPill value={additionalFeatures.swap_free} text="حسابات إسلامية" />
@@ -346,7 +346,7 @@ export default function BrokerPreviewPage() {
                          <InfoRow label="الحد الأدنى للسحب" value={`$${depositsWithdrawals.min_withdrawal}`} />
                          <InfoRow label="سرعة السحب" value={findLabel(TermsBank.supportHours, depositsWithdrawals.withdrawal_speed)} />
                          <Separator className="my-2" />
-                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
+                         <div className="grid md:grid-cols-2 rtl:md:grid-cols-2 gap-x-4 gap-y-2 rtl:gap-x-4">
                              <BooleanPill value={depositsWithdrawals.deposit_fees} text="رسوم على الإيداع" />
                              <BooleanPill value={depositsWithdrawals.withdrawal_fees} text="رسوم على السحب" />
                          </div>

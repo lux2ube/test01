@@ -299,10 +299,7 @@ export default function BrokerPreviewPage() {
                             </div>
                         </InfoRow>
                         <Separator className="my-2" />
-                        <InfoRow label="الحد الأدنى للإيداع" value={`$${tradingConditions.min_deposit}`} />
-                        <InfoRow label="الرافعة المالية القصوى" value={tradingConditions.max_leverage} />
                         <InfoRow label="نوع السبريد" value={findLabel(TermsBank.spreadType, tradingConditions.spread_type)} />
-                        <InfoRow label="أدنى سبريد (نقاط)" value={tradingConditions.min_spread} />
                     </DetailCard>
 
                     <DetailCard title="المنتجات المالية" icon={BrainCircuit}>

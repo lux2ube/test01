@@ -682,6 +682,230 @@ SELECT MAX("order") as max_order FROM brokers;
 
 ---
 
+## 👁️ Broker Preview Page (Single Broker Detail View)
+
+### Location: `src/dashboard/brokers/[brokerId]/page.tsx`
+
+### Page Variables & State:
+
+```typescript
+// Component State
+broker: Broker | null = null;           // Fetched broker data
+isLoading: boolean = true;              // Loading state
+brokerId: string = params.brokerId;     // URL param
+
+// Destructured Data (with safe defaults)
+basicInfo = {} | BrokerBasicInfo;
+regulation = {} | BrokerRegulation;
+tradingConditions = {} | BrokerTradingConditions;
+platforms = {} | BrokerPlatforms;
+instruments = {} | BrokerInstruments;
+depositsWithdrawals = {} | BrokerDepositsWithdrawals;
+cashback = {} | BrokerCashback;
+globalReach = {} | BrokerGlobalReach;
+reputation = {} | BrokerReputation;
+additionalFeatures = {} | BrokerAdditionalFeatures;
+instructions = {} | BrokerInstructions;
+logoUrl = "https://placehold.co/100x100.png";
+```
+
+### Page Sections (10 Detail Cards):
+
+#### 1. **Header Section**
+```
+┌─────────────────────────────────────┐
+│ ← العودة إلى الوسطاء (Back button)   │
+└─────────────────────────────────────┘
+```
+- Back button linking to `/dashboard/brokers`
+- Uses Arabic text: "العودة إلى الوسطاء" (Back to Brokers)
+
+#### 2. **Broker Card (Hero Section)**
+```
+┌──────────────────────────────────────────────────┐
+│ [Logo] | Broker Name          | [Action Button] │
+│        | Group Entity Name                       │
+└──────────────────────────────────────────────────┘
+```
+- **Fields Displayed:**
+  - `logoUrl` - Broker logo image (64x64px)
+  - `basicInfo.broker_name` - Broker name (h1)
+  - `basicInfo.group_entity` - Company group (subtitle)
+  - Action button: "ابدأ في كسب الكاش باك" (Start Earning Cashback)
+
+#### 3. **4-Badge Metrics Row**
+```
+┌──────────┬──────────┬──────────┬──────────┐
+│ WikiFX   │ Verified │  Risk    │ Founded  │
+│ Score    │ Users    │  Level   │  Year    │
+└──────────┴──────────┴──────────┴──────────┘
+```
+- **WikiFX Score:** `reputation.wikifx_score` (0-10, formatted to 1 decimal)
+- **Verified Users:** `reputation.verified_users` (locale-formatted number)
+- **Risk Level:** `regulation.risk_level` (Low/Medium/High)
+- **Founded Year:** `basicInfo.founded_year`
+
+#### 4. **المعلومات الأساسية (Basic Information Card)**
+- **CEO:** `basicInfo.CEO`
+- **Headquarters:** `basicInfo.headquarters`
+- **Company Type:** `basicInfo.broker_type` (looked up in TermsBank)
+- **Regulation Status:** `regulation.regulation_status` (looked up in TermsBank)
+
+#### 5. **التراخيص (Licenses Card)**
+```
+For each license in regulation.licenses:
+┌─────────────────────────┐
+│ Authority: [value]      │
+│ License #: [value]      │
+│ Status: [value]         │
+└─────────────────────────┘
+```
+- Iterates through `regulation.licenses[]` array
+- Uses `ensureArray()` to handle non-array data types
+- Shows: Authority, License Number, Status
+
+#### 6. **منصات التداول (Trading Platforms Card)**
+```
+Supported Platforms: [Badge] [Badge] [Badge]
+├─ MT4 License: [value]
+└─ MT5 License: [value]
+```
+- **Platforms:** `platforms.platforms_supported[]` (displayed as badges)
+- **MT4 Type:** `platforms.mt4_license_type` (Full License/White Label/None)
+- **MT5 Type:** `platforms.mt5_license_type` (Full License/White Label/None)
+
+#### 7. **الحسابات وأنواعها (Account Types Card)**
+```
+Account Types: [Badge] [Badge] [Badge]
+├─ Min Deposit: $[value]
+├─ Max Leverage: [value]
+├─ Spread Type: [value]
+└─ Min Spread: [value] pips
+```
+- **Account Types:** `tradingConditions.account_types[]` (array of badges)
+- **Min Deposit:** `tradingConditions.min_deposit` (with $ prefix)
+- **Leverage:** `tradingConditions.max_leverage`
+- **Spread Type:** `tradingConditions.spread_type`
+- **Min Spread:** `tradingConditions.min_spread`
+
+#### 8. **ميزات الحساب (Account Features Card)**
+```
+Grid of Boolean Pills:
+✓ Welcome Bonus        ✓ Copy Trading
+✓ Crypto Trading       ✓ Islamic Accounts
+✓ Demo Accounts        ✓ Education Center
+✓ Trading Contests
+```
+- Shows as green checkmark (✓) or red X
+- **Fields:**
+  - `additionalFeatures.welcome_bonus`
+  - `additionalFeatures.copy_trading`
+  - `instruments.crypto_trading`
+  - `additionalFeatures.swap_free` (Islamic accounts)
+  - `additionalFeatures.demo_account`
+  - `additionalFeatures.education_center`
+  - `additionalFeatures.trading_contests`
+
+#### 9. **المنتجات المالية (Financial Instruments Card)**
+```
+Grid of Boolean Pills:
+✓ Forex    ✓ Stocks
+✓ Commodities   ✓ Indices
+```
+- **Fields:**
+  - `instruments.forex_pairs` (truthy check)
+  - `instruments.stocks`
+  - `instruments.commodities`
+  - `instruments.indices`
+
+#### 10. **طرق الدفع والسحب (Deposits & Withdrawals Card)**
+```
+Payment Methods: [Badge] [Badge] [Badge]
+├─ Min Withdrawal: $[value]
+├─ Withdrawal Speed: [value]
+├─ Deposit Fees: [Yes/No]
+└─ Withdrawal Fees: [Yes/No]
+```
+- **Payment Methods:** `depositsWithdrawals.payment_methods[]` (array of badges)
+- **Min Withdrawal:** `depositsWithdrawals.min_withdrawal`
+- **Withdrawal Speed:** `depositsWithdrawals.withdrawal_speed`
+- **Fees:** Boolean pills for deposit/withdrawal fees
+
+#### 11. **الدعم والخدمة (Support & Service Card)**
+```
+Languages: [Badge] [Badge] [Badge]
+├─ Support Channels: [Badge] [Badge]
+└─ Support Hours: [value]
+```
+- **Languages:** `globalReach.languages_supported[]` (array of badges)
+- **Support Channels:** `globalReach.customer_support_channels[]`
+- **Hours:** `globalReach.global_presence`
+
+#### 12. **برامج المكافآت (Rewards Programs Card)**
+```
+Eligible Account Types: [Badge] [Badge]
+├─ Reward Frequency: [value]
+├─ Payout Methods: [Badge] [Badge]
+└─ Cashback per Lot: $[value]
+```
+- **Eligible Types:** `cashback.cashback_account_type[]`
+- **Frequency:** `cashback.cashback_frequency` (Daily/Weekly/Monthly)
+- **Methods:** `cashback.rebate_method[]` (array of badges)
+- **Per Lot:** `cashback.cashback_per_lot`
+
+#### 13. **تقييمات الوسيط (Broker Reviews Card)**
+- **Trustpilot Rating:** `reputation.trustpilot_rating`
+- **Review Count:** `reputation.reviews_count` (locale-formatted)
+
+#### 14. **تعليمات (Instructions Card)**
+- **Content:** `instructions.description` (whitespace-preserved text)
+
+### Helper Functions:
+
+```typescript
+// Transform database snake_case to camelCase
+function transformBrokerFromDB(dbBroker: any): Broker
+
+// Find label from TermsBank lookup tables
+function findLabel(bank: {key: string, label: string}[], key: string | undefined): string
+
+// Safely convert any value to array
+function ensureArray<T>(value: any): T[]
+```
+
+### Data Flow:
+
+```
+Fetch broker by ID
+    ↓
+transformBrokerFromDB()
+    ↓ [Convert snake_case to camelCase]
+Broker type with all nested objects
+    ↓ [Destructure with defaults]
+14 Detail Cards
+    ↓ [Each maps data to display elements]
+User sees complete broker profile
+```
+
+### Error Handling:
+
+- **No data:** Shows `notFound()` page
+- **Loading:** Shows skeleton loading state
+- **Missing fields:** Safe defaults with optional chaining
+- **Bad arrays:** `ensureArray()` converts strings/objects to arrays
+- **Bad images:** Falls back to placeholder on error
+
+### Styling:
+
+- Max width: 2xl (42rem)
+- Container: mx-auto with padding
+- Cards: DetailCard component with icon + title
+- Badges: Secondary variant for array items
+- Boolean Pills: Green checkmark (✓) or red X
+- RTL support: Arabic text direction throughout
+
+---
+
 ## 📋 Summary
 
 | Layer | Location | Variables | Type |
@@ -689,7 +913,8 @@ SELECT MAX("order") as max_order FROM brokers;
 | **Database** | Supabase | brokers table | SQL |
 | **TypeScript** | src/types/index.ts | Broker interface | Type |
 | **Admin Form** | src/app/admin/brokers/[brokerId]/page.tsx | BrokerFormValues | Form Schema |
-| **User Display** | src/app/dashboard/brokers/page.tsx | Broker[] | Display |
+| **User List** | src/app/dashboard/brokers/page.tsx | Broker[] | Display |
+| **User Detail** | src/app/dashboard/brokers/[brokerId]/page.tsx | Broker (single) | Display |
 | **Components** | src/components/user/BrokerCard.tsx | broker prop | UI |
 | **Actions** | src/app/admin/manage-brokers/actions.ts | CRUD functions | Server |
 

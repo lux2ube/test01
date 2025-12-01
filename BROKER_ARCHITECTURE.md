@@ -684,7 +684,7 @@ SELECT MAX("order") as max_order FROM brokers;
 
 ## 👁️ Broker Preview Page (Single Broker Detail View)
 
-### Location: `src/dashboard/brokers/[brokerId]/page.tsx`
+### Location: `src/app/dashboard/brokers/[brokerId]/page.tsx`
 
 ### Page Variables & State:
 
@@ -693,8 +693,9 @@ SELECT MAX("order") as max_order FROM brokers;
 broker: Broker | null = null;           // Fetched broker data
 isLoading: boolean = true;              // Loading state
 brokerId: string = params.brokerId;     // URL param
+activeTab: string = "info";             // Active tab (info/trading/features/payment)
 
-// Destructured Data (with safe defaults)
+// Destructured Data (with safe defaults) - ALL VARIABLES PRESERVED
 basicInfo = {} | BrokerBasicInfo;
 regulation = {} | BrokerRegulation;
 tradingConditions = {} | BrokerTradingConditions;
@@ -709,156 +710,139 @@ instructions = {} | BrokerInstructions;
 logoUrl = "https://placehold.co/100x100.png";
 ```
 
-### Page Sections (10 Detail Cards):
+### Page Layout Structure:
 
-#### 1. **Header Section**
-```
-┌─────────────────────────────────────┐
-│ ← العودة إلى الوسطاء (Back button)   │
-└─────────────────────────────────────┘
-```
-- Back button linking to `/dashboard/brokers`
-- Uses Arabic text: "العودة إلى الوسطاء" (Back to Brokers)
-
-#### 2. **Broker Card (Hero Section)**
 ```
 ┌──────────────────────────────────────────────────┐
-│ [Logo] | Broker Name          | [Action Button] │
-│        | Group Entity Name                       │
+│ ← العودة إلى الوسطاء (Back Button)                │
 └──────────────────────────────────────────────────┘
-```
-- **Fields Displayed:**
-  - `logoUrl` - Broker logo image (64x64px)
-  - `basicInfo.broker_name` - Broker name (h1)
-  - `basicInfo.group_entity` - Company group (subtitle)
-  - Action button: "ابدأ في كسب الكاش باك" (Start Earning Cashback)
 
-#### 3. **4-Badge Metrics Row**
+┌──────────────────────────────────────────────────┐
+│ [Logo] Broker Name              [Action Button]  │
+│        Group Entity                              │
+│                                                  │
+│        📊 قسم الكاشباك (Cashback Section)        │
+│        ├─ المكافأة: $[value]                      │
+│        ├─ التكرار: [value]                       │
+│        └─ نوع الحساب: [value]                    │
+└──────────────────────────────────────────────────┘
+
+┌─ WikiFX ─┬─ Verified ─┬─ Risk ─┬─ Founded ─┐
+│  Score   │   Users    │ Level  │   Year    │
+└─────────┴──────────┴────────┴─────────┘
+
+┌────────────────────────────────────────┐
+│ معلومات البروكر │ التداول │ مميزات │ الدفع │
+└────────────────────────────────────────┘
+```
+
+### Hero Section (Top Card with Cashback)
+
+**Layout:**
+- Left: Logo (64x64px)
+- Middle: Broker name (h1), Group entity (subtitle)
+- Right: Action button "ابدأ في كسب الكاش باك"
+
+**Cashback Section (within hero card):**
+```
+قسم الكاشباك
+┌─────────────┬─────────────┬─────────────┐
+│ المكافأة    │ التكرار     │ نوع الحساب  │
+│ $[value]    │ [value]     │ [value]     │
+└─────────────┴─────────────┴─────────────┘
+```
+- **Cashback per Lot:** `cashback.cashback_per_lot`
+- **Frequency:** `cashback.cashback_frequency`
+- **Account Type:** `cashback.cashback_account_type[0]`
+
+### Metrics Row (4 Badges)
 ```
 ┌──────────┬──────────┬──────────┬──────────┐
 │ WikiFX   │ Verified │  Risk    │ Founded  │
 │ Score    │ Users    │  Level   │  Year    │
 └──────────┴──────────┴──────────┴──────────┘
 ```
-- **WikiFX Score:** `reputation.wikifx_score` (0-10, formatted to 1 decimal)
-- **Verified Users:** `reputation.verified_users` (locale-formatted number)
-- **Risk Level:** `regulation.risk_level` (Low/Medium/High)
+- **WikiFX Score:** `reputation.wikifx_score`
+- **Verified Users:** `reputation.verified_users`
+- **Risk Level:** `regulation.risk_level`
 - **Founded Year:** `basicInfo.founded_year`
 
-#### 4. **المعلومات الأساسية (Basic Information Card)**
-- **CEO:** `basicInfo.CEO`
-- **Headquarters:** `basicInfo.headquarters`
-- **Company Type:** `basicInfo.broker_type` (looked up in TermsBank)
-- **Regulation Status:** `regulation.regulation_status` (looked up in TermsBank)
+### Tabs Container (4 Tabs)
 
-#### 5. **التراخيص (Licenses Card)**
-```
-For each license in regulation.licenses:
-┌─────────────────────────┐
-│ Authority: [value]      │
-│ License #: [value]      │
-│ Status: [value]         │
-└─────────────────────────┘
-```
-- Iterates through `regulation.licenses[]` array
-- Uses `ensureArray()` to handle non-array data types
-- Shows: Authority, License Number, Status
+#### **Tab 1: معلومات البروكر (Broker Information)**
 
-#### 6. **منصات التداول (Trading Platforms Card)**
-```
-Supported Platforms: [Badge] [Badge] [Badge]
-├─ MT4 License: [value]
-└─ MT5 License: [value]
-```
-- **Platforms:** `platforms.platforms_supported[]` (displayed as badges)
-- **MT4 Type:** `platforms.mt4_license_type` (Full License/White Label/None)
-- **MT5 Type:** `platforms.mt5_license_type` (Full License/White Label/None)
+Contains 4 Detail Cards:
 
-#### 7. **الحسابات وأنواعها (Account Types Card)**
-```
-Account Types: [Badge] [Badge] [Badge]
-├─ Min Deposit: $[value]
-├─ Max Leverage: [value]
-├─ Spread Type: [value]
-└─ Min Spread: [value] pips
-```
-- **Account Types:** `tradingConditions.account_types[]` (array of badges)
-- **Min Deposit:** `tradingConditions.min_deposit` (with $ prefix)
-- **Leverage:** `tradingConditions.max_leverage`
-- **Spread Type:** `tradingConditions.spread_type`
-- **Min Spread:** `tradingConditions.min_spread`
+1. **المعلومات الأساسية**
+   - CEO: `basicInfo.CEO`
+   - Headquarters: `basicInfo.headquarters`
+   - Type: `basicInfo.broker_type` (lookup)
+   - Regulation Status: `regulation.regulation_status` (lookup)
 
-#### 8. **ميزات الحساب (Account Features Card)**
-```
-Grid of Boolean Pills:
-✓ Welcome Bonus        ✓ Copy Trading
-✓ Crypto Trading       ✓ Islamic Accounts
-✓ Demo Accounts        ✓ Education Center
-✓ Trading Contests
-```
-- Shows as green checkmark (✓) or red X
-- **Fields:**
-  - `additionalFeatures.welcome_bonus`
-  - `additionalFeatures.copy_trading`
-  - `instruments.crypto_trading`
-  - `additionalFeatures.swap_free` (Islamic accounts)
-  - `additionalFeatures.demo_account`
-  - `additionalFeatures.education_center`
-  - `additionalFeatures.trading_contests`
+2. **التراخيص**
+   - Iterates: `regulation.licenses[]`
+   - Per License: Authority, Number, Status
+   - Uses: `ensureArray()` for safety
 
-#### 9. **المنتجات المالية (Financial Instruments Card)**
-```
-Grid of Boolean Pills:
-✓ Forex    ✓ Stocks
-✓ Commodities   ✓ Indices
-```
-- **Fields:**
-  - `instruments.forex_pairs` (truthy check)
-  - `instruments.stocks`
-  - `instruments.commodities`
-  - `instruments.indices`
+3. **تقييمات الوسيط**
+   - Trustpilot Rating: `reputation.trustpilot_rating`
+   - Reviews Count: `reputation.reviews_count`
 
-#### 10. **طرق الدفع والسحب (Deposits & Withdrawals Card)**
-```
-Payment Methods: [Badge] [Badge] [Badge]
-├─ Min Withdrawal: $[value]
-├─ Withdrawal Speed: [value]
-├─ Deposit Fees: [Yes/No]
-└─ Withdrawal Fees: [Yes/No]
-```
-- **Payment Methods:** `depositsWithdrawals.payment_methods[]` (array of badges)
-- **Min Withdrawal:** `depositsWithdrawals.min_withdrawal`
-- **Withdrawal Speed:** `depositsWithdrawals.withdrawal_speed`
-- **Fees:** Boolean pills for deposit/withdrawal fees
+4. **الدعم والخدمة**
+   - Languages: `globalReach.languages_supported[]` (badges)
+   - Support Channels: `globalReach.customer_support_channels[]` (badges)
+   - Support Hours: `globalReach.global_presence` (lookup)
 
-#### 11. **الدعم والخدمة (Support & Service Card)**
-```
-Languages: [Badge] [Badge] [Badge]
-├─ Support Channels: [Badge] [Badge]
-└─ Support Hours: [value]
-```
-- **Languages:** `globalReach.languages_supported[]` (array of badges)
-- **Support Channels:** `globalReach.customer_support_channels[]`
-- **Hours:** `globalReach.global_presence`
+#### **Tab 2: التداول (Trading)**
 
-#### 12. **برامج المكافآت (Rewards Programs Card)**
-```
-Eligible Account Types: [Badge] [Badge]
-├─ Reward Frequency: [value]
-├─ Payout Methods: [Badge] [Badge]
-└─ Cashback per Lot: $[value]
-```
-- **Eligible Types:** `cashback.cashback_account_type[]`
-- **Frequency:** `cashback.cashback_frequency` (Daily/Weekly/Monthly)
-- **Methods:** `cashback.rebate_method[]` (array of badges)
-- **Per Lot:** `cashback.cashback_per_lot`
+Contains 3 Detail Cards:
 
-#### 13. **تقييمات الوسيط (Broker Reviews Card)**
-- **Trustpilot Rating:** `reputation.trustpilot_rating`
-- **Review Count:** `reputation.reviews_count` (locale-formatted)
+1. **منصات التداول**
+   - Platforms: `platforms.platforms_supported[]` (badges)
+   - MT4 License: `platforms.mt4_license_type`
+   - MT5 License: `platforms.mt5_license_type`
 
-#### 14. **تعليمات (Instructions Card)**
-- **Content:** `instructions.description` (whitespace-preserved text)
+2. **الحسابات وأنواعها**
+   - Types: `tradingConditions.account_types[]` (badges)
+   - Min Deposit: `tradingConditions.min_deposit` (with $)
+   - Max Leverage: `tradingConditions.max_leverage`
+   - Spread Type: `tradingConditions.spread_type` (lookup)
+   - Min Spread: `tradingConditions.min_spread`
+
+3. **المنتجات المالية**
+   - Forex: `instruments.forex_pairs` (boolean pill)
+   - Stocks: `instruments.stocks` (boolean pill)
+   - Commodities: `instruments.commodities` (boolean pill)
+   - Indices: `instruments.indices` (boolean pill)
+
+#### **Tab 3: مميزات حصرية (Exclusive Features)**
+
+Contains 2 Detail Cards:
+
+1. **مميزات التداول**
+   - Min Spread: `tradingConditions.min_spread`
+   - Max Leverage: `tradingConditions.max_leverage`
+
+2. **ميزات الحساب**
+   - Welcome Bonus: `additionalFeatures.welcome_bonus`
+   - Copy Trading: `additionalFeatures.copy_trading`
+   - Crypto Trading: `instruments.crypto_trading`
+   - Islamic Accounts: `additionalFeatures.swap_free`
+   - Demo Accounts: `additionalFeatures.demo_account`
+   - Education Center: `additionalFeatures.education_center`
+   - Trading Contests: `additionalFeatures.trading_contests`
+
+#### **Tab 4: الدفع (Payment)**
+
+Contains 1 Detail Card:
+
+1. **طرق الدفع والسحب** (Complete)
+   - Payment Methods: `depositsWithdrawals.payment_methods[]` (badges)
+   - Min Deposit: `depositsWithdrawals.min_deposit || tradingConditions.min_deposit`
+   - Min Withdrawal: `depositsWithdrawals.min_withdrawal`
+   - Withdrawal Speed: `depositsWithdrawals.withdrawal_speed` (lookup)
+   - Deposit Fees: `depositsWithdrawals.deposit_fees` (boolean pill)
+   - Withdrawal Fees: `depositsWithdrawals.withdrawal_fees` (boolean pill)
 
 ### Helper Functions:
 
@@ -882,9 +866,9 @@ transformBrokerFromDB()
     ↓ [Convert snake_case to camelCase]
 Broker type with all nested objects
     ↓ [Destructure with defaults]
-14 Detail Cards
-    ↓ [Each maps data to display elements]
-User sees complete broker profile
+Hero Card + Metrics + 4 Tabs with Detail Cards
+    ↓ [Each card/tab maps data to display elements]
+User sees complete broker profile with organized tabs
 ```
 
 ### Error Handling:
@@ -899,7 +883,10 @@ User sees complete broker profile
 
 - Max width: 2xl (42rem)
 - Container: mx-auto with padding
-- Cards: DetailCard component with icon + title
+- Hero Card: Flex layout with logo + info + action button
+- Cashback Section: Grid 3-column within hero card
+- Tabs: shadcn/ui Tabs component (4 tabs)
+- Detail Cards: DetailCard component with icon + title
 - Badges: Secondary variant for array items
 - Boolean Pills: Green checkmark (✓) or red X
 - RTL support: Arabic text direction throughout

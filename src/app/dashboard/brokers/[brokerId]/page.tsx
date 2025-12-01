@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createClient } from '@/lib/supabase/client';
 import type { Broker } from '@/types';
 import {
@@ -114,6 +115,7 @@ export default function BrokerPreviewPage() {
 
     const [broker, setBroker] = useState<Broker | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState("info");
 
     useEffect(() => {
         const fetchBroker = async () => {
@@ -177,7 +179,7 @@ export default function BrokerPreviewPage() {
             </Button>
             
             <Card className="overflow-hidden">
-                <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-4">
+                <CardContent className="p-4 flex flex-col sm:flex-row items-start gap-4">
                     <Image
                         src={logoUrl || "https://placehold.co/100x100.png"}
                         alt={`${basicInfo?.broker_name || 'Broker'} logo`}
@@ -187,13 +189,34 @@ export default function BrokerPreviewPage() {
                         data-ai-hint="logo"
                         onError={(e) => { e.currentTarget.src = "https://placehold.co/100x100.png"; }}
                     />
-                    <div className="flex-1 text-center sm:text-left">
+                    <div className="flex-1">
                         <h1 className="text-2xl font-bold font-headline">{basicInfo?.broker_name || broker?.name || 'Unknown Broker'}</h1>
-                        <p className="text-sm text-muted-foreground">{basicInfo?.group_entity || ""}</p>
+                        <p className="text-sm text-muted-foreground mb-3">{basicInfo?.group_entity || ""}</p>
+                        
+                        <div className="space-y-2 pb-3 border-b">
+                            <p className="text-xs font-semibold text-primary">قسم الكاشباك</p>
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                                <div className="bg-muted p-2 rounded">
+                                    <p className="text-muted-foreground">المكافأة</p>
+                                    <p className="font-bold text-green-600">${cashback.cashback_per_lot || '0'}</p>
+                                </div>
+                                <div className="bg-muted p-2 rounded">
+                                    <p className="text-muted-foreground">التكرار</p>
+                                    <p className="font-bold">{findLabel(TermsBank.cashbackFrequency, cashback.cashback_frequency) || 'N/A'}</p>
+                                </div>
+                                <div className="bg-muted p-2 rounded">
+                                    <p className="text-muted-foreground">نوع الحساب</p>
+                                    <p className="font-bold">{ensureArray(cashback.cashback_account_type).slice(0, 1).map(t => findLabel(TermsBank.accountTypes, t)).join(', ') || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-2 pt-3">
+                            <Button asChild size="sm" className="flex-1">
+                                <Link href={`/dashboard/brokers/${brokerId}/link`}>ابدأ في كسب الكاش باك</Link>
+                            </Button>
+                        </div>
                     </div>
-                    <Button asChild size="sm">
-                        <Link href={`/dashboard/brokers/${brokerId}/link`}>ابدأ في كسب الكاش باك</Link>
-                    </Button>
                 </CardContent>
             </Card>
 
@@ -203,128 +226,136 @@ export default function BrokerPreviewPage() {
                  <Badge variant="outline" className="flex-col h-14 justify-center gap-1 capitalize"><ShieldCheck className="h-4 w-4 text-blue-500"/> <span className="font-bold">{regulation?.risk_level || 'N/A'}</span><span className="text-xs">مستوى المخاطرة</span></Badge>
                  <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Award className="h-4 w-4 text-green-500"/> <span className="font-bold">{basicInfo?.founded_year || 'N/A'}</span><span className="text-xs">تأسست</span></Badge>
             </div>
-            
-            <DetailCard title="المعلومات الأساسية" icon={Briefcase}>
-                <InfoRow label="المؤسس / CEO" value={basicInfo.CEO} />
-                <InfoRow label="المقر الرئيسي" value={basicInfo.headquarters} />
-                <InfoRow label="نوع الشركة" value={findLabel(TermsBank.brokerType, basicInfo.broker_type)} />
-                <InfoRow label="الحالة التنظيمية" value={findLabel(TermsBank.regulationStatus, regulation.regulation_status)} />
-            </DetailCard>
-            
-            <DetailCard title="التراخيص" icon={ShieldCheck}>
-                {ensureArray(regulation.licenses).map((license, index) => (
-                    <React.Fragment key={index}>
-                        <div className="p-2 bg-muted/50 rounded-md">
-                            <InfoRow label="جهة الترخيص" value={findLabel(TermsBank.licenseAuthority, license.authority)} />
-                            <InfoRow label="رقم الترخيص" value={license.licenseNumber} />
-                            <InfoRow label="حالة الترخيص" value={findLabel(TermsBank.regulationStatus, license.status)} />
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="info" className="text-xs">معلومات البروكر</TabsTrigger>
+                    <TabsTrigger value="trading" className="text-xs">التداول</TabsTrigger>
+                    <TabsTrigger value="features" className="text-xs">مميزات حصرية</TabsTrigger>
+                    <TabsTrigger value="payment" className="text-xs">الدفع</TabsTrigger>
+                </TabsList>
+
+                {/* Tab 1: معلومات البروكر */}
+                <TabsContent value="info" className="space-y-4 mt-4">
+                    <DetailCard title="المعلومات الأساسية" icon={Briefcase}>
+                        <InfoRow label="المؤسس / CEO" value={basicInfo.CEO} />
+                        <InfoRow label="المقر الرئيسي" value={basicInfo.headquarters} />
+                        <InfoRow label="نوع الشركة" value={findLabel(TermsBank.brokerType, basicInfo.broker_type)} />
+                        <InfoRow label="الحالة التنظيمية" value={findLabel(TermsBank.regulationStatus, regulation.regulation_status)} />
+                    </DetailCard>
+                    
+                    <DetailCard title="التراخيص" icon={ShieldCheck}>
+                        {ensureArray(regulation.licenses).map((license, index) => (
+                            <React.Fragment key={index}>
+                                <div className="p-2 bg-muted/50 rounded-md">
+                                    <InfoRow label="جهة الترخيص" value={findLabel(TermsBank.licenseAuthority, license.authority)} />
+                                    <InfoRow label="رقم الترخيص" value={license.licenseNumber} />
+                                    <InfoRow label="حالة الترخيص" value={findLabel(TermsBank.regulationStatus, license.status)} />
+                                </div>
+                                {index < ensureArray(regulation.licenses).length - 1 && <Separator className="my-2" />}
+                            </React.Fragment>
+                         ))}
+                    </DetailCard>
+
+                    <DetailCard title="تقييمات الوسيط" icon={Star}>
+                         <InfoRow label="تقييم Trustpilot" value={reputation.trustpilot_rating} />
+                         <InfoRow label="عدد المراجعات" value={reputation.reviews_count?.toLocaleString()} />
+                    </DetailCard>
+
+                    <DetailCard title="الدعم والخدمة" icon={Globe}>
+                        <InfoRow label="اللغات المدعومة">
+                            <div className="flex gap-1 flex-wrap justify-end">
+                               {ensureArray(globalReach.languages_supported).map(l => <Badge key={l} variant="secondary">{findLabel(TermsBank.languagesSupported, l)}</Badge>)}
+                            </div>
+                        </InfoRow>
+                         <Separator className="my-2" />
+                         <InfoRow label="قنوات الدعم">
+                            <div className="flex gap-1 flex-wrap justify-end">
+                               {ensureArray(globalReach.customer_support_channels).map(c => <Badge key={c} variant="secondary">{findLabel(TermsBank.supportChannels, c)}</Badge>)}
+                            </div>
+                        </InfoRow>
+                         <Separator className="my-2" />
+                         <InfoRow label="ساعات الدعم" value={findLabel(TermsBank.supportHours, globalReach.global_presence)} />
+                    </DetailCard>
+                </TabsContent>
+
+                {/* Tab 2: التداول */}
+                <TabsContent value="trading" className="space-y-4 mt-4">
+                    <DetailCard title="منصات التداول" icon={Gauge}>
+                        <InfoRow label="المنصات المدعومة">
+                            <div className="flex gap-1 flex-wrap justify-end">
+                               {ensureArray(platforms.platforms_supported).map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.platforms, p)}</Badge>)}
+                            </div>
+                        </InfoRow>
+                        <Separator className="my-2" />
+                        <InfoRow label="ترخيص MT4" value={platforms.mt4_license_type} />
+                        <InfoRow label="ترخيص MT5" value={platforms.mt5_license_type} />
+                    </DetailCard>
+
+                    <DetailCard title="الحسابات وأنواعها" icon={Users}>
+                        <InfoRow label="أنواع الحسابات">
+                             <div className="flex gap-1 flex-wrap justify-end">
+                               {ensureArray(tradingConditions.account_types).map(t => <Badge key={t} variant="secondary">{findLabel(TermsBank.accountTypes, t)}</Badge>)}
+                            </div>
+                        </InfoRow>
+                        <Separator className="my-2" />
+                        <InfoRow label="الحد الأدنى للإيداع" value={`$${tradingConditions.min_deposit}`} />
+                        <InfoRow label="الرافعة المالية القصوى" value={tradingConditions.max_leverage} />
+                        <InfoRow label="نوع السبريد" value={findLabel(TermsBank.spreadType, tradingConditions.spread_type)} />
+                        <InfoRow label="أدنى سبريد (نقاط)" value={tradingConditions.min_spread} />
+                    </DetailCard>
+
+                    <DetailCard title="المنتجات المالية" icon={BrainCircuit}>
+                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
+                            <BooleanPill value={!!instruments.forex_pairs} text="فوركس" />
+                            <BooleanPill value={instruments.stocks} text="أسهم" />
+                            <BooleanPill value={instruments.commodities} text="سلع" />
+                            <BooleanPill value={instruments.indices} text="مؤشرات" />
+                         </div>
+                    </DetailCard>
+                </TabsContent>
+
+                {/* Tab 3: مميزات حصرية */}
+                <TabsContent value="features" className="space-y-4 mt-4">
+                    <DetailCard title="مميزات التداول" icon={Award}>
+                        <InfoRow label="أدنى سبريد (نقاط)" value={tradingConditions.min_spread} />
+                        <Separator className="my-2" />
+                        <InfoRow label="الرافعة المالية القصوى" value={tradingConditions.max_leverage} />
+                    </DetailCard>
+
+                    <DetailCard title="ميزات الحساب" icon={Award}>
+                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
+                            <BooleanPill value={additionalFeatures.welcome_bonus} text="بونص ترحيبي ومكافآت" />
+                            <BooleanPill value={additionalFeatures.copy_trading} text="نسخ التداول" />
+                            <BooleanPill value={instruments.crypto_trading} text="تداول العملات المشفرة" />
+                            <BooleanPill value={additionalFeatures.swap_free} text="حسابات إسلامية" />
+                            <BooleanPill value={additionalFeatures.demo_account} text="حسابات تجريبية" />
+                            <BooleanPill value={additionalFeatures.education_center} text="مركز تعليمي" />
+                            <BooleanPill value={additionalFeatures.trading_contests} text="مسابقات تداول" />
                         </div>
-                        {index < ensureArray(regulation.licenses).length - 1 && <Separator className="my-2" />}
-                    </React.Fragment>
-                 ))}
-            </DetailCard>
+                    </DetailCard>
+                </TabsContent>
 
-             <DetailCard title="منصات التداول" icon={Gauge}>
-                <InfoRow label="المنصات المدعومة">
-                    <div className="flex gap-1 flex-wrap justify-end">
-                       {ensureArray(platforms.platforms_supported).map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.platforms, p)}</Badge>)}
-                    </div>
-                </InfoRow>
-                <Separator className="my-2" />
-                <InfoRow label="ترخيص MT4" value={platforms.mt4_license_type} />
-                <InfoRow label="ترخيص MT5" value={platforms.mt5_license_type} />
-            </DetailCard>
-            
-            <DetailCard title="الحسابات وأنواعها" icon={Users}>
-                <InfoRow label="أنواع الحسابات">
-                     <div className="flex gap-1 flex-wrap justify-end">
-                       {ensureArray(tradingConditions.account_types).map(t => <Badge key={t} variant="secondary">{findLabel(TermsBank.accountTypes, t)}</Badge>)}
-                    </div>
-                </InfoRow>
-                <Separator className="my-2" />
-                <InfoRow label="الحد الأدنى للإيداع" value={`$${tradingConditions.min_deposit}`} />
-                <InfoRow label="الرافعة المالية القصوى" value={tradingConditions.max_leverage} />
-                <InfoRow label="نوع السبريد" value={findLabel(TermsBank.spreadType, tradingConditions.spread_type)} />
-                <InfoRow label="أدنى سبريد (نقاط)" value={tradingConditions.min_spread} />
-            </DetailCard>
-
-            <DetailCard title="ميزات الحساب" icon={Award}>
-                 <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
-                    <BooleanPill value={additionalFeatures.welcome_bonus} text="بونص ترحيبي ومكافآت" />
-                    <BooleanPill value={additionalFeatures.copy_trading} text="نسخ التداول" />
-                    <BooleanPill value={instruments.crypto_trading} text="تداول العملات المشفرة" />
-                    <BooleanPill value={additionalFeatures.swap_free} text="حسابات إسلامية" />
-                    <BooleanPill value={additionalFeatures.demo_account} text="حسابات تجريبية" />
-                    <BooleanPill value={additionalFeatures.education_center} text="مركز تعليمي" />
-                    <BooleanPill value={additionalFeatures.trading_contests} text="مسابقات تداول" />
-                </div>
-            </DetailCard>
-            
-            <DetailCard title="المنتجات المالية" icon={BrainCircuit}>
-                 <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
-                    <BooleanPill value={!!instruments.forex_pairs} text="فوركس" />
-                    <BooleanPill value={instruments.stocks} text="أسهم" />
-                    <BooleanPill value={instruments.commodities} text="سلع" />
-                    <BooleanPill value={instruments.indices} text="مؤشرات" />
-                 </div>
-            </DetailCard>
-            
-            <DetailCard title="طرق الدفع والسحب" icon={Landmark}>
-                <InfoRow label="طرق الدفع">
-                     <div className="flex gap-1 flex-wrap justify-end">
-                       {ensureArray(depositsWithdrawals.payment_methods).map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.depositMethods, p)}</Badge>)}
-                    </div>
-                </InfoRow>
-                <Separator className="my-2" />
-                 <InfoRow label="الحد الأدنى للسحب" value={`$${depositsWithdrawals.min_withdrawal}`} />
-                 <InfoRow label="سرعة السحب" value={findLabel(TermsBank.supportHours, depositsWithdrawals.withdrawal_speed)} />
-                 <Separator className="my-2" />
-                 <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
-                     <BooleanPill value={depositsWithdrawals.deposit_fees} text="رسوم على الإيداع" />
-                     <BooleanPill value={depositsWithdrawals.withdrawal_fees} text="رسوم على السحب" />
-                 </div>
-            </DetailCard>
-            
-            <DetailCard title="الدعم والخدمة" icon={Globe}>
-                <InfoRow label="اللغات المدعومة">
-                    <div className="flex gap-1 flex-wrap justify-end">
-                       {ensureArray(globalReach.languages_supported).map(l => <Badge key={l} variant="secondary">{findLabel(TermsBank.languagesSupported, l)}</Badge>)}
-                    </div>
-                </InfoRow>
-                 <Separator className="my-2" />
-                 <InfoRow label="قنوات الدعم">
-                    <div className="flex gap-1 flex-wrap justify-end">
-                       {ensureArray(globalReach.customer_support_channels).map(c => <Badge key={c} variant="secondary">{findLabel(TermsBank.supportChannels, c)}</Badge>)}
-                    </div>
-                </InfoRow>
-                 <Separator className="my-2" />
-                 <InfoRow label="ساعات الدعم" value={findLabel(TermsBank.supportHours, globalReach.global_presence)} />
-            </DetailCard>
-            
-            <DetailCard title="برامج المكافآت" icon={Coins}>
-                 <InfoRow label="أنواع الحسابات المؤهلة">
-                    <div className="flex gap-1 flex-wrap justify-end">
-                       {ensureArray(cashback.cashback_account_type).map(a => <Badge key={a} variant="secondary">{findLabel(TermsBank.accountTypes, a)}</Badge>)}
-                    </div>
-                </InfoRow>
-                 <Separator className="my-2" />
-                 <InfoRow label="تكرار المكافأة" value={findLabel(TermsBank.cashbackFrequency, cashback.cashback_frequency)} />
-                 <InfoRow label="طريقة دفع المكافأة">
-                     <div className="flex gap-1 flex-wrap justify-end">
-                       {ensureArray(cashback.rebate_method).map(m => <Badge key={m} variant="secondary">{findLabel(TermsBank.rebateMethod, m)}</Badge>)}
-                    </div>
-                </InfoRow>
-                 <InfoRow label="قيمة المكافأة لكل لوت" value={`$${cashback.cashback_per_lot}`} />
-            </DetailCard>
-
-            <DetailCard title="تقييمات الوسيط" icon={Star}>
-                 <InfoRow label="تقييم Trustpilot" value={reputation.trustpilot_rating} />
-                 <InfoRow label="عدد المراجعات" value={reputation.reviews_count?.toLocaleString()} />
-            </DetailCard>
-            
-            <DetailCard title="تعليمات" icon={FileText}>
-                 <p className="text-xs text-muted-foreground whitespace-pre-wrap">{instructions?.description}</p>
-            </DetailCard>
+                {/* Tab 4: الدفع */}
+                <TabsContent value="payment" className="space-y-4 mt-4">
+                    <DetailCard title="طرق الدفع والسحب" icon={Landmark}>
+                        <InfoRow label="طرق الدفع">
+                             <div className="flex gap-1 flex-wrap justify-end">
+                               {ensureArray(depositsWithdrawals.payment_methods).map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.depositMethods, p)}</Badge>)}
+                            </div>
+                        </InfoRow>
+                        <Separator className="my-2" />
+                         <InfoRow label="الحد الأدنى للإيداع" value={`$${depositsWithdrawals.min_deposit || tradingConditions.min_deposit || 'N/A'}`} />
+                         <InfoRow label="الحد الأدنى للسحب" value={`$${depositsWithdrawals.min_withdrawal}`} />
+                         <InfoRow label="سرعة السحب" value={findLabel(TermsBank.supportHours, depositsWithdrawals.withdrawal_speed)} />
+                         <Separator className="my-2" />
+                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
+                             <BooleanPill value={depositsWithdrawals.deposit_fees} text="رسوم على الإيداع" />
+                             <BooleanPill value={depositsWithdrawals.withdrawal_fees} text="رسوم على السحب" />
+                         </div>
+                    </DetailCard>
+                </TabsContent>
+            </Tabs>
              
         </div>
     )

@@ -16,28 +16,6 @@ export function AdditionalFeaturesStep({ form }: AdditionalFeaturesStepProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField
           control={form.control}
-          name="additionalFeatures.swap_free"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">
-                  <span className="ltr:inline hidden">Swap Free</span>
-                  <span className="rtl:inline hidden">خالي من المبادلة</span>
-                </FormLabel>
-                <FormDescription>
-                  <span className="ltr:inline hidden">Islamic/swap-free accounts available</span>
-                  <span className="rtl:inline hidden">حسابات إسلامية/خالية من المبادلة متاحة</span>
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="additionalFeatures.education_center"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">

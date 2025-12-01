@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface TradingConditionsStepProps {
   form: UseFormReturn<any>;
@@ -63,12 +64,12 @@ export function TradingConditionsStep({ form }: TradingConditionsStepProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField
           control={form.control}
-          name="tradingConditions.spreads_from"
+          name="tradingConditions.min_spread"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                <span className="ltr:inline hidden">Spreads From (pips)</span>
-                <span className="rtl:inline hidden">الفروق من (نقطة)</span>
+                <span className="ltr:inline hidden">Minimum Spread (pips)</span>
+                <span className="rtl:inline hidden">الحد الأدنى للفروق (نقطة)</span>
               </FormLabel>
               <FormControl>
                 <Input
@@ -86,15 +87,21 @@ export function TradingConditionsStep({ form }: TradingConditionsStepProps) {
 
         <FormField
           control={form.control}
-          name="tradingConditions.commission"
+          name="tradingConditions.commission_per_lot"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                <span className="ltr:inline hidden">Commission</span>
-                <span className="rtl:inline hidden">العمولة</span>
+                <span className="ltr:inline hidden">Commission Per Lot</span>
+                <span className="rtl:inline hidden">العمولة لكل عقد</span>
               </FormLabel>
               <FormControl>
-                <Input placeholder="e.g., $7 per lot" {...field} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...field}
+                  onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -171,39 +178,56 @@ export function TradingConditionsStep({ form }: TradingConditionsStepProps) {
         )}
       />
 
-      <FormField
-        control={form.control}
-        name="tradingConditions.execution_type"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              <span className="ltr:inline hidden">Execution Type</span>
-              <span className="rtl:inline hidden">نوع التنفيذ</span>
-            </FormLabel>
-            <FormControl>
-              <Input placeholder="e.g., Market Execution, Instant Execution" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="tradingConditions.execution_speed"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                <span className="ltr:inline hidden">Execution Speed</span>
+                <span className="rtl:inline hidden">سرعة التنفيذ</span>
+              </FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Instant, Market Execution" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <FormField
-        control={form.control}
-        name="tradingConditions.base_currency"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              <span className="ltr:inline hidden">Base Currency</span>
-              <span className="rtl:inline hidden">العملة الأساسية</span>
-            </FormLabel>
-            <FormControl>
-              <Input placeholder="e.g., USD, EUR, GBP" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+        <FormField
+          control={form.control}
+          name="tradingConditions.swap_free"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                <span className="ltr:inline hidden">Swap Free</span>
+                <span className="rtl:inline hidden">خالي من المبادلة</span>
+              </FormLabel>
+              <FormControl>
+                <RadioGroup value={field.value ? "yes" : "no"} onValueChange={(val) => field.onChange(val === "yes")}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="yes" id="swap-free-yes" />
+                    <label htmlFor="swap-free-yes" className="text-sm cursor-pointer">
+                      <span className="ltr:inline hidden">Yes</span>
+                      <span className="rtl:inline hidden">نعم</span>
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="no" id="swap-free-no" />
+                    <label htmlFor="swap-free-no" className="text-sm cursor-pointer">
+                      <span className="ltr:inline hidden">No</span>
+                      <span className="rtl:inline hidden">لا</span>
+                    </label>
+                  </div>
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
     </div>
   );
 }

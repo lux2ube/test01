@@ -117,61 +117,17 @@ export function PlatformsStep({ form }: PlatformsStepProps) {
 
       <FormField
         control={form.control}
-        name="platforms.mobile_trading"
+        name="platforms.custom_platform"
         render={({ field }) => (
           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
             <div className="space-y-0.5">
               <FormLabel className="text-base">
-                <span className="ltr:inline hidden">Mobile Trading</span>
-                <span className="rtl:inline hidden">التداول عبر الجوال</span>
+                <span className="ltr:inline hidden">Custom/Proprietary Platform</span>
+                <span className="rtl:inline hidden">منصة مخصصة/ملكية</span>
               </FormLabel>
               <FormDescription>
-                <span className="ltr:inline hidden">Mobile apps available</span>
-                <span className="rtl:inline hidden">تطبيقات الجوال متاحة</span>
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-            </FormControl>
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="platforms.demo_account"
-        render={({ field }) => (
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-            <div className="space-y-0.5">
-              <FormLabel className="text-base">
-                <span className="ltr:inline hidden">Demo Account</span>
-                <span className="rtl:inline hidden">حساب تجريبي</span>
-              </FormLabel>
-              <FormDescription>
-                <span className="ltr:inline hidden">Free demo account available</span>
-                <span className="rtl:inline hidden">حساب تجريبي مجاني متاح</span>
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-            </FormControl>
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="platforms.copy_trading"
-        render={({ field }) => (
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-            <div className="space-y-0.5">
-              <FormLabel className="text-base">
-                <span className="ltr:inline hidden">Copy Trading</span>
-                <span className="rtl:inline hidden">نسخ الصفقات</span>
-              </FormLabel>
-              <FormDescription>
-                <span className="ltr:inline hidden">Copy trading feature available</span>
-                <span className="rtl:inline hidden">ميزة نسخ الصفقات متاحة</span>
+                <span className="ltr:inline hidden">Offers custom trading platform</span>
+                <span className="rtl:inline hidden">يقدم منصة تداول مخصصة</span>
               </FormDescription>
             </div>
             <FormControl>

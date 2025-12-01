@@ -100,6 +100,14 @@ function findLabel(bank: {key: string, label: string}[], key: string | undefined
     return bank.find(item => item.key === key)?.label || key;
 }
 
+// Ensure a value is an array, handling various data types from database
+function ensureArray<T>(value: any): T[] {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string' && value.trim()) return [value] as T[];
+    if (value && typeof value === 'object') return [value] as T[];
+    return [];
+}
+
 export default function BrokerPreviewPage() {
     const params = useParams();
     const brokerId = params.brokerId as string;
@@ -204,14 +212,14 @@ export default function BrokerPreviewPage() {
             </DetailCard>
             
             <DetailCard title="التراخيص" icon={ShieldCheck}>
-                {regulation.licenses?.map((license, index) => (
+                {ensureArray(regulation.licenses).map((license, index) => (
                     <React.Fragment key={index}>
                         <div className="p-2 bg-muted/50 rounded-md">
                             <InfoRow label="جهة الترخيص" value={findLabel(TermsBank.licenseAuthority, license.authority)} />
                             <InfoRow label="رقم الترخيص" value={license.licenseNumber} />
                             <InfoRow label="حالة الترخيص" value={findLabel(TermsBank.regulationStatus, license.status)} />
                         </div>
-                        {index < regulation.licenses.length - 1 && <Separator className="my-2" />}
+                        {index < ensureArray(regulation.licenses).length - 1 && <Separator className="my-2" />}
                     </React.Fragment>
                  ))}
             </DetailCard>
@@ -219,7 +227,7 @@ export default function BrokerPreviewPage() {
              <DetailCard title="منصات التداول" icon={Gauge}>
                 <InfoRow label="المنصات المدعومة">
                     <div className="flex gap-1 flex-wrap justify-end">
-                       {platforms.platforms_supported?.map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.platforms, p)}</Badge>)}
+                       {ensureArray(platforms.platforms_supported).map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.platforms, p)}</Badge>)}
                     </div>
                 </InfoRow>
                 <Separator className="my-2" />
@@ -230,7 +238,7 @@ export default function BrokerPreviewPage() {
             <DetailCard title="الحسابات وأنواعها" icon={Users}>
                 <InfoRow label="أنواع الحسابات">
                      <div className="flex gap-1 flex-wrap justify-end">
-                       {tradingConditions.account_types?.map(t => <Badge key={t} variant="secondary">{findLabel(TermsBank.accountTypes, t)}</Badge>)}
+                       {ensureArray(tradingConditions.account_types).map(t => <Badge key={t} variant="secondary">{findLabel(TermsBank.accountTypes, t)}</Badge>)}
                     </div>
                 </InfoRow>
                 <Separator className="my-2" />
@@ -264,7 +272,7 @@ export default function BrokerPreviewPage() {
             <DetailCard title="طرق الدفع والسحب" icon={Landmark}>
                 <InfoRow label="طرق الدفع">
                      <div className="flex gap-1 flex-wrap justify-end">
-                       {depositsWithdrawals.payment_methods?.map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.depositMethods, p)}</Badge>)}
+                       {ensureArray(depositsWithdrawals.payment_methods).map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.depositMethods, p)}</Badge>)}
                     </div>
                 </InfoRow>
                 <Separator className="my-2" />
@@ -280,13 +288,13 @@ export default function BrokerPreviewPage() {
             <DetailCard title="الدعم والخدمة" icon={Globe}>
                 <InfoRow label="اللغات المدعومة">
                     <div className="flex gap-1 flex-wrap justify-end">
-                       {globalReach.languages_supported?.map(l => <Badge key={l} variant="secondary">{findLabel(TermsBank.languagesSupported, l)}</Badge>)}
+                       {ensureArray(globalReach.languages_supported).map(l => <Badge key={l} variant="secondary">{findLabel(TermsBank.languagesSupported, l)}</Badge>)}
                     </div>
                 </InfoRow>
                  <Separator className="my-2" />
                  <InfoRow label="قنوات الدعم">
                     <div className="flex gap-1 flex-wrap justify-end">
-                       {globalReach.customer_support_channels?.map(c => <Badge key={c} variant="secondary">{findLabel(TermsBank.supportChannels, c)}</Badge>)}
+                       {ensureArray(globalReach.customer_support_channels).map(c => <Badge key={c} variant="secondary">{findLabel(TermsBank.supportChannels, c)}</Badge>)}
                     </div>
                 </InfoRow>
                  <Separator className="my-2" />
@@ -296,14 +304,14 @@ export default function BrokerPreviewPage() {
             <DetailCard title="برامج المكافآت" icon={Coins}>
                  <InfoRow label="أنواع الحسابات المؤهلة">
                     <div className="flex gap-1 flex-wrap justify-end">
-                       {cashback.cashback_account_type?.map(a => <Badge key={a} variant="secondary">{findLabel(TermsBank.accountTypes, a)}</Badge>)}
+                       {ensureArray(cashback.cashback_account_type).map(a => <Badge key={a} variant="secondary">{findLabel(TermsBank.accountTypes, a)}</Badge>)}
                     </div>
                 </InfoRow>
                  <Separator className="my-2" />
                  <InfoRow label="تكرار المكافأة" value={findLabel(TermsBank.cashbackFrequency, cashback.cashback_frequency)} />
                  <InfoRow label="طريقة دفع المكافأة">
                      <div className="flex gap-1 flex-wrap justify-end">
-                       {cashback.rebate_method?.map(m => <Badge key={m} variant="secondary">{findLabel(TermsBank.rebateMethod, m)}</Badge>)}
+                       {ensureArray(cashback.rebate_method).map(m => <Badge key={m} variant="secondary">{findLabel(TermsBank.rebateMethod, m)}</Badge>)}
                     </div>
                 </InfoRow>
                  <InfoRow label="قيمة المكافأة لكل لوت" value={`$${cashback.cashback_per_lot}`} />

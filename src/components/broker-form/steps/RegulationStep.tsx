@@ -102,12 +102,28 @@ export function RegulationStep({ form }: RegulationStepProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <span className="ltr:inline hidden">Authority</span>
+                      <span className="ltr:inline hidden">Regulatory Authority</span>
                       <span className="rtl:inline hidden">جهة الترخيص</span>
                     </FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., FCA, CySEC, ASIC" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select authority" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="FCA">FCA (UK)</SelectItem>
+                        <SelectItem value="CySEC">CySEC (Cyprus)</SelectItem>
+                        <SelectItem value="ASIC">ASIC (Australia)</SelectItem>
+                        <SelectItem value="ESMA">ESMA (European Union)</SelectItem>
+                        <SelectItem value="DFSA">DFSA (UAE)</SelectItem>
+                        <SelectItem value="FSA">FSA (Seychelles)</SelectItem>
+                        <SelectItem value="VFSC">VFSC (Vanuatu)</SelectItem>
+                        <SelectItem value="FSC">FSC (Mauritius)</SelectItem>
+                        <SelectItem value="NFA">NFA (USA)</SelectItem>
+                        <SelectItem value="CFTC">CFTC (USA)</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

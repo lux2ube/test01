@@ -228,11 +228,11 @@ export default function BrokerPreviewPage() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4 rtl:flex rtl:flex-row-reverse">
-                    <TabsTrigger value="info" className="text-xs">معلومات البروكر</TabsTrigger>
-                    <TabsTrigger value="trading" className="text-xs">التداول</TabsTrigger>
-                    <TabsTrigger value="features" className="text-xs">مميزات حصرية</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="payment" className="text-xs">الدفع</TabsTrigger>
+                    <TabsTrigger value="features" className="text-xs">مميزات حصرية</TabsTrigger>
+                    <TabsTrigger value="trading" className="text-xs">التداول</TabsTrigger>
+                    <TabsTrigger value="info" className="text-xs">معلومات البروكر</TabsTrigger>
                 </TabsList>
 
                 {/* Tab 1: معلومات البروكر */}

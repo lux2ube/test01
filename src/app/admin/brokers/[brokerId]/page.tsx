@@ -86,26 +86,17 @@ function transformFormToBroker(formValues: BrokerFormValues): any {
     },
     
     tradingConditions: {
-      minimum_deposit: formValues.tradingConditions.minimum_deposit || formValues.tradingConditions.min_deposit,
-      maximum_leverage: formValues.tradingConditions.maximum_leverage || formValues.tradingConditions.max_leverage,
-      spreads_from: formValues.tradingConditions.spreads_from || formValues.tradingConditions.min_spread,
-      commission: formValues.tradingConditions.commission,
       account_types: formValues.tradingConditions.account_types,
-      execution_type: formValues.tradingConditions.execution_type,
-      base_currency: formValues.tradingConditions.base_currency,
       max_leverage: formValues.tradingConditions.max_leverage,
       min_deposit: formValues.tradingConditions.min_deposit,
       spread_type: formValues.tradingConditions.spread_type,
       min_spread: formValues.tradingConditions.min_spread,
       commission_per_lot: formValues.tradingConditions.commission_per_lot,
       execution_speed: formValues.tradingConditions.execution_speed,
+      swap_free: formValues.tradingConditions.swap_free,
     },
     
     platforms: {
-      trading_platforms: formValues.platforms.trading_platforms,
-      mobile_trading: formValues.platforms.mobile_trading,
-      demo_account: formValues.platforms.demo_account,
-      copy_trading: formValues.platforms.copy_trading,
       platforms_supported: formValues.platforms.platforms_supported,
       mt4_license_type: formValues.platforms.mt4_license_type,
       mt5_license_type: formValues.platforms.mt5_license_type,
@@ -157,7 +148,6 @@ function transformFormToBroker(formValues: BrokerFormValues): any {
     },
     
     additionalFeatures: {
-      swap_free: formValues.additionalFeatures.swap_free,
       education_center: formValues.additionalFeatures.education_center,
       copy_trading: formValues.additionalFeatures.copy_trading,
       demo_account: formValues.additionalFeatures.demo_account,
@@ -215,26 +205,17 @@ const formSchema = z.object({
   }),
   
   tradingConditions: z.object({
-    minimum_deposit: z.coerce.number().min(0).optional(),
-    maximum_leverage: z.string().optional().default(""),
-    spreads_from: z.coerce.number().min(0).optional(),
-    commission: z.string().optional().default(""),
-    account_types: z.string().optional().default(""),
-    execution_type: z.string().optional().default(""),
-    base_currency: z.string().optional().default(""),
-    max_leverage: z.string().optional().default("1:500"),
     min_deposit: z.coerce.number().min(0).default(10),
-    spread_type: z.string().optional().default(""),
+    max_leverage: z.string().optional().default("1:500"),
     min_spread: z.coerce.number().min(0).optional().default(0),
     commission_per_lot: z.coerce.number().min(0).optional().default(0),
+    account_types: z.array(z.string()).optional().default([]),
+    spread_type: z.string().optional().default(""),
     execution_speed: z.string().optional().default(""),
+    swap_free: z.boolean().default(false),
   }),
   
   platforms: z.object({
-    trading_platforms: z.string().optional().default(""),
-    mobile_trading: z.boolean().default(false),
-    demo_account: z.boolean().default(false),
-    copy_trading: z.boolean().default(false),
     platforms_supported: z.array(z.string()).optional().default([]),
     mt4_license_type: z.enum(['Full License', 'White Label', 'None']).default('None'),
     mt5_license_type: z.enum(['Full License', 'White Label', 'None']).default('None'),
@@ -286,7 +267,6 @@ const formSchema = z.object({
   }),
   
   additionalFeatures: z.object({
-    swap_free: z.boolean().default(false),
     education_center: z.boolean().default(false),
     copy_trading: z.boolean().default(false),
     demo_account: z.boolean().default(false),
@@ -318,14 +298,14 @@ const getSafeDefaultValues = (broker?: Broker | null): BrokerFormValues => {
     description: "",
     basicInfo: { broker_name: "", year_founded: undefined, headquarters: "", website: "", company_name: "", group_entity: "", founded_year: new Date().getFullYear(), CEO: "", broker_type: "" },
     regulation: { is_regulated: false, licenses: [], regulatory_bodies: "", investor_protection: "", regulation_status: "", offshore_regulation: false, risk_level: "", regulated_in: [], regulator_name: [] },
-    tradingConditions: { minimum_deposit: undefined, maximum_leverage: "", spreads_from: undefined, commission: "", account_types: "", execution_type: "", base_currency: "", max_leverage: "1:500", min_deposit: 10, spread_type: "", min_spread: 0, commission_per_lot: 0, execution_speed: "" },
-    platforms: { trading_platforms: "", mobile_trading: false, demo_account: false, copy_trading: false, platforms_supported: [], mt4_license_type: 'None', mt5_license_type: 'None', custom_platform: false },
+    tradingConditions: { min_deposit: 10, max_leverage: "1:500", min_spread: 0, commission_per_lot: 0, account_types: [], spread_type: "", execution_speed: "", swap_free: false },
+    platforms: { platforms_supported: [], mt4_license_type: 'None', mt5_license_type: 'None', custom_platform: false },
     instruments: { forex_pairs: "", crypto_trading: false, stocks: false, commodities: false, indices: false },
     depositsWithdrawals: { payment_methods: [], min_withdrawal: 0, withdrawal_speed: "", deposit_fees: false, withdrawal_fees: false },
     cashback: { offers_cashback: false, cashback_amount: undefined, cashback_currency: "", cashback_frequency: "Daily", minimum_withdrawal: undefined, eligible_instruments: "", terms_and_conditions: "", affiliate_program_link: "", cashback_account_type: [], rebate_method: [], cashback_per_lot: 0 },
     globalReach: { business_region: [], global_presence: "", languages_supported: [], customer_support_channels: [] },
     reputation: { wikifx_score: 0, trustpilot_rating: 0, reviews_count: 0, verified_users: 0 },
-    additionalFeatures: { swap_free: false, education_center: false, copy_trading: false, demo_account: false, trading_contests: false, regulatory_alerts: "", welcome_bonus: false },
+    additionalFeatures: { education_center: false, copy_trading: false, demo_account: false, trading_contests: false, regulatory_alerts: "", welcome_bonus: false },
     instructions: { description: "", new_account_instructions: "", new_account_link: "", new_account_link_text: "" },
     existingAccountInstructions: { description: "", linkText: "", link: "" },
   };

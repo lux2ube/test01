@@ -60,7 +60,7 @@ function BrokerDetailSkeleton() {
 function DetailCard({ title, icon: Icon, children }: { title: string, icon: React.ElementType, children: React.ReactNode }) {
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center gap-3 space-y-0 p-4">
+            <CardHeader className="flex rtl:flex-row-reverse flex-row items-center gap-3 space-y-0 p-4">
                 <Icon className="w-5 h-5 text-primary" />
                 <CardTitle className="text-base font-headline">{title}</CardTitle>
             </CardHeader>

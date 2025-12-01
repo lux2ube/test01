@@ -2,7 +2,6 @@
 
 import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -11,14 +10,6 @@ interface PlatformsStepProps {
 }
 
 export function PlatformsStep({ form }: PlatformsStepProps) {
-  const commonPlatforms = [
-    { id: "mt4", label: "MetaTrader 4", labelAr: "ميتاتريدر 4" },
-    { id: "mt5", label: "MetaTrader 5", labelAr: "ميتاتريدر 5" },
-    { id: "ctrader", label: "cTrader", labelAr: "سي تريدر" },
-    { id: "webtrader", label: "Web Trader", labelAr: "منصة الويب" },
-    { id: "mobile", label: "Mobile Apps", labelAr: "تطبيقات الجوال" },
-  ];
-
   return (
     <div className="space-y-6">
       <FormField

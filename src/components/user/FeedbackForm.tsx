@@ -45,6 +45,10 @@ export function UserFeedbackForm({ form: activeForm }: { form: FeedbackForm | nu
 
     const form = useForm({
         resolver: zodResolver(formSchema),
+        defaultValues: activeForm?.questions.reduce((acc, q) => {
+            acc[q.id] = q.type === 'rating' ? 0 : '';
+            return acc;
+        }, {} as Record<string, any>) || {},
     });
 
     if (!activeForm || !user) {
@@ -78,7 +82,7 @@ export function UserFeedbackForm({ form: activeForm }: { form: FeedbackForm | nu
                             ) : question.type === 'rating' ? (
                                 <RatingInput value={field.value} onChange={field.onChange} />
                             ) : question.type === 'multiple-choice' ? (
-                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-1">
+                                <RadioGroup value={field.value} onValueChange={field.onChange} className="space-y-1">
                                     {question.options?.map(opt => (
                                         <FormItem key={opt} className="flex items-center space-x-3 space-y-0">
                                             <FormControl>

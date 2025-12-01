@@ -518,6 +518,10 @@ export default function BrokerFormPage() {
         result = await updateBroker(brokerId, payload);
       }
       
+      if (!result) {
+        throw new Error('No response from server');
+      }
+      
       if (result.success) {
         toast({
           title: isNew ? "Broker added successfully" : "Broker updated successfully",
@@ -533,7 +537,7 @@ export default function BrokerFormPage() {
       } else {
         toast({
           title: "Error",
-          description: result.error || "An error occurred",
+          description: result.error || result.message || "An error occurred",
           variant: "destructive",
         });
       }

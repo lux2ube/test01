@@ -50,6 +50,11 @@ export async function addBroker(data: Omit<Broker, 'id' | 'order'>) {
   try {
     const supabase = await createAdminClient();
     
+    if (!supabase) {
+      console.error('Failed to create admin client');
+      return { success: false, error: 'فشل الاتصال بقاعدة البيانات', message: 'فشل إضافة الوسيط.' };
+    }
+    
     const { data: brokersData, error: fetchError } = await supabase
       .from('brokers')
       .select('order')
@@ -58,7 +63,7 @@ export async function addBroker(data: Omit<Broker, 'id' | 'order'>) {
 
     if (fetchError) {
       console.error('Error fetching max order:', fetchError);
-      return { success: false, message: 'فشل إضافة الوسيط.' };
+      return { success: false, error: fetchError.message, message: 'فشل إضافة الوسيط.' };
     }
 
     const maxOrder = brokersData && brokersData.length > 0 && brokersData[0].order != null
@@ -72,19 +77,25 @@ export async function addBroker(data: Omit<Broker, 'id' | 'order'>) {
 
     if (error) {
       console.error('Error adding broker:', error);
-      return { success: false, message: 'فشل إضافة الوسيط.' };
+      return { success: false, error: error.message, message: 'فشل إضافة الوسيط.' };
     }
 
     return { success: true, message: 'تمت إضافة الوسيط بنجاح.' };
   } catch (error) {
     console.error('Error adding broker:', error);
-    return { success: false, message: 'فشل إضافة الوسيط.' };
+    return { success: false, error: String(error), message: 'فشل إضافة الوسيط.' };
   }
 }
 
 export async function updateBroker(brokerId: string, data: Partial<Omit<Broker, 'id'>>) {
   try {
     const supabase = await createAdminClient();
+    
+    if (!supabase) {
+      console.error('Failed to create admin client');
+      return { success: false, error: 'فشل الاتصال بقاعدة البيانات', message: 'فشل تحديث الوسيط.' };
+    }
+    
     const dbData = transformBrokerForDB(data);
     const { error } = await supabase
       .from('brokers')
@@ -93,13 +104,13 @@ export async function updateBroker(brokerId: string, data: Partial<Omit<Broker, 
 
     if (error) {
       console.error('Error updating broker:', error);
-      return { success: false, message: 'فشل تحديث الوسيط.' };
+      return { success: false, error: error.message, message: 'فشل تحديث الوسيط.' };
     }
 
     return { success: true, message: 'تم تحديث الوسيط بنجاح.' };
   } catch (error) {
     console.error('Error updating broker:', error);
-    return { success: false, message: 'فشل تحديث الوسيط.' };
+    return { success: false, error: String(error), message: 'فشل تحديث الوسيط.' };
   }
 }
 

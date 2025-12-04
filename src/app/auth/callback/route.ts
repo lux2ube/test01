@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/server';
-import { getSession } from '@/lib/auth/session';
+import { createSessionCookie } from '@/lib/auth/session';
 import { generateReferralCode } from '@/lib/referral';
 import { getCountryFromHeaders } from '@/lib/server-geo';
 import { NextResponse } from 'next/server';
@@ -114,13 +114,6 @@ export async function GET(request: Request) {
       }
     }
 
-    const ironSession = await getSession();
-    ironSession.userId = user.id;
-    ironSession.access_token = session.access_token;
-    ironSession.refresh_token = session.refresh_token;
-    ironSession.expires_at = session.expires_at || 0;
-    await ironSession.save();
-
     console.log('✅ OAuth login successful for user:', user.id);
 
     const userRole = existingProfile?.role || 'user';
@@ -137,17 +130,27 @@ export async function GET(request: Request) {
     // Create response with session cookies set
     const finalResponse = NextResponse.redirect(fullRedirectUrl);
     
-    // Always use secure in production, but allow insecure in development for Replit
-    const isProduction = process.env.NODE_ENV === 'production';
+    // Cookie settings - allow insecure in development for Replit
+    const allowInsecure = process.env.DEV_ALLOW_INSECURE_COOKIES === 'true';
     const cookieOptions = {
       httpOnly: true,
       sameSite: 'strict' as const,
-      secure: isProduction, // Only true in production
+      secure: !allowInsecure,
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     };
     
-    console.log('🍪 Setting session cookies with secure:', isProduction);
+    // CRITICAL FIX: Create sealed iron-session cookie and set it on the redirect response
+    // Previously ironSession.save() set cookie on cookies() store, but that doesn't transfer to NextResponse.redirect()
+    const sealedSession = await createSessionCookie(
+      user.id,
+      session.access_token,
+      session.refresh_token,
+      session.expires_at || 0
+    );
+    
+    console.log('🍪 Setting auth_session cookie on redirect response');
+    finalResponse.cookies.set('auth_session', sealedSession, cookieOptions);
     finalResponse.cookies.set('sb-access-token', session.access_token, cookieOptions);
     finalResponse.cookies.set('sb-refresh-token', session.refresh_token, cookieOptions);
     

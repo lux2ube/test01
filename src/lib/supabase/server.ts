@@ -1,8 +1,59 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createServerClient as createSupabaseServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { getSession, refreshSession, destroySession } from '@/lib/auth/session';
 
-// Server-side Supabase client that uses session tokens
+// Server-side Supabase client using SSR package with proper cookie handling
 export async function createClient() {
+  const cookieStore = await cookies();
+
+  return createSupabaseServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Called from Server Component - ignore
+            // Middleware handles token refresh
+          }
+        },
+      },
+    }
+  );
+}
+
+// Server-side Supabase client for API routes that need to set response cookies
+export async function createClientForRoute(request: Request, response: { cookies: Map<string, { name: string; value: string; options: any }> }) {
+  const cookieStore = await cookies();
+  
+  return createSupabaseServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, { name, value, options });
+          });
+        },
+      },
+    }
+  );
+}
+
+// Legacy session-based client (for compatibility with iron-session flows)
+export async function createClientWithSession() {
   const session = await getSession();
   
   if (!session.access_token || !session.userId) {
@@ -23,26 +74,21 @@ export async function createClient() {
     
     if (!refreshed) {
       console.error('❌ Failed to refresh session, destroying session cookie');
-      // Destroy session on refresh failure to force re-authentication
       await destroySession();
       
-      // Return unauthenticated client
       return createSupabaseClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
     }
     
-    // Re-fetch session after refresh
     const refreshedSession = await getSession();
     
-    // Create authenticated client and set session
     const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     
-    // Set session so auth helpers work correctly
     await supabase.auth.setSession({
       access_token: refreshedSession.access_token,
       refresh_token: refreshedSession.refresh_token,
@@ -51,13 +97,11 @@ export async function createClient() {
     return supabase;
   }
 
-  // Create authenticated client with current session tokens
   const supabase = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
   
-  // Set session so auth helpers work correctly
   await supabase.auth.setSession({
     access_token: session.access_token,
     refresh_token: session.refresh_token,

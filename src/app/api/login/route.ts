@@ -1,6 +1,7 @@
-import { createAdminClient } from '@/lib/supabase/server';
+import { createServerClient } from '@supabase/ssr';
 import { createSessionCookie } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +14,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use admin client to authenticate (bypasses browser cookie issues)
-    const supabase = await createAdminClient();
+    const cookieStore = await cookies();
+    
+    // Track cookies that need to be set on the response
+    const cookiesToSet: { name: string; value: string; options: any }[] = [];
+
+    // Create Supabase client with SSR cookie handling
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookies) {
+            cookies.forEach((cookie) => {
+              cookiesToSet.push(cookie);
+            });
+          },
+        },
+      }
+    );
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -36,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create sealed session cookie
+    // Create sealed iron-session cookie for server-side auth
     const sealedSession = await createSessionCookie(
       data.user.id,
       data.session.access_token,
@@ -61,35 +82,26 @@ export async function POST(request: NextRequest) {
       success: true,
       redirectUrl,
       userId: data.user.id,
-      // NOTE: Tokens are NOT sent to client for security
-      // They're stored securely in iron-session cookies server-side
     });
 
-    // CRITICAL: Clear ALL old session cookies first to prevent session mixing
-    response.cookies.delete('auth_session');
-    response.cookies.delete('sb-access-token');
-    response.cookies.delete('sb-refresh-token');
-    response.cookies.delete('sb-session');
+    // CRITICAL: Set all Supabase SSR cookies (these are the ones the browser client reads)
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options);
+    });
 
     // SECURITY: Secure cookies by default (financial-grade requirement)
-    // Only allow insecure cookies when EXPLICITLY enabled for local development
     const allowInsecure = process.env.DEV_ALLOW_INSECURE_COOKIES === 'true';
     
-    const cookieOptions = {
+    const ironSessionCookieOptions = {
       httpOnly: true,
-      sameSite: 'strict' as const, // Strict for financial-grade security
-      secure: !allowInsecure, // Secure by default, insecure only when explicitly allowed
+      sameSite: 'lax' as const, // Use 'lax' for cross-origin redirect compatibility
+      secure: !allowInsecure,
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     };
 
-    // Set new iron-session cookie for server-side auth
-    response.cookies.set('auth_session', sealedSession, cookieOptions);
-
-    // Set new Supabase auth session so client-side checks work
-    response.cookies.set('sb-access-token', data.session.access_token, cookieOptions);
-
-    response.cookies.set('sb-refresh-token', data.session.refresh_token, cookieOptions);
+    // Set iron-session cookie for server-side auth (backup/validation)
+    response.cookies.set('auth_session', sealedSession, ironSessionCookieOptions);
 
     return response;
   } catch (error) {

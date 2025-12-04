@@ -96,36 +96,8 @@ export default function LoginPage() {
           description: "Logged in successfully. Redirecting...",
         });
 
-        // CRITICAL: Sync Supabase session via SECURE server endpoint
-        // This endpoint validates iron-session matches Supabase tokens
-        // preventing token swap attacks, then returns validated tokens
-        const sessionResponse = await fetch('/api/set-session', {
-          method: 'POST',
-          credentials: 'include', // Send cookies with iron-session
-        });
-
-        if (!sessionResponse.ok) {
-          console.error('Failed to sync session');
-          throw new Error('Failed to sync session. Please try again.');
-        }
-
-        const sessionData = await sessionResponse.json();
-
-        // Update client-side Supabase session with VALIDATED tokens
-        // These tokens have been verified against iron-session on the server
-        const supabase = createClient();
-        const { error: clientSetError } = await supabase.auth.setSession({
-          access_token: sessionData.access_token,
-          refresh_token: sessionData.refresh_token,
-        });
-
-        if (clientSetError) {
-          console.error('Failed to set client session:', clientSetError);
-          throw new Error('Failed to set client session. Please try again.');
-        }
-
-        // Wait for session to fully propagate
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Supabase SSR cookies are now set by the login API
+        // Full page redirect to ensure cookies are picked up
         window.location.href = data.redirectUrl;
       }
     } catch (error: any) {

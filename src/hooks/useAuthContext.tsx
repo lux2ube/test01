@@ -1,11 +1,11 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import type { UserProfile } from '@/types';
-import type { User } from '@supabase/supabase-js';
 
-export interface AppUser extends User {
+export interface AppUser {
+    id: string;
+    email?: string;
     profile?: UserProfile;
 }
 
@@ -21,145 +21,67 @@ const AuthContext = createContext<AuthContextType>({
     refetchUserData: () => {},
 });
 
-const safeToDate = (timestamp: any): Date | undefined => {
-    if (!timestamp) return undefined;
-    if (timestamp instanceof Date) return timestamp;
-    if (typeof timestamp === 'string') return new Date(timestamp);
-    return undefined;
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
 
-  const fetchUserData = useCallback(async (supabaseUser: User) => {
-    if (!supabaseUser) {
+  const fetchUserData = useCallback(async () => {
+    try {
+      console.log('AuthContext: Fetching user from /api/auth/me');
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include', // Important: send cookies
+      });
+      
+      if (!response.ok) {
+        console.log('AuthContext: API response not ok:', response.status);
         setUser(null);
         setIsLoading(false);
         return;
-    }
-    try {
-        const { data: userProfile, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', supabaseUser.id)
-            .single();
-        
-        let profile: UserProfile | undefined = undefined;
-        
-        if (!error && userProfile) {
-            profile = {
-                id: supabaseUser.id,
-                email: userProfile.email,
-                name: userProfile.name,
-                role: userProfile.role,
-                clientId: userProfile.client_id,
-                createdAt: safeToDate(userProfile.created_at),
-                country: userProfile.country,
-                isVerified: userProfile.is_verified,
-                status: userProfile.status,
-                phoneNumber: userProfile.phone_number,
-                phoneNumberVerified: userProfile.phone_number_verified,
-                referralCode: userProfile.referral_code,
-                referredBy: userProfile.referred_by,
-                referrals: [], // Will be calculated from referrals query if needed
-                level: userProfile.level,
-                monthlyEarnings: userProfile.monthly_earnings,
-                kycData: (userProfile.kyc_status || userProfile.kyc_document_front_url) ? {
-                    documentType: userProfile.kyc_document_type,
-                    documentNumber: userProfile.kyc_document_number || '',
-                    fullName: userProfile.kyc_full_name || '',
-                    dateOfBirth: safeToDate(userProfile.kyc_date_of_birth) || new Date(),
-                    nationality: userProfile.kyc_nationality || '',
-                    documentIssueDate: safeToDate(userProfile.kyc_document_issue_date) || new Date(),
-                    documentExpiryDate: safeToDate(userProfile.kyc_document_expiry_date) || new Date(),
-                    gender: userProfile.kyc_gender || 'male',
-                    documentFrontUrl: userProfile.kyc_document_front_url || '',
-                    documentBackUrl: userProfile.kyc_document_back_url,
-                    status: userProfile.kyc_status || 'Pending',
-                    submittedAt: safeToDate(userProfile.kyc_submitted_at) || new Date(),
-                    rejectionReason: userProfile.kyc_rejection_reason,
-                } : undefined,
-                addressData: (userProfile.address_status || userProfile.address_document_url) ? {
-                    country: userProfile.address_country || '',
-                    city: userProfile.address_city || '',
-                    streetAddress: userProfile.address_street || '',
-                    stateProvince: userProfile.address_state_province || '',
-                    postalCode: userProfile.address_postal_code || '',
-                    documentUrl: userProfile.address_document_url || '',
-                    status: userProfile.address_status || 'Pending',
-                    submittedAt: safeToDate(userProfile.address_submitted_at) || new Date(),
-                    rejectionReason: userProfile.address_rejection_reason,
-                } : undefined,
-            } as UserProfile;
-        }
+      }
 
-        setUser({ 
-            ...supabaseUser, 
-            profile: profile,
-        });
-
+      const data = await response.json();
+      console.log('AuthContext: Received user data:', data.user?.id || 'null');
+      
+      if (data.user) {
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
     } catch (error) {
-        console.error("Error fetching user data:", error);
-        setUser(supabaseUser as AppUser);
+      console.error("AuthContext: Error fetching user data:", error);
+      setUser(null);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Auth context init - Session user:', session?.user?.id);
-      if (session?.user) {
-        fetchUserData(session.user);
-      } else {
-        setUser(null);
-        setIsLoading(false);
-      }
-    });
+    fetchUserData();
 
-    // Listen for auth changes - CRITICAL: handle logout events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event);
-      if (_event === 'SIGNED_OUT') {
-        console.log('User signed out, clearing user state');
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-      // Handle all other auth state changes (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, etc.)
-      if (session?.user) {
-        fetchUserData(session.user);
-      } else {
-        setUser(null);
-        setIsLoading(false);
-      }
-    });
-
-    // Custom event to trigger a refetch
-    const handleRefetch = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if(session?.user) {
-            fetchUserData(session.user);
-        }
+    // Listen for custom logout/login events
+    const handleAuthChange = () => {
+      setIsLoading(true);
+      fetchUserData();
     };
-    window.addEventListener('refetchUser', handleRefetch);
+    
+    window.addEventListener('refetchUser', handleAuthChange);
+    window.addEventListener('userLoggedIn', handleAuthChange);
+    window.addEventListener('userLoggedOut', () => {
+      setUser(null);
+      setIsLoading(false);
+    });
 
     return () => {
-        subscription.unsubscribe();
-        window.removeEventListener('refetchUser', handleRefetch);
+      window.removeEventListener('refetchUser', handleAuthChange);
+      window.removeEventListener('userLoggedIn', handleAuthChange);
+      window.removeEventListener('userLoggedOut', () => {});
     };
-  }, [fetchUserData, supabase]);
+  }, [fetchUserData]);
   
   const refetchUserData = useCallback(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if(session?.user) {
-          setIsLoading(true);
-          fetchUserData(session.user);
-      }
-  }, [fetchUserData, supabase]);
+    setIsLoading(true);
+    await fetchUserData();
+  }, [fetchUserData]);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, refetchUserData }}>

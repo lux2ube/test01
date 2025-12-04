@@ -96,7 +96,9 @@ export default function LoginPage() {
           description: "Logged in successfully. Redirecting...",
         });
 
-        // Supabase SSR cookies are now set by the login API
+        // Dispatch event to trigger AuthContext refresh
+        window.dispatchEvent(new Event('userLoggedIn'));
+
         // Full page redirect to ensure cookies are picked up
         window.location.href = data.redirectUrl;
       }

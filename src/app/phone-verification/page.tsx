@@ -6,16 +6,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import PhoneInput, { isPossiblePhoneNumber } from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserPhoneNumber, adminUpdateUserPhoneNumber } from '../actions';
 import { useAuthContext } from '@/hooks/useAuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { phoneCountryCodes } from '@/lib/countries';
-
-// Define a custom labels object for react-phone-number-input
-import ar from 'react-phone-number-input/locale/ar.json'
+import { PhoneInputWithCountry } from '@/components/ui/phone-input';
 
 function PhoneVerificationForm() {
     const router = useRouter();
@@ -23,7 +18,7 @@ function PhoneVerificationForm() {
     const { toast } = useToast();
     const { user } = useAuthContext();
 
-    const [phoneNumber, setPhoneNumber] = useState<string | undefined>();
+    const [phoneNumber, setPhoneNumber] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
     const [defaultCountry, setDefaultCountry] = useState<string>('SA');
     const targetUserId = searchParams.get('userId');
@@ -60,7 +55,7 @@ function PhoneVerificationForm() {
     }, [user]);
 
     const handleSave = async () => {
-        if (!phoneNumber || !isPossiblePhoneNumber(phoneNumber)) {
+        if (!phoneNumber || phoneNumber.length < 8) {
             toast({ variant: 'destructive', title: 'رقم هاتف غير صالح', description: 'الرجاء إدخال رقم هاتف صحيح.' });
             return;
         }
@@ -125,18 +120,13 @@ function PhoneVerificationForm() {
                         </AlertDescription>
                     </Alert>
 
-                    <div className="phone-input-container" dir="ltr">
-                        <PhoneInput
-                            international
-                            country={defaultCountry as any}
-                            labels={ar}
-                            placeholder="أدخل رقم الهاتف"
-                            value={phoneNumber}
-                            onChange={setPhoneNumber}
-                            className="w-full"
-                            countries={phoneCountryCodes as any}
-                        />
-                    </div>
+                    <PhoneInputWithCountry
+                        value={phoneNumber}
+                        onChange={setPhoneNumber}
+                        defaultCountry={defaultCountry}
+                        placeholder="أدخل رقم الهاتف"
+                        onlyArab={true}
+                    />
                     
                     <Button onClick={handleSave} disabled={isLoading} className="w-full">
                         {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'حفظ ومتابعة'}

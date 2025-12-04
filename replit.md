@@ -18,6 +18,7 @@ The platform is built with Next.js 15.3.3 and Turbopack, using TypeScript and st
 - KYC verification form is a simplified 2-step flow focusing on document upload without manual data entry.
 - Admin document viewer displays all uploaded verification documents (KYC, Address) with extracted data.
 - **Unified Country Management System:** Centralized country data with 252 countries including Arabic translations. Uses `CountrySelector` (single) and `MultiCountrySelector` (multi) components. Countries stored as ISO codes (e.g., 'SA', 'AE') in database for consistency. Display names are language-aware (Arabic names in RTL, English in LTR). Components support searchable dropdowns with flag emojis and bilingual placeholders.
+- **Unified Phone Input:** Custom `PhoneInputWithCountry` component with integrated country selector showing Arabic country names, dial codes, and flags. Supports filtering to Arab countries only (`onlyArab` prop).
 
 **Technical Implementations & Feature Specifications:**
 - User authentication and authorization with Supabase Auth and secure SSR cookie handling, including custom session management with iron-session for Replit compatibility and anti-session-mixing protection.

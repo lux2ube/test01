@@ -36,9 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { countries, getCountryName } from "@/lib/countries";
 import { CountrySelector } from "@/components/ui/country-selector";
-import PhoneInput, { isPossiblePhoneNumber } from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
-import ar from 'react-phone-number-input/locale/ar.json'
+import { PhoneInputWithCountry } from "@/components/ui/phone-input";
 
 type UserDetails = Awaited<ReturnType<typeof getUserDetails>>;
 
@@ -363,15 +361,12 @@ function PhoneEditDialog({ phoneNumber, userId, onSuccess }: { phoneNumber?: str
                                 <FormItem>
                                     <FormLabel>رقم الهاتف</FormLabel>
                                     <FormControl>
-                                        <div className="phone-input-container" dir="ltr">
-                                            <PhoneInput
-                                                international
-                                                labels={ar}
-                                                placeholder="أدخل رقم الهاتف"
-                                                {...field}
-                                                className="w-full"
-                                            />
-                                        </div>
+                                        <PhoneInputWithCountry
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            placeholder="أدخل رقم الهاتف"
+                                            onlyArab={true}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

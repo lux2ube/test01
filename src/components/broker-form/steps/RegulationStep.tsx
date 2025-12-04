@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { MultiCountrySelector } from "@/components/ui/country-selector";
 
 interface RegulationStepProps {
   form: UseFormReturn<any>;
@@ -207,33 +208,13 @@ export function RegulationStep({ form }: RegulationStepProps) {
               <span className="ltr:inline hidden">Regulated In (Countries)</span>
               <span className="rtl:inline hidden">مرخص في (دول)</span>
             </FormLabel>
-            <div className="space-y-3">
-              {[
-                { id: "UK", label: "United Kingdom (FCA)" },
-                { id: "Cyprus", label: "Cyprus (CySEC)" },
-                { id: "Australia", label: "Australia (ASIC)" },
-                { id: "EU", label: "European Union (ESMA)" },
-                { id: "UAE", label: "United Arab Emirates (DFSA)" },
-              ].map((country) => (
-                <div key={country.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`regulated-${country.id}`}
-                    checked={field.value?.includes(country.id) || false}
-                    onCheckedChange={(checked) => {
-                      const value = field.value || [];
-                      if (checked) {
-                        field.onChange([...value, country.id]);
-                      } else {
-                        field.onChange(value.filter((v: string) => v !== country.id));
-                      }
-                    }}
-                  />
-                  <label htmlFor={`regulated-${country.id}`} className="text-sm cursor-pointer">
-                    {country.label}
-                  </label>
-                </div>
-              ))}
-            </div>
+            <FormControl>
+              <MultiCountrySelector
+                value={field.value || []}
+                onChange={field.onChange}
+                placeholder="اختر الدول"
+              />
+            </FormControl>
             <FormMessage />
           </FormItem>
         )}

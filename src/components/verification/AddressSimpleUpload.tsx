@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, Loader2, CheckCircle, ArrowRight, ArrowLeft, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { CountrySelector } from '@/components/ui/country-selector';
 
 interface AddressSimpleUploadProps {
   onSuccess: () => void;
@@ -16,14 +17,12 @@ interface AddressSimpleUploadProps {
 export function AddressSimpleUpload({ onSuccess, onCancel }: AddressSimpleUploadProps) {
   const [step, setStep] = useState(1);
   
-  // Address details
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
   const [streetAddress, setStreetAddress] = useState('');
   const [stateProvince, setStateProvince] = useState('');
   const [postalCode, setPostalCode] = useState('');
   
-  // File upload
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentPreview, setDocumentPreview] = useState<string | null>(null);
   
@@ -32,21 +31,6 @@ export function AddressSimpleUpload({ onSuccess, onCancel }: AddressSimpleUpload
   
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const countries = [
-    { code: 'YE', name: 'اليمن', flag: '🇾🇪' },
-    { code: 'SA', name: 'السعودية', flag: '🇸🇦' },
-    { code: 'AE', name: 'الإمارات', flag: '🇦🇪' },
-    { code: 'EG', name: 'مصر', flag: '🇪🇬' },
-    { code: 'JO', name: 'الأردن', flag: '🇯🇴' },
-    { code: 'LB', name: 'لبنان', flag: '🇱🇧' },
-    { code: 'IQ', name: 'العراق', flag: '🇮🇶' },
-    { code: 'SY', name: 'سوريا', flag: '🇸🇾' },
-    { code: 'KW', name: 'الكويت', flag: '🇰🇼' },
-    { code: 'QA', name: 'قطر', flag: '🇶🇦' },
-    { code: 'BH', name: 'البحرين', flag: '🇧🇭' },
-    { code: 'OM', name: 'عمان', flag: '🇴🇲' },
-  ];
 
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,19 +153,12 @@ export function AddressSimpleUpload({ onSuccess, onCancel }: AddressSimpleUpload
           {/* Country Selection */}
           <div className="space-y-3">
             <Label htmlFor="country">الدولة *</Label>
-            <select
-              id="country"
+            <CountrySelector
               value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="w-full p-3 border rounded-lg bg-background text-right"
-            >
-              <option value="">اختر الدولة</option>
-              {countries.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.flag} {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCountry}
+              placeholder="اختر الدولة"
+              onlyArab={true}
+            />
           </div>
 
           {/* City */}

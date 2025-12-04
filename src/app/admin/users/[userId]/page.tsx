@@ -34,7 +34,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { countries } from "@/lib/countries";
+import { countries, getCountryName } from "@/lib/countries";
+import { CountrySelector } from "@/components/ui/country-selector";
 import PhoneInput, { isPossiblePhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import ar from 'react-phone-number-input/locale/ar.json'
@@ -96,15 +97,13 @@ function EditUserDialog({ userProfile, onSuccess }: { userProfile: UserProfile, 
                          <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>الاسم</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                          <FormField control={form.control} name="country" render={({ field }) => (
                             <FormItem><FormLabel>الدولة</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="اختر دولة..." /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <Input placeholder="بحث..." className="mb-2" onChange={(e) => {
-                                            // Implement search logic here if needed
-                                        }} />
-                                        {countries.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <FormControl>
+                                    <CountrySelector
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        placeholder="اختر دولة..."
+                                    />
+                                </FormControl>
                             <FormMessage /></FormItem>
                          )}/>
                         <DialogFooter>

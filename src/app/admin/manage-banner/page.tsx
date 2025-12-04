@@ -98,7 +98,7 @@ export default function ManageBannerPage() {
     };
     
     const levelOptions = clientLevels.map(level => ({ value: String(level.id), label: level.name }));
-    const countryOptions = countries.map(country => ({ value: country.code, label: country.name }));
+    const countryOptions = countries.map(country => ({ value: country.code, label: `${country.flag} ${country.nameAr}` }));
     const statusOptions: { value: UserStatus, label: string }[] = [
         { value: 'NEW', label: 'جديد' },
         { value: 'Active', label: 'نشط' },

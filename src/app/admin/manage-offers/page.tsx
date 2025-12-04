@@ -98,7 +98,7 @@ function OfferForm({ offer, onSuccess, onCancel, clientLevels }: { offer?: Offer
     };
 
     const levelOptions = clientLevels.map(level => ({ value: String(level.id), label: level.name }));
-    const countryOptions = countries.map(country => ({ value: country.code, label: country.name }));
+    const countryOptions = countries.map(country => ({ value: country.code, label: `${country.flag} ${country.nameAr}` }));
     const statusOptions = [
         { value: 'NEW', label: 'جديد' },
         { value: 'Active', label: 'نشط' },

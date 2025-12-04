@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Upload, Loader2, CheckCircle, ArrowRight, ArrowLeft, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { CountrySelector } from '@/components/ui/country-selector';
 
 interface KycSimpleUploadProps {
   onSuccess: () => void;
@@ -30,21 +31,6 @@ export function KycSimpleUpload({ onSuccess, onCancel }: KycSimpleUploadProps) {
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
-
-  const countries = [
-    { code: 'YE', name: 'اليمن', flag: '🇾🇪' },
-    { code: 'SA', name: 'السعودية', flag: '🇸🇦' },
-    { code: 'AE', name: 'الإمارات', flag: '🇦🇪' },
-    { code: 'EG', name: 'مصر', flag: '🇪🇬' },
-    { code: 'JO', name: 'الأردن', flag: '🇯🇴' },
-    { code: 'LB', name: 'لبنان', flag: '🇱🇧' },
-    { code: 'IQ', name: 'العراق', flag: '🇮🇶' },
-    { code: 'SY', name: 'سوريا', flag: '🇸🇾' },
-    { code: 'KW', name: 'الكويت', flag: '🇰🇼' },
-    { code: 'QA', name: 'قطر', flag: '🇶🇦' },
-    { code: 'BH', name: 'البحرين', flag: '🇧🇭' },
-    { code: 'OM', name: 'عمان', flag: '🇴🇲' },
-  ];
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -213,18 +199,12 @@ export function KycSimpleUpload({ onSuccess, onCancel }: KycSimpleUploadProps) {
           {/* Country Selection */}
           <div className="space-y-3">
             <label className="block text-sm font-medium">الدولة المصدرة</label>
-            <select
+            <CountrySelector
               value={nationality}
-              onChange={(e) => setNationality(e.target.value)}
-              className="w-full p-3 border rounded-lg bg-background text-right"
-            >
-              <option value="">اختر الدولة</option>
-              {countries.map((country) => (
-                <option key={country.code} value={country.code}>
-                  {country.flag} {country.name}
-                </option>
-              ))}
-            </select>
+              onChange={setNationality}
+              placeholder="اختر الدولة"
+              onlyArab={true}
+            />
           </div>
 
           {/* Document Type Selection */}

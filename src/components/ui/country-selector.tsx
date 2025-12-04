@@ -42,7 +42,7 @@ interface MultiCountrySelectorProps {
 export function CountrySelector({
   value,
   onChange,
-  placeholder = "اختر الدولة",
+  placeholder,
   disabled = false,
   onlyArab = false,
   className,
@@ -69,21 +69,34 @@ export function CountrySelector({
               <span className="ltr:inline hidden">{selectedCountry.name}</span>
             </span>
           ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
+            <span className="text-muted-foreground">
+              {placeholder || (
+                <>
+                  <span className="rtl:inline hidden">اختر الدولة</span>
+                  <span className="ltr:inline hidden">Select country</span>
+                </>
+              )}
+            </span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
         <Command>
-          <CommandInput placeholder="ابحث عن دولة..." className="h-9" />
+          <CommandInput 
+            placeholder="Search country / ابحث عن دولة..." 
+            className="h-9" 
+          />
           <CommandList>
-            <CommandEmpty>لم يتم العثور على نتائج.</CommandEmpty>
+            <CommandEmpty>
+              <span className="rtl:inline hidden">لم يتم العثور على نتائج</span>
+              <span className="ltr:inline hidden">No results found</span>
+            </CommandEmpty>
             <CommandGroup className="max-h-[300px] overflow-auto">
               {countryList.map((country) => (
                 <CommandItem
                   key={country.code}
-                  value={`${country.name} ${country.nameAr}`}
+                  value={`${country.name} ${country.nameAr} ${country.code}`}
                   onSelect={() => {
                     onChange(country.code);
                     setOpen(false);
@@ -113,7 +126,7 @@ export function CountrySelector({
 export function MultiCountrySelector({
   value = [],
   onChange,
-  placeholder = "اختر الدول",
+  placeholder,
   disabled = false,
   onlyArab = false,
   className,
@@ -134,7 +147,16 @@ export function MultiCountrySelector({
 
   const displayText = () => {
     if (selectedCountries.length === 0) {
-      return <span className="text-muted-foreground">{placeholder}</span>;
+      return (
+        <span className="text-muted-foreground">
+          {placeholder || (
+            <>
+              <span className="rtl:inline hidden">اختر الدول</span>
+              <span className="ltr:inline hidden">Select countries</span>
+            </>
+          )}
+        </span>
+      );
     }
     if (selectedCountries.length <= maxDisplay) {
       return (
@@ -155,7 +177,8 @@ export function MultiCountrySelector({
           <span key={c.code} className="text-lg">{c.flag}</span>
         ))}
         <span className="text-sm text-muted-foreground">
-          +{selectedCountries.length - maxDisplay} دولة أخرى
+          <span className="rtl:inline hidden">+{selectedCountries.length - maxDisplay} دولة أخرى</span>
+          <span className="ltr:inline hidden">+{selectedCountries.length - maxDisplay} more</span>
         </span>
       </span>
     );
@@ -177,14 +200,20 @@ export function MultiCountrySelector({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
         <Command>
-          <CommandInput placeholder="ابحث عن دولة..." className="h-9" />
+          <CommandInput 
+            placeholder="Search country / ابحث عن دولة..." 
+            className="h-9" 
+          />
           <CommandList>
-            <CommandEmpty>لم يتم العثور على نتائج.</CommandEmpty>
+            <CommandEmpty>
+              <span className="rtl:inline hidden">لم يتم العثور على نتائج</span>
+              <span className="ltr:inline hidden">No results found</span>
+            </CommandEmpty>
             <CommandGroup className="max-h-[300px] overflow-auto">
               {countryList.map((country) => (
                 <CommandItem
                   key={country.code}
-                  value={`${country.name} ${country.nameAr}`}
+                  value={`${country.name} ${country.nameAr} ${country.code}`}
                   onSelect={() => handleToggle(country.code)}
                 >
                   <div className="flex items-center gap-2 flex-1">

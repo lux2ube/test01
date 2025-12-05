@@ -67,14 +67,23 @@ function EditUserDialog({ userProfile, onSuccess }: { userProfile: UserProfile, 
         },
     });
 
+    useEffect(() => {
+        if (isOpen) {
+            form.reset({
+                name: userProfile?.name || "",
+                country: userProfile?.country || "",
+            });
+        }
+    }, [isOpen, userProfile, form]);
+
     const onSubmit = async (values: EditUserForm) => {
         if (!userProfile) return;
         setIsSubmitting(true);
         const result = await updateUser(userProfile.id, values);
         if (result.success) {
             toast({ title: "نجاح", description: result.message });
-            onSuccess();
             setIsOpen(false);
+            onSuccess();
         } else {
             toast({ variant: "destructive", title: "خطأ", description: result.message });
         }

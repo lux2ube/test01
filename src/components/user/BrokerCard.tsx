@@ -50,9 +50,9 @@ export function BrokerCard({ broker }: { broker: Broker }) {
              <Link href={`/dashboard/brokers/${broker.id}`} className="block">
                 <div className="flex justify-between items-start">
                     <div className="flex items-start gap-3">
-                        {broker.logo_url && 
+                        {broker.logoUrl && 
                             <Image
-                                src={broker.logo_url}
+                                src={broker.logoUrl}
                                 alt={`${name} logo`}
                                 width={48}
                                 height={48}

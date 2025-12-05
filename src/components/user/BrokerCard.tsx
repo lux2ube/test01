@@ -31,7 +31,7 @@ function StarRating({ rating }: { rating: number }) {
     )
 }
 
-export function BrokerCard({ broker }: { broker: Broker }) {
+export function BrokerCard({ broker, isPublic }: { broker: Broker, isPublic?: boolean }) {
   if (!broker) {
     return null; 
   }
@@ -43,11 +43,12 @@ export function BrokerCard({ broker }: { broker: Broker }) {
   const cashbackFrequency = broker.cashback?.cashback_frequency;
   const swapFree = broker.tradingConditions?.swap_free;
   const copyTrading = broker.additionalFeatures?.copy_trading;
+  const brokerLink = isPublic ? `/brokers/${broker.id}` : `/dashboard/brokers/${broker.id}`;
   
   return (
     <Card className="w-full overflow-hidden">
         <CardContent className="p-4 space-y-3">
-             <Link href={`/dashboard/brokers/${broker.id}`} className="block">
+             <Link href={brokerLink} className="block">
                 <div className="flex justify-between items-start">
                     <div className="flex items-start gap-3">
                         {broker.logo_url && 
@@ -104,12 +105,12 @@ export function BrokerCard({ broker }: { broker: Broker }) {
 
             <div className="space-y-2">
                 <Button asChild className="w-full" size="sm">
-                    <Link href={`/dashboard/brokers/${broker.id}/link?action=new`}>
+                    <Link href={isPublic ? `/login?redirect=/dashboard/brokers/${broker.id}/link?action=new` : `/dashboard/brokers/${broker.id}/link?action=new`}>
                         فتح حساب جديد مع {name}.
                     </Link>
                 </Button>
                 <Button asChild className="w-full" variant="secondary" size="sm">
-                    <Link href={`/dashboard/brokers/${broker.id}/link?action=existing`}>
+                    <Link href={isPublic ? `/login?redirect=/dashboard/brokers/${broker.id}/link?action=existing` : `/dashboard/brokers/${broker.id}/link?action=existing`}>
                         لدي بالفعل حساب مع {name}.
                     </Link>
                 </Button>

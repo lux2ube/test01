@@ -49,9 +49,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const protectedPaths = ['/dashboard', '/admin', '/phone-verification'];
-  const publicPaths = ['/brokers'];
-  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
-  const isProtectedPath = !isPublicPath && protectedPaths.some(path => pathname.startsWith(path));
+  const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
   
   if (isProtectedPath) {
     // First check Supabase session (primary auth)

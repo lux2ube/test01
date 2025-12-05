@@ -178,7 +178,7 @@ export default function Home() {
                             <Link href="/register">ابدأ مجاناً</Link>
                         </Button>
                         <Button asChild variant="secondary" size="lg">
-                            <Link href="/brokers">عرض الوسطاء</Link>
+                            <Link href="/dashboard/brokers">عرض الوسطاء</Link>
                         </Button>
                     </div>
                 </div>

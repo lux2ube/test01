@@ -31,7 +31,7 @@ function StarRating({ rating }: { rating: number }) {
     )
 }
 
-export function BrokerCard({ broker, isPublic, hideButtons }: { broker: Broker, isPublic?: boolean, hideButtons?: boolean }) {
+export function BrokerCard({ broker }: { broker: Broker }) {
   if (!broker) {
     return null; 
   }
@@ -43,17 +43,16 @@ export function BrokerCard({ broker, isPublic, hideButtons }: { broker: Broker, 
   const cashbackFrequency = broker.cashback?.cashback_frequency;
   const swapFree = broker.tradingConditions?.swap_free;
   const copyTrading = broker.additionalFeatures?.copy_trading;
-  const brokerLink = isPublic ? `/brokers/${broker.id}` : `/dashboard/brokers/${broker.id}`;
   
   return (
     <Card className="w-full overflow-hidden">
         <CardContent className="p-4 space-y-3">
-             <Link href={brokerLink} className="block">
+             <Link href={`/dashboard/brokers/${broker.id}`} className="block">
                 <div className="flex justify-between items-start">
                     <div className="flex items-start gap-3">
-                        {broker.logoUrl && 
+                        {broker.logo_url && 
                             <Image
-                                src={broker.logoUrl}
+                                src={broker.logo_url}
                                 alt={`${name} logo`}
                                 width={48}
                                 height={48}
@@ -103,20 +102,18 @@ export function BrokerCard({ broker, isPublic, hideButtons }: { broker: Broker, 
                 </div>
             </div>
 
-            {!hideButtons && (
-                <div className="space-y-2">
-                    <Button asChild className="w-full" size="sm">
-                        <Link href={isPublic ? `/login?redirect=/dashboard/brokers/${broker.id}/link?action=new` : `/dashboard/brokers/${broker.id}/link?action=new`}>
-                            فتح حساب جديد مع {name}.
-                        </Link>
-                    </Button>
-                    <Button asChild className="w-full" variant="secondary" size="sm">
-                        <Link href={isPublic ? `/login?redirect=/dashboard/brokers/${broker.id}/link?action=existing` : `/dashboard/brokers/${broker.id}/link?action=existing`}>
-                            لدي بالفعل حساب مع {name}.
-                        </Link>
-                    </Button>
-                </div>
-            )}
+            <div className="space-y-2">
+                <Button asChild className="w-full" size="sm">
+                    <Link href={`/dashboard/brokers/${broker.id}/link?action=new`}>
+                        فتح حساب جديد مع {name}.
+                    </Link>
+                </Button>
+                <Button asChild className="w-full" variant="secondary" size="sm">
+                    <Link href={`/dashboard/brokers/${broker.id}/link?action=existing`}>
+                        لدي بالفعل حساب مع {name}.
+                    </Link>
+                </Button>
+            </div>
         </CardContent>
     </Card>
   )

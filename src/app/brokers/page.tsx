@@ -61,7 +61,7 @@ export default function BrokersPage() {
     return (
         <div className="flex flex-col space-y-4">
           {brokers.map((broker) => (
-            <BrokerCard key={broker.id} broker={broker} isPublic={true} />
+            <BrokerCard key={broker.id} broker={broker} isPublic={true} hideButtons={true} />
           ))}
         </div>
     )

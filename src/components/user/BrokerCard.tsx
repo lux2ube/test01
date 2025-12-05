@@ -31,7 +31,7 @@ function StarRating({ rating }: { rating: number }) {
     )
 }
 
-export function BrokerCard({ broker, isPublic }: { broker: Broker, isPublic?: boolean }) {
+export function BrokerCard({ broker, isPublic, hideButtons }: { broker: Broker, isPublic?: boolean, hideButtons?: boolean }) {
   if (!broker) {
     return null; 
   }
@@ -103,18 +103,20 @@ export function BrokerCard({ broker, isPublic }: { broker: Broker, isPublic?: bo
                 </div>
             </div>
 
-            <div className="space-y-2">
-                <Button asChild className="w-full" size="sm">
-                    <Link href={isPublic ? `/login?redirect=/dashboard/brokers/${broker.id}/link?action=new` : `/dashboard/brokers/${broker.id}/link?action=new`}>
-                        فتح حساب جديد مع {name}.
-                    </Link>
-                </Button>
-                <Button asChild className="w-full" variant="secondary" size="sm">
-                    <Link href={isPublic ? `/login?redirect=/dashboard/brokers/${broker.id}/link?action=existing` : `/dashboard/brokers/${broker.id}/link?action=existing`}>
-                        لدي بالفعل حساب مع {name}.
-                    </Link>
-                </Button>
-            </div>
+            {!hideButtons && (
+                <div className="space-y-2">
+                    <Button asChild className="w-full" size="sm">
+                        <Link href={isPublic ? `/login?redirect=/dashboard/brokers/${broker.id}/link?action=new` : `/dashboard/brokers/${broker.id}/link?action=new`}>
+                            فتح حساب جديد مع {name}.
+                        </Link>
+                    </Button>
+                    <Button asChild className="w-full" variant="secondary" size="sm">
+                        <Link href={isPublic ? `/login?redirect=/dashboard/brokers/${broker.id}/link?action=existing` : `/dashboard/brokers/${broker.id}/link?action=existing`}>
+                            لدي بالفعل حساب مع {name}.
+                        </Link>
+                    </Button>
+                </div>
+            )}
         </CardContent>
     </Card>
   )

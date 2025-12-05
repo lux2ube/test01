@@ -211,9 +211,12 @@ export default function BrokerPreviewPage() {
                             </div>
                         </div>
                         
-                        <div className="flex gap-2 pt-3">
+                        <div className="flex flex-col gap-2 pt-3">
                             <Button asChild size="sm" className="flex-1">
-                                <Link href={`/login?redirect=/dashboard/brokers/${brokerId}/link`}>ابدأ في كسب الكاش باك</Link>
+                                <Link href={`/login?redirect=/dashboard/brokers/${brokerId}/link?action=new`}>فتح حساب جديد</Link>
+                            </Button>
+                            <Button asChild size="sm" variant="secondary" className="flex-1">
+                                <Link href={`/login?redirect=/dashboard/brokers/${brokerId}/link?action=existing`}>ربط حسابي الحالي</Link>
                             </Button>
                         </div>
                     </div>

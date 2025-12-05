@@ -51,9 +51,9 @@ export function BrokerCard({ broker, isPublic }: { broker: Broker, isPublic?: bo
              <Link href={brokerLink} className="block">
                 <div className="flex justify-between items-start">
                     <div className="flex items-start gap-3">
-                        {broker.logo_url && 
+                        {broker.logoUrl && 
                             <Image
-                                src={broker.logo_url}
+                                src={broker.logoUrl}
                                 alt={`${name} logo`}
                                 width={48}
                                 height={48}

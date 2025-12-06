@@ -2,7 +2,7 @@
 "use client"
 
 import { useAuthContext } from "@/hooks/useAuthContext";
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Loader2, ChevronRight, Mail, Phone, User, Home } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,13 +46,9 @@ function VerificationItemContent({ icon: Icon, title, status }: { icon: React.El
 }
 
 export default function VerificationPage() {
-    const { user, isLoading, refetchUserData } = useAuthContext();
+    const { user, isLoading } = useAuthContext();
     const router = useRouter();
     const { toast } = useToast();
-    
-    useEffect(() => {
-        refetchUserData();
-    }, []);
     
     const handleSendVerificationEmail = async () => {
         const result = await sendVerificationEmail();
@@ -79,7 +75,7 @@ export default function VerificationPage() {
     const { profile } = user;
 
     // Determine statuses
-    const emailStatus = user.email_confirmed_at ? 'Verified' : 'Not Verified';
+    const emailStatus = profile.isVerified ? 'Verified' : 'Not Verified';
     const phoneStatus = !profile.phoneNumber ? 'Add' : profile.phoneNumberVerified ? 'Verified' : 'Pending';
     const kycStatus = !profile.kycData ? 'Not Verified' : profile.kycData.status;
     const addressStatus = !profile.addressData ? 'Not Verified' : profile.addressData.status;

@@ -203,7 +203,7 @@ export interface Broker {
         new_account_link?: string,
         new_account_link_text?: string
     };
-    existingAccountInstructions: string;
+    existingAccountInstructions: string | { description?: string; linkText?: string; link?: string };
 }
 
 

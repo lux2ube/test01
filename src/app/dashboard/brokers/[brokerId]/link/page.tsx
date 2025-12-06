@@ -195,9 +195,9 @@ export default function BrokerLinkPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col items-start gap-4">
-            {broker.logo_url &&
+            {broker.logoUrl &&
               <Image
-                  src={broker.logo_url}
+                  src={broker.logoUrl}
                   alt={`${brokerName} logo`}
                   width={48}
                   height={48}
@@ -296,54 +296,105 @@ function Step1({ brokerName }: { brokerName: string }) {
 function Step2({ hasAccount, broker }: { hasAccount: string | undefined; broker: Broker }) {
     const brokerName = broker.name || broker.basicInfo?.broker_name;
     
-    // Parse deeply nested JSON instructions
-    const parseInstructions = (instructions: any) => {
-        let parsed = instructions;
-        let maxDepth = 5; // Prevent infinite loops
+    // Parse description - handles nested JSON, objects, arrays, and strings
+    // Always returns a string - never an object
+    const parseDescription = (desc: any, depth: number = 0): string => {
+        // Prevent infinite recursion
+        if (depth > 10) return '';
         
-        // Parse through multiple levels of JSON encoding
-        while (typeof parsed === 'string' && maxDepth > 0) {
-            try {
-                parsed = JSON.parse(parsed);
-            } catch (e) {
-                break;
-            }
-            maxDepth--;
-        }
+        if (!desc) return '';
+        if (desc === null || desc === undefined) return '';
         
-        // Extract the final values
-        const result = {
-            description: '',
-            linkText: '',
-            link: ''
-        };
-        
-        if (typeof parsed === 'object' && parsed !== null) {
-            // If description is still a string, try to parse it once more
-            let desc = parsed.description;
-            if (typeof desc === 'string') {
-                try {
-                    const descObj = JSON.parse(desc);
-                    result.description = descObj?.description || desc;
-                } catch (e) {
-                    result.description = desc;
-                }
-            } else {
-                result.description = parsed.description || '';
+        // If it's already a string
+        if (typeof desc === 'string') {
+            const trimmed = desc.trim();
+            
+            // Check if it looks like JSON
+            if (!trimmed.startsWith('{') && !trimmed.startsWith('[') && !trimmed.startsWith('"')) {
+                return desc; // It's a plain string, return it
             }
             
-            result.linkText = parsed.linkText || '';
-            result.link = parsed.link || '';
+            // Try to parse as JSON
+            try {
+                const parsed = JSON.parse(desc);
+                return parseDescription(parsed, depth + 1);
+            } catch (e) {
+                return desc; // Can't parse, return as is
+            }
         }
         
-        return result;
+        // If it's an array, recursively extract and join text
+        if (Array.isArray(desc)) {
+            return desc.map(item => parseDescription(item, depth + 1)).filter(Boolean).join(' ');
+        }
+        
+        // If it's an object, look for common text keys
+        if (typeof desc === 'object') {
+            // Try common text key names in order of priority
+            const textKeys = ['description', 'text', 'content', 'value', 'message'];
+            for (const key of textKeys) {
+                if (desc[key] !== undefined && desc[key] !== null) {
+                    const result = parseDescription(desc[key], depth + 1);
+                    if (result) return result;
+                }
+            }
+            // No recognized text key found
+            return '';
+        }
+        
+        // For other types (number, boolean, etc), convert to string
+        return String(desc);
     };
     
-    const instructions = parseInstructions(broker.instructions);
-    const description = instructions.description || "اتبع الرابط لفتح حساب جديد.";
-    const link = instructions.link || broker.cashback?.affiliate_program_link || (broker as any).instructions?.link;
-    const linkText = instructions.linkText || `افتح حسابًا مع ${brokerName}`;
-    const existingAccountInstructions = broker.existingAccountInstructions || "يرجى الاتصال بالدعم لربط حسابك الحالي تحت شبكة شركائنا.";
+    // Access instructions directly - they're already an object from the database
+    const rawInstructions = broker.instructions || {};
+    const description = parseDescription(rawInstructions.description) || "اتبع الرابط لفتح حساب جديد.";
+    const link = rawInstructions.link || broker.cashback?.affiliate_program_link || '';
+    const linkText = rawInstructions.linkText || `افتح حسابًا مع ${brokerName}`;
+    
+    // For existing accounts - handle both object and string formats
+    // Returns { text, linkText, link } for proper rendering
+    const getExistingAccountData = (): { text: string; linkText?: string; link?: string } => {
+        const defaultText = "يرجى الاتصال بالدعم لربط حسابك الحالي تحت شبكة شركائنا.";
+        const raw = broker.existingAccountInstructions;
+        
+        if (!raw) return { text: defaultText };
+        
+        // If it's already a string
+        if (typeof raw === 'string') {
+            // Try to parse if it looks like JSON
+            if (raw.trim().startsWith('{') || raw.trim().startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (typeof parsed === 'object' && parsed !== null) {
+                        return {
+                            text: parsed.description || parsed.text || defaultText,
+                            linkText: parsed.linkText,
+                            link: parsed.link
+                        };
+                    }
+                    return { text: String(parsed) || defaultText };
+                } catch (e) {
+                    return { text: raw || defaultText };
+                }
+            }
+            return { text: raw || defaultText };
+        }
+        
+        // If it's an object with properties
+        if (typeof raw === 'object' && raw !== null) {
+            const obj = raw as any;
+            return {
+                text: obj.description || obj.text || defaultText,
+                linkText: obj.linkText,
+                link: obj.link
+            };
+        }
+        
+        return { text: defaultText };
+    };
+    
+    const existingAccountData = getExistingAccountData();
 
     return (
         <>
@@ -370,8 +421,15 @@ function Step2({ hasAccount, broker }: { hasAccount: string | undefined; broker:
                     <Alert>
                         <Info className="h-4 w-4" />
                         <AlertTitle>هام: ربط الحساب الحالي</AlertTitle>
-                        <AlertDescription>
-                            <p className="text-xs">{existingAccountInstructions}</p>
+                        <AlertDescription className="space-y-4">
+                            <p className="text-xs">{existingAccountData.text}</p>
+                            {existingAccountData.link && (
+                                <Button asChild size="sm" className="w-full">
+                                    <a href={existingAccountData.link} target="_blank" rel="noopener noreferrer">
+                                        {existingAccountData.linkText || 'اتبع الرابط'} <ExternalLink className="ml-2 h-4 w-4" />
+                                    </a>
+                                </Button>
+                            )}
                         </AlertDescription>
                     </Alert>
                 )}

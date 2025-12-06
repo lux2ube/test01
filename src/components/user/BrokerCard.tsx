@@ -60,12 +60,23 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                                 data-ai-hint="logo"
                             />
                         }
-                        <div className="space-y-1 flex-1">
+                        <div className="space-y-1">
                             <h3 className="text-base font-bold">{name}</h3>
-                            <p className="text-xs text-muted-foreground">{description}</p>
                             <StarRating rating={rating} />
                         </div>
                     </div>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground">
+                                    <Info className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="max-w-xs">{description}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             </Link>
             

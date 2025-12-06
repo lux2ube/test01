@@ -169,9 +169,9 @@ export default function BrokerLinkPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col items-start gap-4">
-            {(broker.logoUrl || broker.logo_url) &&
+            {broker.logo_url &&
               <Image
-                  src={broker.logoUrl || broker.logo_url}
+                  src={broker.logo_url}
                   alt={`${brokerName} logo`}
                   width={48}
                   height={48}
@@ -179,10 +179,9 @@ export default function BrokerLinkPage() {
                   data-ai-hint="logo"
                 />
             }
-            <div className="flex-1 w-full">
+            <div className="flex-1">
               <h1 className="text-lg font-bold font-headline">{brokerName}</h1>
-              <p className="text-xs text-muted-foreground mt-1">{broker.basicInfo ? `تأسست عام ${broker.basicInfo.founded_year}، ومقرها في ${broker.basicInfo.headquarters}` : broker.description}</p>
-              {broker.basicInfo?.description && <p className="text-sm text-foreground mt-2">{broker.basicInfo.description}</p>}
+              <p className="text-xs text-muted-foreground">{broker.basicInfo ? `تأسست عام ${broker.basicInfo.founded_year}، ومقرها في ${broker.basicInfo.headquarters}` : broker.description}</p>
             </div>
           </div>
         </CardContent>

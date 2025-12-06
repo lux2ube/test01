@@ -3,6 +3,31 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import type { Broker } from '@/types';
 
+// Transform database snake_case fields to camelCase for TypeScript
+function transformBrokerFromDB(dbBroker: any): Broker {
+  return {
+    id: dbBroker.id,
+    order: dbBroker.order,
+    logoUrl: dbBroker.logo_url || dbBroker.logoUrl || "",
+    basicInfo: dbBroker.basic_info || dbBroker.basicInfo || {},
+    regulation: dbBroker.regulation || {},
+    tradingConditions: dbBroker.trading_conditions || dbBroker.tradingConditions || {},
+    platforms: dbBroker.platforms || {},
+    instruments: dbBroker.instruments || {},
+    depositsWithdrawals: dbBroker.deposits_withdrawals || dbBroker.depositsWithdrawals || {},
+    cashback: dbBroker.cashback || {},
+    globalReach: dbBroker.global_reach || dbBroker.globalReach || {},
+    reputation: dbBroker.reputation || {},
+    additionalFeatures: dbBroker.additional_features || dbBroker.additionalFeatures || {},
+    name: dbBroker.name || "",
+    description: dbBroker.description || "",
+    category: dbBroker.category || "other",
+    rating: dbBroker.rating || 0,
+    instructions: dbBroker.instructions || {},
+    existingAccountInstructions: dbBroker.existing_account_instructions || dbBroker.existingAccountInstructions || "",
+  };
+}
+
 // Transform camelCase Broker fields to snake_case for database
 function transformBrokerForDB(broker: Partial<Omit<Broker, 'id' | 'order'>>): any {
   const dbData: any = {};
@@ -43,7 +68,7 @@ export async function getBrokers(): Promise<Broker[]> {
     return [];
   }
 
-  return (data || []) as Broker[];
+  return (data || []).map(transformBrokerFromDB);
 }
 
 export async function addBroker(data: Omit<Broker, 'id' | 'order'>) {

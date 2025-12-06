@@ -169,6 +169,7 @@ export default function BrokerPreviewPage() {
         reputation = {}, 
         additionalFeatures = {}, 
         instructions = {},
+        description = "",
         logoUrl = "https://placehold.co/100x100.png"
     } = broker || {};
     
@@ -219,6 +220,14 @@ export default function BrokerPreviewPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {description && (
+                <Card>
+                    <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{description}</p>
+                    </CardContent>
+                </Card>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
                  <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Star className="h-4 w-4 text-yellow-500"/> <span className="font-bold">{reputation?.wikifx_score?.toFixed(1) || '0'}</span><span className="text-xs">تقييم WikiFX</span></Badge>

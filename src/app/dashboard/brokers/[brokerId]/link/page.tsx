@@ -22,6 +22,31 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
+// Transform database format to TypeScript types (snake_case to camelCase)
+function transformBrokerFromDB(dbBroker: any): Broker {
+  return {
+    id: dbBroker.id,
+    order: dbBroker.order,
+    logoUrl: dbBroker.logo_url || dbBroker.logoUrl || "https://placehold.co/100x100.png",
+    basicInfo: dbBroker.basic_info || dbBroker.basicInfo || {},
+    regulation: dbBroker.regulation || {},
+    tradingConditions: dbBroker.trading_conditions || dbBroker.tradingConditions || {},
+    platforms: dbBroker.platforms || {},
+    instruments: dbBroker.instruments || {},
+    depositsWithdrawals: dbBroker.deposits_withdrawals || dbBroker.depositsWithdrawals || {},
+    cashback: dbBroker.cashback || {},
+    globalReach: dbBroker.global_reach || dbBroker.globalReach || {},
+    reputation: dbBroker.reputation || {},
+    additionalFeatures: dbBroker.additional_features || dbBroker.additionalFeatures || {},
+    name: dbBroker.name || "Unknown Broker",
+    description: dbBroker.description || "",
+    category: dbBroker.category || "other",
+    rating: dbBroker.rating || 0,
+    instructions: dbBroker.instructions || {},
+    existingAccountInstructions: dbBroker.existing_account_instructions || dbBroker.existingAccountInstructions || "",
+  };
+}
+
 const formSchema = z.object({
   hasAccount: z.enum(["yes", "no"], { required_error: "يرجى تحديد خيار." }),
   accountNumber: z.string().min(5, { message: 'يجب أن يكون رقم الحساب 5 أحرف على الأقل.' }),
@@ -64,7 +89,8 @@ export default function BrokerLinkPage() {
         if (error || !data) {
           notFound();
         } else {
-          setBroker({ id: data.id, ...data } as Broker);
+          const transformedBroker = transformBrokerFromDB(data);
+          setBroker(transformedBroker);
         }
       } catch (error) {
         console.error("Error fetching broker", error);

@@ -41,8 +41,8 @@ export function AddressSimpleUpload({ onSuccess, onCancel, userCountry }: Addres
 
       if (response.ok && data.success) {
         toast({ 
-          title: 'نجاح', 
-          description: 'تم تحديث دولتك بنجاح.' 
+          title: 'تم الإرسال', 
+          description: 'تم إرسال طلبك بنجاح وسيتم مراجعته من قبل الإدارة.' 
         });
         onSuccess();
       } else {

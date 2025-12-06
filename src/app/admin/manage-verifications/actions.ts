@@ -176,6 +176,17 @@ export async function updateVerificationStatus(
       } else {
         updateData['address_rejection_reason'] = null;
         notificationMessage = 'تم تأكيد دولة إقامتك بنجاح.';
+        
+        // When approving, copy address_country to the main country field
+        const { data: userData } = await supabase
+          .from('users')
+          .select('address_country')
+          .eq('id', userId)
+          .single();
+        
+        if (userData?.address_country) {
+          updateData['country'] = userData.address_country;
+        }
       }
     } else if (type === 'phone') {
       if (status === 'Verified') {

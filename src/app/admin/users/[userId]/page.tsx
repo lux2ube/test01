@@ -37,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { countries, getCountryName } from "@/lib/countries";
 import { CountrySelector } from "@/components/ui/country-selector";
 import { PhoneInputWithCountry } from "@/components/ui/phone-input";
+import { isPossiblePhoneNumber } from 'libphonenumber-js';
 
 type UserDetails = Awaited<ReturnType<typeof getUserDetails>>;
 
@@ -280,8 +281,6 @@ function KycEditDialog({ data, userId, onSuccess }: { data?: KycData; userId: st
 
 const addressSchema = z.object({
   country: z.string().min(2, "الدولة مطلوبة"),
-  city: z.string().min(2, "المدينة مطلوبة"),
-  streetAddress: z.string().min(5, "عنوان الشارع مطلوب"),
   status: z.enum(['Pending', 'Verified', 'Rejected']),
   rejectionReason: z.string().optional(),
 });
@@ -293,8 +292,18 @@ function AddressEditDialog({ data, userId, onSuccess }: { data?: AddressData; us
     const { toast } = useToast();
     const form = useForm<AddressFormValues>({
         resolver: zodResolver(addressSchema),
-        defaultValues: data || { country: '', city: '', streetAddress: '', status: 'Pending', rejectionReason: '' },
+        defaultValues: data || { country: '', status: 'Pending', rejectionReason: '' },
     });
+
+    useEffect(() => {
+        if (isOpen) {
+            form.reset({
+                country: data?.country || '',
+                status: data?.status || 'Pending',
+                rejectionReason: data?.rejectionReason || '',
+            });
+        }
+    }, [isOpen, data, form]);
 
     const onSubmit = async (values: AddressFormValues) => {
         setIsSubmitting(true);
@@ -313,11 +322,21 @@ function AddressEditDialog({ data, userId, onSuccess }: { data?: AddressData; us
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild><Button size="sm" variant="outline">{data ? <Edit2 className="ml-2 h-4 w-4"/> : <PlusCircle className="ml-2 h-4 w-4"/>}{data ? "تعديل" : "إضافة"}</Button></DialogTrigger>
             <DialogContent>
-                <DialogHeader><DialogTitle>{data ? "تعديل" : "إضافة"} بيانات العنوان</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{data ? "تعديل" : "إضافة"} بيانات دولة الإقامة</DialogTitle></DialogHeader>
                 <Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>الدولة</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="city" render={({ field }) => (<FormItem><FormLabel>المدينة</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="streetAddress" render={({ field }) => (<FormItem><FormLabel>عنوان الشارع</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="country" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>الدولة</FormLabel>
+                            <FormControl>
+                                <CountrySelector
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="اختر دولة..."
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
                     <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>الحالة</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Pending">معلق</SelectItem><SelectItem value="Verified">مقبول</SelectItem><SelectItem value="Rejected">مرفوض</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="rejectionReason" render={({ field }) => (<FormItem><FormLabel>سبب الرفض (إن وجد)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <DialogFooter><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}حفظ</Button></DialogFooter>

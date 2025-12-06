@@ -17,13 +17,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Country is required' }, { status: 400 });
     }
 
-    // Update user's country - auto-verified, no admin review needed
+    // Check current address status - allow submission only if Not Verified, Verified (for changes), or Rejected
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('address_status')
+      .eq('id', user.id)
+      .single();
+
+    if (currentUser?.address_status === 'Pending') {
+      return NextResponse.json({ 
+        error: 'لديك طلب قيد المراجعة. يرجى الانتظار حتى تتم مراجعته.' 
+      }, { status: 400 });
+    }
+
+    // Store submitted country for admin review - status is Pending until admin approves
+    // Note: 'country' field is NOT updated here - only admin can update it after approval
     const { error } = await supabase
       .from('users')
       .update({
-        country: country,
         address_country: country,
-        address_status: 'Verified',
+        address_status: 'Pending',
         address_submitted_at: new Date().toISOString(),
         address_rejection_reason: null,
       })

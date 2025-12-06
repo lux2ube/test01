@@ -154,7 +154,6 @@ function WithdrawTabContent() {
         
         let finalDetails: Record<string, any> = {};
         let paymentMethodName = '';
-        let withdrawalType = '';
 
         if (values.withdrawalType === 'trading_account') {
             const account = userTradingAccounts.find(a => a.id === values.tradingAccountId);
@@ -162,74 +161,48 @@ function WithdrawTabContent() {
                 toast({ variant: 'destructive', title: 'خطأ', description: 'حساب التداول المحدد غير صالح.' });
                 return;
             }
-            withdrawalType = 'trading_account';
             paymentMethodName = "تحويل داخلي";
-            finalDetails = { 
-                type: 'trading_account',
-                broker: account.broker, 
-                accountNumber: account.accountNumber 
-            };
+            finalDetails = { broker: account.broker, accountNumber: account.accountNumber };
         } else {
-            if (!selectedMethod) {
+             if (!selectedMethod) {
                 toast({ variant: 'destructive', title: 'خطأ', description: 'طريقة الدفع المحددة غير صالحة.' });
                 return;
             }
-            
-            withdrawalType = 'crypto';
-            paymentMethodName = selectedMethod.name;
-            
-            const methodFields = selectedMethod.fields || [];
-            finalDetails = { 
-                type: 'crypto',
-                methodId: selectedMethod.id,
-                methodName: selectedMethod.name,
-            };
-            
-            methodFields.forEach(field => {
-                finalDetails[field.name] = values.details[field.name] || '';
-            });
+             paymentMethodName = selectedMethod.name;
+             finalDetails = selectedMethod.fields.reduce((acc, field) => {
+                 acc[field.name] = values.details[field.name];
+                 return acc;
+             }, {} as Record<string, any>);
 
-            if (methodFields.length > 0) {
-                const detailsToValidate: Record<string, string> = {};
-                methodFields.forEach(field => {
-                    detailsToValidate[field.name] = values.details[field.name] || '';
+            const detailsSchema = z.object(
+                selectedMethod.fields.reduce((acc, field) => {
+                    let fieldValidation: z.ZodString | z.ZodAny = z.string();
+                    if (field.validation.required) {
+                        fieldValidation = fieldValidation.min(1, `${'${field.label}'} مطلوب.`);
+                    }
+                    if (field.validation.minLength) {
+                        fieldValidation = fieldValidation.min(field.validation.minLength, `${'${field.label}'} يجب أن يكون على الأقل ${'${field.validation.minLength}'} حرفًا.`);
+                    }
+                    if (field.validation.regex) {
+                        try {
+                            const regex = new RegExp(field.validation.regex);
+                            fieldValidation = fieldValidation.regex(regex, field.validation.regexErrorMessage || `تنسيق ${'${field.label}'} غير صالح`);
+                        } catch (e) {
+                            console.error("Invalid regex in payment method config:", e);
+                        }
+                    }
+                    acc[field.name] = fieldValidation;
+                    return acc;
+                }, {} as Record<string, z.ZodString | z.ZodAny>)
+            );
+
+            const detailsValidationResult = detailsSchema.safeParse(finalDetails);
+            if(!detailsValidationResult.success) {
+                detailsValidationResult.error.errors.forEach(err => {
+                    form.setError(`details.${'${err.path[0]}'}`, { type: 'manual', message: err.message });
                 });
-
-                const detailsSchema = z.object(
-                    methodFields.reduce((acc, field) => {
-                        let fieldValidation: z.ZodString | z.ZodAny = z.string();
-                        if (field.validation?.required) {
-                            fieldValidation = fieldValidation.min(1, `${field.label} مطلوب.`);
-                        }
-                        if (field.validation?.minLength) {
-                            fieldValidation = fieldValidation.min(field.validation.minLength, `${field.label} يجب أن يكون على الأقل ${field.validation.minLength} حرفًا.`);
-                        }
-                        if (field.validation?.regex) {
-                            try {
-                                const regex = new RegExp(field.validation.regex);
-                                fieldValidation = fieldValidation.regex(regex, field.validation.regexErrorMessage || `تنسيق ${field.label} غير صالح`);
-                            } catch (e) {
-                                console.error("Invalid regex in payment method config:", e);
-                            }
-                        }
-                        acc[field.name] = fieldValidation;
-                        return acc;
-                    }, {} as Record<string, z.ZodString | z.ZodAny>)
-                );
-
-                const detailsValidationResult = detailsSchema.safeParse(detailsToValidate);
-                if (!detailsValidationResult.success) {
-                    detailsValidationResult.error.errors.forEach(err => {
-                        form.setError(`details.${err.path[0]}`, { type: 'manual', message: err.message });
-                    });
-                    return;
-                }
+                return;
             }
-        }
-        
-        if (values.amount <= 0) {
-            form.setError("amount", { type: "manual", message: "يجب أن يكون المبلغ أكبر من صفر."});
-            return;
         }
         
         if (values.amount > availableBalance) {

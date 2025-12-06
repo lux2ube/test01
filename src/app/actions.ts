@@ -754,13 +754,6 @@ export async function requestWithdrawal(
     const user = await getAuthenticatedUser();
     const userId = user.id;
     
-    console.log('[WITHDRAWAL] Starting withdrawal request:', {
-        userId,
-        amount: payload.amount,
-        paymentMethod: payload.paymentMethod,
-        detailsType: payload.withdrawalDetails?.type
-    });
-    
     try {
         const supabase = await createAdminClient();
         
@@ -768,27 +761,21 @@ export async function requestWithdrawal(
         const balanceResult = await getMyBalance();
         
         if (!balanceResult.success) {
-            console.error('[WITHDRAWAL] Failed to fetch balance:', balanceResult);
             throw new Error('Failed to fetch balance');
         }
         
         const availableBalance = balanceResult.balance.available_balance;
-        console.log('[WITHDRAWAL] Available balance:', availableBalance, 'Requested:', payload.amount);
         
         if (payload.amount > availableBalance) {
-            throw new Error("الرصيد المتاح غير كافي لهذا السحب.");
+            throw new Error("Insufficient available balance for this withdrawal.");
         }
         
-        if (payload.amount <= 0) {
-            throw new Error("يجب أن يكون مبلغ السحب أكبر من صفر.");
-        }
-        
-        const { data: withdrawal, error: insertError } = await supabase
+        const { data: withdrawal, error } = await supabase
             .from('withdrawals')
             .insert({
                 user_id: userId,
                 amount: payload.amount,
-                status: payload.status || 'Processing',
+                status: payload.status,
                 payment_method: payload.paymentMethod,
                 withdrawal_details: payload.withdrawalDetails,
                 requested_at: new Date().toISOString()
@@ -796,47 +783,30 @@ export async function requestWithdrawal(
             .select()
             .single();
         
-        if (insertError || !withdrawal) {
-            console.error('[WITHDRAWAL] Failed to insert withdrawal record:', insertError);
-            throw insertError || new Error('فشل إنشاء طلب السحب');
-        }
-        
-        console.log('[WITHDRAWAL] Withdrawal record created:', withdrawal.id);
+        if (error || !withdrawal) throw error || new Error('Failed to create withdrawal');
         
         const { createWithdrawal } = await import('@/lib/ledger/service');
-        
-        try {
-            const ledgerResult = await createWithdrawal({
-                userId,
-                amount: payload.amount,
-                referenceId: withdrawal.id,
-                metadata: {
-                    payment_method: payload.paymentMethod,
-                    withdrawal_type: payload.withdrawalDetails?.type || 'unknown',
-                    withdrawal_details: payload.withdrawalDetails,
-                    _actor_id: userId,
-                    _actor_action: 'user_request_withdrawal'
-                }
-            });
-            
-            if (!ledgerResult) {
-                console.error('[WITHDRAWAL] Ledger returned null result');
-                await supabase.from('withdrawals').delete().eq('id', withdrawal.id);
-                throw new Error('فشل تسجيل العملية في النظام المحاسبي');
+        const ledgerResult = await createWithdrawal({
+            userId,
+            amount: payload.amount,
+            referenceId: withdrawal.id,
+            metadata: {
+                payment_method: payload.paymentMethod,
+                withdrawal_details: payload.withdrawalDetails,
+                _actor_id: userId,
+                _actor_action: 'user_request_withdrawal'
             }
-            
-            console.log('[WITHDRAWAL] Ledger transaction created successfully for withdrawal:', withdrawal.id);
-            
-        } catch (ledgerError) {
-            console.error('[WITHDRAWAL] Ledger error, rolling back withdrawal record:', ledgerError);
+        });
+        
+        if (!ledgerResult) {
             await supabase.from('withdrawals').delete().eq('id', withdrawal.id);
-            throw new Error('فشل تسجيل العملية في النظام المحاسبي');
+            throw new Error('Failed to update ledger');
         }
         
-        return { success: true, message: 'تم تقديم طلب السحب بنجاح.' };
+        return { success: true, message: 'Withdrawal request submitted successfully.' };
     } catch (error) {
-        console.error('[WITHDRAWAL] Error requesting withdrawal:', error);
-        const errorMessage = error instanceof Error ? error.message : 'حدث خطأ غير متوقع.';
+        console.error('Error requesting withdrawal:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
         return { success: false, message: errorMessage };
     }
 }

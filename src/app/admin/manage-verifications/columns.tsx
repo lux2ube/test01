@@ -4,7 +4,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from 'date-fns'
 import Link from 'next/link'
-import { MoreHorizontal, FileText, Home, Phone, User, Check, X, Eye } from "lucide-react"
+import { MoreHorizontal, FileText, Phone, User, Check, X, Eye, MapPin } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,8 +17,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { PendingVerification, KycData, AddressData } from "@/types"
+import { countries } from "@/lib/countries"
+
+function getCountryName(code: string): string {
+  const country = countries.find(c => c.code === code);
+  return country ? `${country.flag} ${country.nameAr}` : code;
+}
 
 function VerificationDataCell({ data }: { data: KycData | AddressData | { phoneNumber: string } }) {
+    if ('country' in data && !('documentType' in data) && !('phoneNumber' in data)) {
+        return (
+            <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{getCountryName(data.country)}</span>
+            </div>
+        );
+    }
+    
     return (
         <div className="text-xs space-y-1">
             {Object.entries(data).map(([key, value]) => {
@@ -33,7 +48,7 @@ function VerificationDataCell({ data }: { data: KycData | AddressData | { phoneN
 const getTypeInfo = (type: PendingVerification['type']) => {
     switch (type) {
         case 'KYC': return { icon: FileText, text: 'تحقق الهوية' };
-        case 'Address': return { icon: Home, text: 'تحقق العنوان' };
+        case 'Address': return { icon: MapPin, text: 'تحديد الدولة' };
         case 'Phone': return { icon: Phone, text: 'تحقق الهاتف' };
         default: return { icon: User, text: 'تحقق' };
     }
@@ -80,7 +95,7 @@ export const getColumns = (
     id: 'actions',
     cell: ({ row }) => {
       const request = row.original;
-      const canViewDocuments = request.type === 'KYC' || request.type === 'Address';
+      const canViewDocuments = request.type === 'KYC';
       
       return (
         <DropdownMenu>

@@ -11,25 +11,19 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const {
-      country,
-      city,
-      streetAddress,
-      stateProvince,
-      postalCode,
-      documentUrl,
-    } = body;
+    const { country } = body;
 
-    // Update user's address data
+    if (!country) {
+      return NextResponse.json({ error: 'Country is required' }, { status: 400 });
+    }
+
+    // Update user's country - this updates the main country field
+    // and sets address_status to Pending for admin review
     const { error } = await supabase
       .from('users')
       .update({
+        country: country,
         address_country: country,
-        address_city: city,
-        address_street: streetAddress,
-        address_state_province: stateProvince || null,
-        address_postal_code: postalCode,
-        address_document_url: documentUrl,
         address_status: 'Pending',
         address_submitted_at: new Date().toISOString(),
         address_rejection_reason: null,
@@ -37,13 +31,13 @@ export async function POST(request: Request) {
       .eq('id', user.id);
 
     if (error) {
-      console.error('Error updating address data:', error);
-      return NextResponse.json({ error: 'Failed to submit address data' }, { status: 500 });
+      console.error('Error updating country:', error);
+      return NextResponse.json({ error: 'Failed to update country' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in address submission:', error);
+    console.error('Error in country update:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

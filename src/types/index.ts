@@ -89,11 +89,6 @@ export interface KycData {
 
 export interface AddressData {
     country: string;
-    city: string;
-    streetAddress: string;
-    stateProvince?: string;
-    postalCode: string;
-    documentUrl: string;
     status: 'Pending' | 'Verified' | 'Rejected';
     submittedAt: Date;
     rejectionReason?: string;

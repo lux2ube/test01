@@ -76,12 +76,7 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
         type: 'Address',
         requestedAt: user.address_submitted_at ? new Date(user.address_submitted_at) : new Date(),
         data: {
-          country: user.address_country,
-          city: user.address_city,
-          streetAddress: user.address_street,
-          stateProvince: user.address_state_province,
-          postalCode: user.address_postal_code,
-          documentUrl: user.address_document_url || '',
+          country: user.address_country || user.country || '',
           status: user.address_status,
           submittedAt: user.address_submitted_at ? new Date(user.address_submitted_at) : new Date(),
           rejectionReason: user.address_rejection_reason,

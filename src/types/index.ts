@@ -299,7 +299,8 @@ export interface WhitelistPayment {
     id: string;
     userId: string;
     paymentMethod: string;
-    walletAddress: string;
+    walletAddress?: string;
+    paymentSignature: string;
     paymentDetails?: Record<string, any>;
     approvedAt: Date;
     approvedByWithdrawalId?: string;

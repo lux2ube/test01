@@ -6,24 +6,27 @@ import type { Withdrawal, WhitelistPayment } from '@/types';
 async function addToWhitelist(
   userId: string,
   paymentMethod: string,
-  walletAddress: string,
   paymentDetails: Record<string, any>,
   withdrawalId: string
 ) {
   const supabase = await createAdminClient();
+  
+  const paymentSignature = createPaymentSignature(paymentDetails);
+  const primaryIdentifier = extractPrimaryIdentifier(paymentDetails);
   
   const { error } = await supabase
     .from('whitelist_payments')
     .upsert({
       user_id: userId,
       payment_method: paymentMethod,
-      wallet_address: walletAddress,
+      wallet_address: primaryIdentifier,
+      payment_signature: paymentSignature,
       payment_details: paymentDetails,
       approved_by_withdrawal_id: withdrawalId,
       approved_at: new Date().toISOString(),
       is_active: true,
     }, {
-      onConflict: 'user_id,payment_method,wallet_address',
+      onConflict: 'user_id,payment_method,payment_signature',
       ignoreDuplicates: false
     });
   
@@ -37,16 +40,18 @@ async function addToWhitelist(
 async function isPaymentWhitelisted(
   userId: string,
   paymentMethod: string,
-  walletAddress: string
+  paymentDetails: Record<string, any>
 ): Promise<boolean> {
   const supabase = await createAdminClient();
+  
+  const paymentSignature = createPaymentSignature(paymentDetails);
   
   const { data, error } = await supabase
     .from('whitelist_payments')
     .select('id')
     .eq('user_id', userId)
     .eq('payment_method', paymentMethod)
-    .eq('wallet_address', walletAddress)
+    .eq('payment_signature', paymentSignature)
     .eq('is_active', true)
     .single();
   
@@ -57,14 +62,50 @@ async function isPaymentWhitelisted(
   return true;
 }
 
-function extractWalletAddress(details: Record<string, any>): string {
+/**
+ * Creates a deterministic signature from all payment details.
+ * This ensures that ALL fields are considered when checking for whitelist matches.
+ * For example, a crypto payment with wallet + network + memo will only match
+ * if all three fields are identical.
+ * 
+ * Uses a simple key=value|key=value format for reliability.
+ * Keys are lowercased for consistency, VALUES ARE PRESERVED EXACTLY for security
+ * (case-sensitive wallet addresses like Base58 require exact matching).
+ * This approach avoids JSON formatting discrepancies between TypeScript and PostgreSQL.
+ */
+function createPaymentSignature(details: Record<string, unknown>): string {
+  if (!details || Object.keys(details).length === 0) {
+    return '';
+  }
+
+  const sortedKeys = Object.keys(details).sort();
+  const parts = sortedKeys.map(key => {
+    const value = details[key];
+    const stringValue = value === null || value === undefined 
+      ? '' 
+      : String(value).trim();
+    return `${key.toLowerCase()}=${stringValue}`;
+  });
+
+  return parts.join('|');
+}
+
+/**
+ * Extracts the primary wallet/account identifier for display purposes.
+ * Used for showing a human-readable identifier in the UI.
+ */
+function extractPrimaryIdentifier(details: Record<string, any>): string {
   const walletKeys = ['walletAddress', 'wallet_address', 'address', 'binanceId', 'accountNumber'];
   for (const key of walletKeys) {
     if (details[key]) {
       return String(details[key]);
     }
   }
-  return JSON.stringify(details);
+  const firstKey = Object.keys(details)[0];
+  if (firstKey && details[firstKey]) {
+    return String(details[firstKey]);
+  }
+  return '';
 }
 
 async function createNotification(
@@ -105,11 +146,11 @@ export async function getWithdrawals(): Promise<Withdrawal[]> {
   }
 
   const withdrawals = await Promise.all((data || []).map(async (row) => {
-    const walletAddress = extractWalletAddress(row.withdrawal_details || {});
+    const paymentDetails = row.withdrawal_details || {};
     const isWhitelisted = await isPaymentWhitelisted(
       row.user_id,
       row.payment_method,
-      walletAddress
+      paymentDetails
     );
     
     return {
@@ -172,11 +213,9 @@ export async function approveWithdrawal(withdrawalId: string, txId: string) {
 
     if (updateError) throw updateError;
 
-    const walletAddress = extractWalletAddress(withdrawal.withdrawal_details || {});
     await addToWhitelist(
       withdrawal.user_id,
       withdrawal.payment_method,
-      walletAddress,
       withdrawal.withdrawal_details || {},
       withdrawalId
     );

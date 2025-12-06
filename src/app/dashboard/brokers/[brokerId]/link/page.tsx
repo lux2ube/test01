@@ -6,7 +6,7 @@ import { useRouter, useParams, useSearchParams, notFound } from 'next/navigation
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -15,19 +15,18 @@ import { useAuthContext } from '@/hooks/useAuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { submitTradingAccount } from '@/app/actions';
 import type { Broker } from '@/types';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, Loader2, UserPlus, FileText, Link as LinkIcon, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Loader2, UserPlus, FileText, Link as LinkIcon, ExternalLink, ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import Image from 'next/image';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { Progress } from '@/components/ui/progress';
 
-// Transform database format to TypeScript types (snake_case to camelCase)
 function transformBrokerFromDB(dbBroker: any): Broker {
   return {
     id: dbBroker.id,
     order: dbBroker.order,
-    logoUrl: dbBroker.logo_url || dbBroker.logoUrl || "https://placehold.co/100x100.png",
+    logoUrl: dbBroker.logo_url || dbBroker.logoUrl || "",
     basicInfo: dbBroker.basic_info || dbBroker.basicInfo || {},
     regulation: dbBroker.regulation || {},
     tradingConditions: dbBroker.trading_conditions || dbBroker.tradingConditions || {},
@@ -55,9 +54,9 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const STEPS = [
-  { id: 1, name: 'اختر المسار', icon: UserPlus },
-  { id: 2, name: 'التعليمات', icon: FileText },
-  { id: 3, name: 'ربط الحساب', icon: LinkIcon },
+  { id: 1, title: 'اختر المسار' },
+  { id: 2, title: 'اتبع التعليمات' },
+  { id: 3, title: 'أدخل رقم الحساب' },
 ];
 
 export default function BrokerLinkPage() {
@@ -186,72 +185,77 @@ export default function BrokerLinkPage() {
     }
   };
 
-  return (
-    <div className="max-w-md mx-auto w-full px-4 py-4 space-y-4">
-      <Button variant="ghost" asChild className="h-auto p-0 text-sm">
-          <Link href={`/dashboard/brokers/${brokerId}`}><ArrowLeft className="mr-2 h-4 w-4" />العودة إلى التفاصيل</Link>
-      </Button>
+  const progressPercent = (currentStep / STEPS.length) * 100;
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col items-start gap-4">
-            {broker.logoUrl &&
-              <Image
-                  src={broker.logoUrl}
-                  alt={`${brokerName} logo`}
-                  width={48}
-                  height={48}
-                  className="w-12 h-12 object-contain rounded-lg border p-1 bg-background flex-shrink-0"
-                  data-ai-hint="logo"
-                />
-            }
-            <div className="flex-1">
-              <h1 className="text-lg font-bold font-headline">{brokerName}</h1>
-              <p className="text-xs text-muted-foreground">{broker.basicInfo ? `تأسست عام ${broker.basicInfo.founded_year}، ومقرها في ${broker.basicInfo.headquarters}` : broker.description}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <div className="text-center">
-        <h2 className="text-lg font-bold font-headline">ابدأ في الكسب الآن</h2>
+  return (
+    <div className="min-h-[calc(100vh-120px)] flex flex-col max-w-lg mx-auto w-full px-4 py-4">
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="ghost" asChild size="sm" className="h-8 px-2 text-muted-foreground">
+          <Link href={`/dashboard/brokers/${brokerId}`}>
+            <ArrowRight className="h-4 w-4 ml-1" />
+            رجوع
+          </Link>
+        </Button>
+        <div className="flex items-center gap-2">
+          {broker.logoUrl && (
+            <Image
+              src={broker.logoUrl}
+              alt={brokerName}
+              width={24}
+              height={24}
+              className="w-6 h-6 object-contain rounded"
+            />
+          )}
+          <span className="text-sm font-medium">{brokerName}</span>
+        </div>
       </div>
 
-      <div className="w-full">
-          <div className="flex items-center justify-between">
-              {STEPS.map((step, index) => (
-                <React.Fragment key={step.id}>
-                  <div className="flex flex-col items-center text-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${currentStep >= step.id ? 'bg-primary border-primary text-primary-foreground' : 'bg-muted border-border text-muted-foreground'}`}>
-                        <step.icon className="w-4 h-4"/>
-                    </div>
-                    <p className={`mt-2 text-xs font-medium ${currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'}`}>{step.name}</p>
-                  </div>
-                  {index < STEPS.length - 1 && <div className={`flex-1 h-0.5 mx-2 ${currentStep > step.id ? 'bg-primary' : 'bg-border'}`}></div>}
-                </React.Fragment>
-              ))}
-          </div>
+      <div className="mb-4">
+        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+          <span>الخطوة {currentStep} من {STEPS.length}</span>
+          <span>{STEPS[currentStep - 1].title}</span>
+        </div>
+        <Progress value={progressPercent} className="h-1.5" />
       </div>
 
       <FormProvider {...form}>
-        <form onSubmit={form.handleSubmit(processForm)} className="space-y-4">
-            <Card>
-                {currentStep === 1 && <Step1 brokerName={brokerName} />}
-                {currentStep === 2 && <Step2 hasAccount={hasAccountValue} broker={broker} />}
-                {currentStep === 3 && <Step3 />}
-            </Card>
+        <form onSubmit={form.handleSubmit(processForm)} className="flex-1 flex flex-col">
+          <div className="flex-1 pb-24">
+            {currentStep === 1 && <Step1 brokerName={brokerName} />}
+            {currentStep === 2 && <Step2 hasAccount={hasAccountValue} broker={broker} />}
+            {currentStep === 3 && <Step3 />}
+          </div>
 
-            <div className="space-y-2">
-                <Button type="button" onClick={next} disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {currentStep === STEPS.length ? 'إرسال' : 'التالي'}
-                </Button>
+          <div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg">
+            <div className="max-w-lg mx-auto px-4 py-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                <span>{STEPS[currentStep - 1].title}</span>
+                <span>{currentStep} / {STEPS.length}</span>
+              </div>
+              <div className="flex gap-2">
                 {currentStep > 1 && !action && (
-                    <Button type="button" onClick={prev} variant="secondary" className="w-full">
-                        السابق
-                    </Button>
+                  <Button type="button" onClick={prev} variant="outline" size="lg" className="flex-1">
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                    السابق
+                  </Button>
                 )}
+                <Button type="button" onClick={next} disabled={isSubmitting} size="lg" className={currentStep > 1 && !action ? "flex-1" : "w-full"}>
+                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+                  {currentStep === STEPS.length ? (
+                    <>
+                      <Check className="h-4 w-4 ml-1" />
+                      إرسال
+                    </>
+                  ) : (
+                    <>
+                      التالي
+                      <ArrowLeft className="h-4 w-4 mr-1" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
+          </div>
         </form>
       </FormProvider>
     </div>
@@ -259,238 +263,249 @@ export default function BrokerLinkPage() {
 }
 
 function Step1({ brokerName }: { brokerName: string }) {
-    const { control } = useFormContext();
-    return (
-        <>
-            <CardHeader>
-                <CardTitle className="text-base">اختر مسارك</CardTitle>
-                <CardDescription className="text-xs">هل لديك بالفعل حساب تداول مع {brokerName}؟</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <FormField
-                    control={control}
-                    name="hasAccount"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormControl>
-                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-2">
-                                    <FormItem className="flex items-center space-x-3 space-y-0 p-3 border rounded-md has-[[data-state=checked]]:border-primary">
-                                        <FormControl><RadioGroupItem value="no" id="no" /></FormControl>
-                                        <FormLabel htmlFor="no" className="font-normal cursor-pointer w-full text-sm">لا، أحتاج إلى حساب جديد</FormLabel>
-                                    </FormItem>
-                                     <FormItem className="flex items-center space-x-3 space-y-0 p-3 border rounded-md has-[[data-state=checked]]:border-primary">
-                                        <FormControl><RadioGroupItem value="yes" id="yes" /></FormControl>
-                                        <FormLabel htmlFor="yes" className="font-normal cursor-pointer w-full text-sm">نعم، لدي حساب</FormLabel>
-                                    </FormItem>
-                                </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </CardContent>
-        </>
-    );
+  const { control } = useFormContext();
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-2">
+        <h2 className="text-lg font-bold">هل لديك حساب مع {brokerName}؟</h2>
+        <p className="text-sm text-muted-foreground mt-1">اختر الخيار المناسب للمتابعة</p>
+      </div>
+      
+      <FormField
+        control={control}
+        name="hasAccount"
+        render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-3">
+                <label htmlFor="no" className="cursor-pointer">
+                  <div className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${field.value === 'no' ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}`}>
+                    <RadioGroupItem value="no" id="no" className="sr-only" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${field.value === 'no' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                      <UserPlus className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">لا، أريد فتح حساب جديد</p>
+                      <p className="text-xs text-muted-foreground">سنوجهك لإنشاء حساب جديد</p>
+                    </div>
+                    {field.value === 'no' && <Check className="h-5 w-5 text-primary" />}
+                  </div>
+                </label>
+                
+                <label htmlFor="yes" className="cursor-pointer">
+                  <div className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${field.value === 'yes' ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}`}>
+                    <RadioGroupItem value="yes" id="yes" className="sr-only" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${field.value === 'yes' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                      <LinkIcon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">نعم، لدي حساب بالفعل</p>
+                      <p className="text-xs text-muted-foreground">سنربط حسابك الحالي</p>
+                    </div>
+                    {field.value === 'yes' && <Check className="h-5 w-5 text-primary" />}
+                  </div>
+                </label>
+              </RadioGroup>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  );
 }
 
 function Step2({ hasAccount, broker }: { hasAccount: string | undefined; broker: Broker }) {
-    const brokerName = broker.name || broker.basicInfo?.broker_name;
+  const brokerName = broker.name || broker.basicInfo?.broker_name;
+  
+  const parseDescription = (desc: any, depth: number = 0): string => {
+    if (depth > 10) return '';
+    if (!desc) return '';
+    if (desc === null || desc === undefined) return '';
     
-    // Parse description - handles nested JSON, objects, arrays, and strings
-    // Always returns a string - never an object
-    const parseDescription = (desc: any, depth: number = 0): string => {
-        // Prevent infinite recursion
-        if (depth > 10) return '';
-        
-        if (!desc) return '';
-        if (desc === null || desc === undefined) return '';
-        
-        // If it's already a string
-        if (typeof desc === 'string') {
-            const trimmed = desc.trim();
-            
-            // Check if it looks like JSON
-            if (!trimmed.startsWith('{') && !trimmed.startsWith('[') && !trimmed.startsWith('"')) {
-                return desc; // It's a plain string, return it
-            }
-            
-            // Try to parse as JSON
-            try {
-                const parsed = JSON.parse(desc);
-                return parseDescription(parsed, depth + 1);
-            } catch (e) {
-                return desc; // Can't parse, return as is
-            }
-        }
-        
-        // If it's an array, recursively extract and join text
-        if (Array.isArray(desc)) {
-            return desc.map(item => parseDescription(item, depth + 1)).filter(Boolean).join(' ');
-        }
-        
-        // If it's an object, look for common text keys
-        if (typeof desc === 'object') {
-            // Try common text key names in order of priority
-            const textKeys = ['description', 'text', 'content', 'value', 'message'];
-            for (const key of textKeys) {
-                if (desc[key] !== undefined && desc[key] !== null) {
-                    const result = parseDescription(desc[key], depth + 1);
-                    if (result) return result;
-                }
-            }
-            // No recognized text key found
-            return '';
-        }
-        
-        // For other types (number, boolean, etc), convert to string
-        return String(desc);
-    };
+    if (typeof desc === 'string') {
+      const trimmed = desc.trim();
+      if (!trimmed.startsWith('{') && !trimmed.startsWith('[') && !trimmed.startsWith('"')) {
+        return desc;
+      }
+      try {
+        const parsed = JSON.parse(desc);
+        return parseDescription(parsed, depth + 1);
+      } catch (e) {
+        return desc;
+      }
+    }
     
-    // Access instructions directly - they're already an object from the database
-    const rawInstructions = broker.instructions || {};
-    const description = parseDescription(rawInstructions.description) || "اتبع الرابط لفتح حساب جديد.";
-    const link = rawInstructions.link || broker.cashback?.affiliate_program_link || '';
-    const linkText = rawInstructions.linkText || `افتح حسابًا مع ${brokerName}`;
+    if (Array.isArray(desc)) {
+      return desc.map(item => parseDescription(item, depth + 1)).filter(Boolean).join(' ');
+    }
     
-    // For existing accounts - handle both object and string formats
-    // Returns { text, linkText, link } for proper rendering
-    const getExistingAccountData = (): { text: string; linkText?: string; link?: string } => {
-        const defaultText = "يرجى الاتصال بالدعم لربط حسابك الحالي تحت شبكة شركائنا.";
-        const raw = broker.existingAccountInstructions;
-        
-        if (!raw) return { text: defaultText };
-        
-        // If it's already a string
-        if (typeof raw === 'string') {
-            // Try to parse if it looks like JSON
-            if (raw.trim().startsWith('{') || raw.trim().startsWith('[')) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    if (typeof parsed === 'object' && parsed !== null) {
-                        return {
-                            text: parsed.description || parsed.text || defaultText,
-                            linkText: parsed.linkText,
-                            link: parsed.link
-                        };
-                    }
-                    return { text: String(parsed) || defaultText };
-                } catch (e) {
-                    return { text: raw || defaultText };
-                }
-            }
-            return { text: raw || defaultText };
+    if (typeof desc === 'object') {
+      const textKeys = ['description', 'text', 'content', 'value', 'message'];
+      for (const key of textKeys) {
+        if (desc[key] !== undefined && desc[key] !== null) {
+          const result = parseDescription(desc[key], depth + 1);
+          if (result) return result;
         }
-        
-        // If it's an object with properties
-        if (typeof raw === 'object' && raw !== null) {
-            const obj = raw as any;
+      }
+      return '';
+    }
+    
+    return String(desc);
+  };
+  
+  const rawInstructions = broker.instructions || {};
+  const description = parseDescription(rawInstructions.description) || "اتبع الرابط لفتح حساب جديد.";
+  const link = rawInstructions.link || broker.cashback?.affiliate_program_link || '';
+  const linkText = rawInstructions.linkText || `افتح حسابًا مع ${brokerName}`;
+  
+  const getExistingAccountData = (): { text: string; linkText?: string; link?: string } => {
+    const defaultText = "يرجى الاتصال بالدعم لربط حسابك الحالي تحت شبكة شركائنا.";
+    const raw = broker.existingAccountInstructions;
+    
+    if (!raw) return { text: defaultText };
+    
+    if (typeof raw === 'string') {
+      if (raw.trim().startsWith('{') || raw.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed === 'object' && parsed !== null) {
             return {
-                text: obj.description || obj.text || defaultText,
-                linkText: obj.linkText,
-                link: obj.link
+              text: parsed.description || parsed.text || defaultText,
+              linkText: parsed.linkText,
+              link: parsed.link
             };
+          }
+          return { text: String(parsed) || defaultText };
+        } catch (e) {
+          return { text: raw || defaultText };
         }
-        
-        return { text: defaultText };
-    };
+      }
+      return { text: raw || defaultText };
+    }
     
-    const existingAccountData = getExistingAccountData();
+    if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as any;
+      return {
+        text: obj.description || obj.text || defaultText,
+        linkText: obj.linkText,
+        link: obj.link
+      };
+    }
+    
+    return { text: defaultText };
+  };
+  
+  const existingAccountData = getExistingAccountData();
 
-    return (
-        <>
-            <CardHeader>
-                <CardTitle className="text-base">التعليمات</CardTitle>
-                <CardDescription className="text-xs">اتبع التعليمات ذات الصلة.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {hasAccount === 'no' && (
-                    <Alert>
-                        <UserPlus className="h-4 w-4" />
-                        <AlertTitle>إنشاء حساب جديد</AlertTitle>
-                        <AlertDescription className="space-y-4">
-                            <p className="text-xs">{description}</p>
-                            <Button asChild size="sm" className="w-full">
-                                <a href={link} target="_blank" rel="noopener noreferrer">
-                                    {linkText} <ExternalLink className="ml-2 h-4 w-4" />
-                                </a>
-                            </Button>
-                        </AlertDescription>
-                    </Alert>
-                )}
-                 {hasAccount === 'yes' && (
-                    <Alert>
-                        <Info className="h-4 w-4" />
-                        <AlertTitle>هام: ربط الحساب الحالي</AlertTitle>
-                        <AlertDescription className="space-y-4">
-                            <p className="text-xs">{existingAccountData.text}</p>
-                            {existingAccountData.link && (
-                                <Button asChild size="sm" className="w-full">
-                                    <a href={existingAccountData.link} target="_blank" rel="noopener noreferrer">
-                                        {existingAccountData.linkText || 'اتبع الرابط'} <ExternalLink className="ml-2 h-4 w-4" />
-                                    </a>
-                                </Button>
-                            )}
-                        </AlertDescription>
-                    </Alert>
-                )}
-            </CardContent>
-        </>
-    );
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-2">
+        <h2 className="text-lg font-bold">
+          {hasAccount === 'no' ? 'إنشاء حساب جديد' : 'ربط حسابك الحالي'}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">اتبع التعليمات أدناه ثم انتقل للخطوة التالية</p>
+      </div>
+      
+      {hasAccount === 'no' && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <UserPlus className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm mb-1">خطوات فتح الحساب</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+              </div>
+            </div>
+            {link && (
+              <Button asChild className="w-full">
+                <a href={link} target="_blank" rel="noopener noreferrer">
+                  {linkText}
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                </a>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      
+      {hasAccount === 'yes' && (
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <FileText className="h-4 w-4 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm mb-1">تعليمات مهمة</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{existingAccountData.text}</p>
+              </div>
+            </div>
+            {existingAccountData.link && (
+              <Button asChild variant="outline" className="w-full">
+                <a href={existingAccountData.link} target="_blank" rel="noopener noreferrer">
+                  {existingAccountData.linkText || 'اتبع الرابط'}
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                </a>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 }
 
 function Step3() {
-    const { control } = useFormContext();
-    return (
-        <>
-            <CardHeader>
-                <CardTitle className="text-base">ربط الحساب</CardTitle>
-                <CardDescription className="text-xs">أدخل رقم حساب التداول الخاص بك.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <FormField
-                    control={control}
-                    name="accountNumber"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>رقم حساب التداول</FormLabel>
-                        <FormControl>
-                            <Input placeholder="أدخل الرقم" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </CardContent>
-        </>
-    )
+  const { control } = useFormContext();
+  return (
+    <div className="space-y-4">
+      <div className="text-center py-2">
+        <h2 className="text-lg font-bold">أدخل رقم الحساب</h2>
+        <p className="text-sm text-muted-foreground mt-1">أدخل رقم حساب التداول الخاص بك لربطه</p>
+      </div>
+      
+      <Card>
+        <CardContent className="p-4">
+          <FormField
+            control={control}
+            name="accountNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm">رقم حساب التداول</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="مثال: 123456789" 
+                    className="text-center text-lg h-12"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  ستجد رقم الحساب في لوحة تحكم منصة التداول الخاصة بك
+                </p>
+              </FormItem>
+            )}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 function BrokerPageSkeleton() {
-    return (
-        <div className="max-w-md mx-auto w-full px-4 py-4 space-y-4 animate-pulse">
-            <Card>
-                <CardContent className="p-4">
-                    <div className="flex flex-col items-start gap-4">
-                         <Skeleton className="w-12 h-12 rounded-lg" />
-                         <div className="w-full space-y-2">
-                             <Skeleton className="h-5 w-1/2" />
-                             <Skeleton className="h-3 w-full" />
-                             <Skeleton className="h-3 w-4/5" />
-                         </div>
-                    </div>
-                </CardContent>
-            </Card>
-            <Skeleton className="h-6 w-1/2 mx-auto" />
-            <Skeleton className="h-16 w-full" />
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-20 w-full" />
-                </CardContent>
-            </Card>
-        </div>
-    )
+  return (
+    <div className="max-w-lg mx-auto w-full px-4 py-4 space-y-4 animate-pulse">
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-8 w-16" />
+        <Skeleton className="h-6 w-24" />
+      </div>
+      <Skeleton className="h-2 w-full" />
+      <Skeleton className="h-8 w-48 mx-auto" />
+      <Skeleton className="h-24 w-full rounded-xl" />
+      <Skeleton className="h-24 w-full rounded-xl" />
+    </div>
+  )
 }

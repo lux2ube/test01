@@ -235,26 +235,12 @@ export default function BrokerPreviewPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-1 mb-4">
-                        {hasSwapFree && <Badge variant="secondary" className="text-[10px]">حساب إسلامي</Badge>}
-                        {additionalFeatures.copy_trading && <Badge variant="secondary" className="text-[10px]">نسخ التداول</Badge>}
-                        {additionalFeatures.demo_account && <Badge variant="secondary" className="text-[10px]">حساب تجريبي</Badge>}
-                        {additionalFeatures.welcome_bonus && <Badge variant="secondary" className="text-[10px]">مكافأة ترحيبية</Badge>}
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button asChild size="sm">
-                            <Link href={`/dashboard/brokers/${brokerId}/link?action=new`}>
-                                <TrendingUp className="h-3.5 w-3.5 ml-1" />
-                                فتح حساب
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" size="sm">
-                            <Link href={`/dashboard/brokers/${brokerId}/link?action=existing`}>
-                                ربط حساب موجود
-                            </Link>
-                        </Button>
-                    </div>
+                    <Button asChild className="w-full">
+                        <Link href={`/dashboard/brokers/${brokerId}/link`}>
+                            <TrendingUp className="h-4 w-4 ml-2" />
+                            ابدأ في كسب الكاش باك
+                        </Link>
+                    </Button>
                 </CardContent>
             </Card>
 

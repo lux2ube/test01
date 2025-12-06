@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { Broker } from "@/types";
-import { Star, ChevronLeft, Check, X, Banknote, Shield, TrendingUp } from "lucide-react";
+import { Star, ChevronLeft, Banknote, Shield, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 function StarRating({ rating }: { rating: number }) {
     const roundedRating = Math.round(rating * 2) / 2;
@@ -30,6 +31,15 @@ function StarRating({ rating }: { rating: number }) {
     )
 }
 
+const featureLabels: Record<string, string> = {
+    swap_free: 'إسلامي',
+    education_center: 'مركز تعليمي',
+    copy_trading: 'نسخ التداول',
+    demo_account: 'حساب تجريبي',
+    trading_contests: 'مسابقات',
+    welcome_bonus: 'مكافأة ترحيبية',
+};
+
 export function BrokerCard({ broker }: { broker: Broker }) {
   if (!broker) {
     return null; 
@@ -39,12 +49,19 @@ export function BrokerCard({ broker }: { broker: Broker }) {
   const rating = (broker.reputation?.wikifx_score ?? 0) / 2;
   const cashbackPerLot = broker.cashback?.cashback_per_lot ?? 0;
   const cashbackFrequency = broker.cashback?.cashback_frequency || 'Monthly';
-  const swapFree = broker.tradingConditions?.swap_free ?? false;
-  const copyTrading = broker.additionalFeatures?.copy_trading ?? false;
   const minDeposit = broker.tradingConditions?.min_deposit ?? 0;
-  const maxLeverage = broker.tradingConditions?.max_leverage || '1:100';
   const regulationStatus = broker.regulation?.regulation_status || '';
   const isRegulated = regulationStatus.toLowerCase().includes('regulated') || (broker.regulation?.licenses?.length ?? 0) > 0;
+  
+  const platforms = broker.platforms?.platforms_supported || [];
+  
+  const activeFeatures: string[] = [];
+  if (broker.tradingConditions?.swap_free) activeFeatures.push('swap_free');
+  if (broker.additionalFeatures?.education_center) activeFeatures.push('education_center');
+  if (broker.additionalFeatures?.copy_trading) activeFeatures.push('copy_trading');
+  if (broker.additionalFeatures?.demo_account) activeFeatures.push('demo_account');
+  if (broker.additionalFeatures?.trading_contests) activeFeatures.push('trading_contests');
+  if (broker.additionalFeatures?.welcome_bonus) activeFeatures.push('welcome_bonus');
   
   return (
     <Card className="w-full overflow-hidden hover:shadow-md transition-shadow duration-200 border-border/60">
@@ -80,10 +97,23 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                             )}
                         </div>
                         <StarRating rating={rating} />
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                            <span>الحد الأدنى: ${minDeposit}</span>
-                            <span className="text-border">|</span>
-                            <span>الرافعة: {maxLeverage}</span>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-muted-foreground">الحد الأدنى: ${minDeposit}</span>
+                            {platforms.length > 0 && (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                    {platforms.slice(0, 3).map((platform, index) => (
+                                        <span 
+                                            key={index} 
+                                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground"
+                                        >
+                                            {platform}
+                                        </span>
+                                    ))}
+                                    {platforms.length > 3 && (
+                                        <span className="text-[10px] text-muted-foreground">+{platforms.length - 3}</span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                     
@@ -113,24 +143,19 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                     </div>
                 </div>
                 
-                <div className="flex items-center justify-center gap-6 text-sm border-t border-border/40 pt-3">
-                    <div className="flex items-center gap-1.5">
-                        {swapFree ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                            <X className="h-4 w-4 text-muted-foreground/50" />
-                        )}
-                        <span className={swapFree ? 'text-foreground' : 'text-muted-foreground'}>إسلامي</span>
+                {activeFeatures.length > 0 && (
+                    <div className="flex items-center justify-center gap-2 flex-wrap border-t border-border/40 pt-3">
+                        {activeFeatures.map((feature) => (
+                            <Badge 
+                                key={feature} 
+                                variant="secondary" 
+                                className="text-[10px] px-2 py-0.5 font-normal"
+                            >
+                                {featureLabels[feature]}
+                            </Badge>
+                        ))}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                        {copyTrading ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                            <X className="h-4 w-4 text-muted-foreground/50" />
-                        )}
-                        <span className={copyTrading ? 'text-foreground' : 'text-muted-foreground'}>نسخ التداول</span>
-                    </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-2 pt-1">
                     <Button asChild size="sm" className="font-medium">

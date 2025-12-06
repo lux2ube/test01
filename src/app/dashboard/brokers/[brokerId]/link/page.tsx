@@ -350,18 +350,18 @@ export default function BrokerLinkPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="p-4 rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
-                      <div className="flex flex-col gap-3">
+                    <div className="w-full max-w-full p-4 rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 overflow-hidden">
+                      <div className="flex flex-col gap-3 w-full">
                         <div className="flex items-center gap-2">
                           <LinkIcon className="w-5 h-5 text-amber-600 flex-shrink-0" />
                           <p className="font-semibold text-sm">تعليمات مهمة</p>
                         </div>
-                        <p className="text-sm text-muted-foreground whitespace-pre-line break-words leading-relaxed">
+                        <p className="text-sm text-muted-foreground whitespace-pre-line break-words leading-relaxed w-full" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                           {existingData.text}
                         </p>
                         {existingData.link && (
-                          <Button asChild variant="outline" size="sm" className="h-10 text-sm w-full">
-                            <a href={existingData.link} target="_blank" rel="noopener noreferrer">
+                          <Button asChild variant="outline" size="sm" className="h-auto min-h-[40px] text-sm w-full whitespace-normal py-2">
+                            <a href={existingData.link} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-center" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                               {existingData.linkText || 'فتح الرابط'}
                               <ExternalLink className="w-4 h-4 me-2" />
                             </a>

@@ -59,13 +59,8 @@ export async function GET() {
             submittedAt: profile.kyc_submitted_at,
             rejectionReason: profile.kyc_rejection_reason,
           } : undefined,
-          addressData: (profile.address_status || profile.address_document_url) ? {
+          addressData: profile.address_status ? {
             country: profile.address_country || '',
-            city: profile.address_city || '',
-            streetAddress: profile.address_street || '',
-            stateProvince: profile.address_state_province || '',
-            postalCode: profile.address_postal_code || '',
-            documentUrl: profile.address_document_url || '',
             status: profile.address_status || 'Pending',
             submittedAt: profile.address_submitted_at,
             rejectionReason: profile.address_rejection_reason,

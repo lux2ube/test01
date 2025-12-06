@@ -6,26 +6,29 @@ import { useParams, notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createClient } from '@/lib/supabase/client';
 import type { Broker } from '@/types';
 import {
-    ArrowLeft, ShieldCheck, Globe, Star, Users, Award, Briefcase, CheckCircle, XCircle, Gauge, Scale,
-    Landmark, Coins, BrainCircuit, Copy, TestTube2, AlertTriangle, UserPlus, FileText, Link2, ExternalLink
+    ArrowRight, Shield, Star, CheckCircle, XCircle, TrendingUp,
+    Banknote, CreditCard, Clock, Building2, Globe, Headphones
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import React from 'react';
 import { TermsBank } from '@/lib/terms-bank';
 
-// Transform database format to TypeScript types (snake_case to camelCase)
 function transformBrokerFromDB(dbBroker: any): Broker {
   return {
     id: dbBroker.id,
     order: dbBroker.order,
-    logoUrl: dbBroker.logo_url || dbBroker.logoUrl || "https://placehold.co/100x100.png",
+    logoUrl: dbBroker.logo_url || dbBroker.logoUrl || "",
     basicInfo: dbBroker.basic_info || dbBroker.basicInfo || {},
     regulation: dbBroker.regulation || {},
     tradingConditions: dbBroker.trading_conditions || dbBroker.tradingConditions || {},
@@ -49,51 +52,18 @@ function BrokerDetailSkeleton() {
     return (
         <div className="space-y-4 animate-pulse">
             <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-32 w-full" />
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-40 w-full" />
         </div>
     )
 }
 
-function DetailCard({ title, icon: Icon, children }: { title: string, icon: React.ElementType, children: React.ReactNode }) {
-    return (
-        <Card>
-            <CardHeader className="flex rtl:flex-row-reverse flex-row items-center gap-3 space-y-0 p-4">
-                <Icon className="w-5 h-5 text-primary" />
-                <CardTitle className="text-base font-headline">{title}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 text-sm space-y-2">
-                {children}
-            </CardContent>
-        </Card>
-    )
-}
-
-function InfoRow({ label, value, children }: { label: string, value?: any, children?: React.ReactNode }) {
-    if (value === undefined && !children) return null;
-    if (Array.isArray(value) && value.length === 0) return null;
-    if (value === '' || value === null) return null;
-
-    return (
-        <div className="flex rtl:flex-row-reverse justify-between items-center text-xs">
-            <span className="text-muted-foreground">{label}</span>
-            <div className="font-medium rtl:text-left text-right">
-                {children || value}
-            </div>
-        </div>
-    )
-}
-
-function BooleanPill({ value, text }: { value: boolean | undefined, text: string }) {
-    if (value === undefined) return null;
-    return (
-        <div className="flex items-center gap-1.5">
-            {value ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : <XCircle className="h-3.5 w-3.5 text-red-500" />}
-            <span className="text-xs">{text}</span>
-        </div>
-    )
+function ensureArray<T>(value: any): T[] {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string' && value.trim()) return [value] as T[];
+    if (value && typeof value === 'object') return [value] as T[];
+    return [];
 }
 
 function findLabel(bank: {key: string, label: string}[], key: string | undefined) {
@@ -101,12 +71,29 @@ function findLabel(bank: {key: string, label: string}[], key: string | undefined
     return bank.find(item => item.key === key)?.label || key;
 }
 
-// Ensure a value is an array, handling various data types from database
-function ensureArray<T>(value: any): T[] {
-    if (Array.isArray(value)) return value;
-    if (typeof value === 'string' && value.trim()) return [value] as T[];
-    if (value && typeof value === 'object') return [value] as T[];
-    return [];
+function FeatureBadge({ active, label }: { active: boolean | undefined, label: string }) {
+    if (!active) return null;
+    return (
+        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <CheckCircle className="h-3 w-3" />
+            {label}
+        </span>
+    );
+}
+
+function InfoItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | number | undefined }) {
+    if (!value && value !== 0) return null;
+    return (
+        <div className="flex items-center gap-3 py-2">
+            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-muted-foreground">{label}</p>
+                <p className="text-sm font-medium truncate">{value}</p>
+            </div>
+        </div>
+    );
 }
 
 export default function BrokerPreviewPage() {
@@ -115,7 +102,6 @@ export default function BrokerPreviewPage() {
 
     const [broker, setBroker] = useState<Broker | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("info");
 
     useEffect(() => {
         const fetchBroker = async () => {
@@ -147,7 +133,7 @@ export default function BrokerPreviewPage() {
 
     if (isLoading) {
         return (
-            <div className="container mx-auto px-4 py-4 max-w-2xl">
+            <div className="container mx-auto px-4 py-4 max-w-lg">
                 <BrokerDetailSkeleton />
             </div>
         )
@@ -168,55 +154,87 @@ export default function BrokerPreviewPage() {
         globalReach = {}, 
         reputation = {}, 
         additionalFeatures = {}, 
-        instructions = {},
         description = "",
-        logoUrl = "https://placehold.co/100x100.png"
+        logoUrl = ""
     } = broker || {};
+
+    const name = broker.name || basicInfo.broker_name || 'Unknown Broker';
+    const rating = (reputation?.wikifx_score ?? 0) / 2;
+    const isRegulated = regulation?.regulation_status?.toLowerCase().includes('regulated') || (regulation?.licenses?.length ?? 0) > 0;
+    const platformsList = ensureArray<string>(platforms.platforms_supported);
+    const paymentMethods = ensureArray<string>(depositsWithdrawals.payment_methods);
+    const licenses = ensureArray<any>(regulation.licenses);
     
     return (
-        <div className="container mx-auto px-4 py-4 max-w-2xl space-y-4">
-            <Button variant="ghost" asChild className="h-auto p-0 text-sm">
-                <Link href="/dashboard/brokers"><ArrowLeft className="mr-2 h-4 w-4" />العودة إلى الوسطاء</Link>
+        <div className="container mx-auto px-4 py-4 max-w-lg space-y-4">
+            <Button variant="ghost" asChild className="h-auto p-0 text-sm text-muted-foreground hover:text-foreground">
+                <Link href="/dashboard/brokers" className="flex items-center gap-1">
+                    <ArrowRight className="h-4 w-4" />
+                    العودة
+                </Link>
             </Button>
             
-            <Card className="overflow-hidden">
-                <CardContent className="p-4 flex flex-col sm:flex-row items-start gap-4">
-                    <Image
-                        src={logoUrl || "https://placehold.co/100x100.png"}
-                        alt={`${basicInfo?.broker_name || 'Broker'} logo`}
-                        width={64}
-                        height={64}
-                        className="w-16 h-16 object-contain rounded-lg border p-1 bg-white flex-shrink-0"
-                        data-ai-hint="logo"
-                        onError={(e) => { e.currentTarget.src = "https://placehold.co/100x100.png"; }}
-                    />
-                    <div className="flex-1">
-                        <h1 className="text-2xl font-bold font-headline">{basicInfo?.broker_name || broker?.name || 'Unknown Broker'}</h1>
-                        <p className="text-sm text-muted-foreground mb-3">{basicInfo?.group_entity || ""}</p>
+            <Card>
+                <CardContent className="p-4">
+                    <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                            {logoUrl ? (
+                                <div className="w-16 h-16 rounded-xl border bg-white flex items-center justify-center overflow-hidden">
+                                    <Image
+                                        src={logoUrl}
+                                        alt={`${name} logo`}
+                                        width={56}
+                                        height={56}
+                                        className="w-14 h-14 object-contain"
+                                        data-ai-hint="company logo"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-16 h-16 rounded-xl border bg-muted flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-muted-foreground">{name.charAt(0)}</span>
+                                </div>
+                            )}
+                        </div>
                         
-                        <div className="space-y-2 pb-3 border-b">
-                            <p className="text-xs font-semibold text-primary">قسم الكاشباك</p>
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                                <div className="bg-muted p-2 rounded">
-                                    <p className="text-muted-foreground">المكافأة</p>
-                                    <p className="font-bold text-green-600">${cashback.cashback_per_lot || '0'}</p>
-                                </div>
-                                <div className="bg-muted p-2 rounded">
-                                    <p className="text-muted-foreground">التكرار</p>
-                                    <p className="font-bold">{findLabel(TermsBank.cashbackFrequency, cashback.cashback_frequency) || 'N/A'}</p>
-                                </div>
-                                <div className="bg-muted p-2 rounded">
-                                    <p className="text-muted-foreground">نوع الحساب</p>
-                                    <p className="font-bold">{ensureArray(cashback.cashback_account_type).slice(0, 1).map(t => findLabel(TermsBank.accountTypes, t)).join(', ') || 'N/A'}</p>
-                                </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <h1 className="text-xl font-bold truncate">{name}</h1>
+                                {isRegulated && <Shield className="h-4 w-4 text-green-600 flex-shrink-0" />}
                             </div>
+                            <div className="flex items-center gap-1 mb-2">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star key={i} className={`h-3.5 w-3.5 ${i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+                                ))}
+                                <span className="text-xs text-muted-foreground mr-1">({rating.toFixed(1)})</span>
+                            </div>
+                            {basicInfo.founded_year && (
+                                <p className="text-xs text-muted-foreground">تأسس عام {basicInfo.founded_year}</p>
+                            )}
                         </div>
-                        
-                        <div className="flex gap-2 pt-3">
-                            <Button asChild size="sm" className="flex-1">
-                                <Link href={`/dashboard/brokers/${brokerId}/link`}>ابدأ في كسب الكاش باك</Link>
-                            </Button>
+                    </div>
+                    
+                    <div className="mt-4 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-muted-foreground">كاش باك لكل لوت</span>
+                            <Badge variant="secondary" className="text-[10px]">
+                                {cashback.cashback_frequency === 'Daily' ? 'يومي' : cashback.cashback_frequency === 'Weekly' ? 'أسبوعي' : 'شهري'}
+                            </Badge>
                         </div>
+                        <p className="text-3xl font-bold text-primary">${cashback.cashback_per_lot || 0}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                        <Button asChild className="w-full">
+                            <Link href={`/dashboard/brokers/${brokerId}/link?action=new`}>
+                                <TrendingUp className="h-4 w-4 ml-1.5" />
+                                فتح حساب جديد
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="w-full">
+                            <Link href={`/dashboard/brokers/${brokerId}/link?action=existing`}>
+                                ربط حساب موجود
+                            </Link>
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -224,145 +242,199 @@ export default function BrokerPreviewPage() {
             {description && (
                 <Card>
                     <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{description}</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
                     </CardContent>
                 </Card>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
-                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Star className="h-4 w-4 text-yellow-500"/> <span className="font-bold">{reputation?.wikifx_score?.toFixed(1) || '0'}</span><span className="text-xs">تقييم WikiFX</span></Badge>
-                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Users className="h-4 w-4 text-primary"/> <span className="font-bold">{reputation?.verified_users?.toLocaleString() || '0'}</span><span className="text-xs">مستخدمون موثوقون</span></Badge>
-                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1 capitalize"><ShieldCheck className="h-4 w-4 text-blue-500"/> <span className="font-bold">{regulation?.risk_level || 'N/A'}</span><span className="text-xs">مستوى المخاطرة</span></Badge>
-                 <Badge variant="outline" className="flex-col h-14 justify-center gap-1"><Award className="h-4 w-4 text-green-500"/> <span className="font-bold">{basicInfo?.founded_year || 'N/A'}</span><span className="text-xs">تأسست</span></Badge>
+            <div className="flex flex-wrap gap-1.5">
+                <FeatureBadge active={tradingConditions.swap_free || additionalFeatures.swap_free} label="حساب إسلامي" />
+                <FeatureBadge active={additionalFeatures.copy_trading} label="نسخ التداول" />
+                <FeatureBadge active={additionalFeatures.demo_account} label="حساب تجريبي" />
+                <FeatureBadge active={additionalFeatures.education_center} label="مركز تعليمي" />
+                <FeatureBadge active={additionalFeatures.welcome_bonus} label="مكافأة ترحيبية" />
+                <FeatureBadge active={additionalFeatures.trading_contests} label="مسابقات" />
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="payment" className="text-xs">الدفع</TabsTrigger>
-                    <TabsTrigger value="features" className="text-xs">مميزات حصرية</TabsTrigger>
-                    <TabsTrigger value="trading" className="text-xs">التداول</TabsTrigger>
-                    <TabsTrigger value="info" className="text-xs">معلومات البروكر</TabsTrigger>
-                </TabsList>
+            <Card>
+                <CardContent className="p-4">
+                    <h3 className="text-sm font-semibold mb-3">معلومات سريعة</h3>
+                    <div className="grid grid-cols-2 gap-x-4">
+                        <InfoItem icon={Banknote} label="الحد الأدنى للإيداع" value={`$${tradingConditions.min_deposit || 0}`} />
+                        <InfoItem icon={TrendingUp} label="الرافعة المالية" value={tradingConditions.max_leverage} />
+                        <InfoItem icon={Clock} label="سرعة السحب" value={findLabel(TermsBank.supportHours, depositsWithdrawals.withdrawal_speed)} />
+                        <InfoItem icon={Building2} label="المقر الرئيسي" value={basicInfo.headquarters} />
+                    </div>
+                </CardContent>
+            </Card>
 
-                {/* Tab 1: معلومات البروكر */}
-                <TabsContent value="info" className="space-y-4 mt-4">
-                    <DetailCard title="المعلومات الأساسية" icon={Briefcase}>
-                        <InfoRow label="المؤسس / CEO" value={basicInfo.CEO} />
-                        <InfoRow label="المقر الرئيسي" value={basicInfo.headquarters} />
-                        <InfoRow label="نوع الشركة" value={findLabel(TermsBank.brokerType, basicInfo.broker_type)} />
-                        <InfoRow label="الحالة التنظيمية" value={findLabel(TermsBank.regulationStatus, regulation.regulation_status)} />
-                    </DetailCard>
-                    
-                    <DetailCard title="التراخيص" icon={ShieldCheck}>
-                        {ensureArray(regulation.licenses).map((license, index) => (
-                            <React.Fragment key={index}>
-                                <div className="p-2 bg-muted/50 rounded-md">
-                                    <InfoRow label="جهة الترخيص" value={findLabel(TermsBank.licenseAuthority, license.authority)} />
-                                    <InfoRow label="رقم الترخيص" value={license.licenseNumber} />
-                                    <InfoRow label="حالة الترخيص" value={findLabel(TermsBank.regulationStatus, license.status)} />
-                                </div>
-                                {index < ensureArray(regulation.licenses).length - 1 && <Separator className="my-2" />}
-                            </React.Fragment>
-                         ))}
-                    </DetailCard>
-
-                    <DetailCard title="تقييمات الوسيط" icon={Star}>
-                         <InfoRow label="تقييم Trustpilot" value={reputation.trustpilot_rating} />
-                         <InfoRow label="عدد المراجعات" value={reputation.reviews_count?.toLocaleString()} />
-                    </DetailCard>
-
-                    <DetailCard title="الدعم والخدمة" icon={Globe}>
-                        <InfoRow label="اللغات المدعومة">
-                            <div className="flex gap-1 flex-wrap justify-end">
-                               {ensureArray(globalReach.languages_supported).map(l => <Badge key={l} variant="secondary">{findLabel(TermsBank.languagesSupported, l)}</Badge>)}
-                            </div>
-                        </InfoRow>
-                         <Separator className="my-2" />
-                         <InfoRow label="قنوات الدعم">
-                            <div className="flex gap-1 flex-wrap justify-end">
-                               {ensureArray(globalReach.customer_support_channels).map(c => <Badge key={c} variant="secondary">{findLabel(TermsBank.supportChannels, c)}</Badge>)}
-                            </div>
-                        </InfoRow>
-                         <Separator className="my-2" />
-                         <InfoRow label="ساعات الدعم" value={findLabel(TermsBank.supportHours, globalReach.global_presence)} />
-                    </DetailCard>
-                </TabsContent>
-
-                {/* Tab 2: التداول */}
-                <TabsContent value="trading" className="space-y-4 mt-4">
-                    <DetailCard title="منصات التداول" icon={Gauge}>
-                        <InfoRow label="المنصات المدعومة">
-                            <div className="flex gap-1 flex-wrap justify-end">
-                               {ensureArray(platforms.platforms_supported).map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.platforms, p)}</Badge>)}
-                            </div>
-                        </InfoRow>
-                        <Separator className="my-2" />
-                        <InfoRow label="ترخيص MT4" value={platforms.mt4_license_type} />
-                        <InfoRow label="ترخيص MT5" value={platforms.mt5_license_type} />
-                    </DetailCard>
-
-                    <DetailCard title="الحسابات وأنواعها" icon={Users}>
-                        <InfoRow label="أنواع الحسابات">
-                             <div className="flex gap-1 flex-wrap justify-end">
-                               {ensureArray(tradingConditions.account_types).map(t => <Badge key={t} variant="secondary">{findLabel(TermsBank.accountTypes, t)}</Badge>)}
-                            </div>
-                        </InfoRow>
-                        <Separator className="my-2" />
-                        <InfoRow label="نوع السبريد" value={findLabel(TermsBank.spreadType, tradingConditions.spread_type)} />
-                    </DetailCard>
-
-                    <DetailCard title="المنتجات المالية" icon={BrainCircuit}>
-                         <div className="grid md:grid-cols-2 rtl:md:grid-cols-2 gap-x-4 gap-y-2 rtl:gap-x-4">
-                            <BooleanPill value={!!instruments.forex_pairs} text="فوركس" />
-                            <BooleanPill value={instruments.stocks} text="أسهم" />
-                            <BooleanPill value={instruments.commodities} text="سلع" />
-                            <BooleanPill value={instruments.indices} text="مؤشرات" />
-                            <BooleanPill value={instruments.crypto_trading} text="تداول العملات المشفرة" />
-                         </div>
-                    </DetailCard>
-                </TabsContent>
-
-                {/* Tab 3: مميزات حصرية */}
-                <TabsContent value="features" className="space-y-4 mt-4">
-                    <DetailCard title="مميزات التداول" icon={Award}>
-                        <InfoRow label="أدنى سبريد (نقاط)" value={tradingConditions.min_spread} />
-                        <Separator className="my-2" />
-                        <InfoRow label="الرافعة المالية القصوى" value={tradingConditions.max_leverage} />
-                    </DetailCard>
-
-                    <DetailCard title="ميزات الحساب" icon={Award}>
-                         <div className="grid md:grid-cols-2 rtl:md:grid-cols-2 gap-x-4 gap-y-2 rtl:gap-x-4">
-                            <BooleanPill value={additionalFeatures.welcome_bonus} text="بونص ترحيبي ومكافآت" />
-                            <BooleanPill value={additionalFeatures.copy_trading} text="نسخ التداول" />
-                            <BooleanPill value={additionalFeatures.swap_free} text="حسابات إسلامية" />
-                            <BooleanPill value={additionalFeatures.demo_account} text="حسابات تجريبية" />
-                            <BooleanPill value={additionalFeatures.education_center} text="مركز تعليمي" />
-                            <BooleanPill value={additionalFeatures.trading_contests} text="مسابقات تداول" />
+            {platformsList.length > 0 && (
+                <Card>
+                    <CardContent className="p-4">
+                        <h3 className="text-sm font-semibold mb-3">منصات التداول</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {platformsList.map((platform, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                    {findLabel(TermsBank.platforms, platform)}
+                                </Badge>
+                            ))}
                         </div>
-                    </DetailCard>
-                </TabsContent>
+                    </CardContent>
+                </Card>
+            )}
 
-                {/* Tab 4: الدفع */}
-                <TabsContent value="payment" className="space-y-4 mt-4">
-                    <DetailCard title="طرق الدفع والسحب" icon={Landmark}>
-                        <InfoRow label="طرق الدفع">
-                             <div className="flex gap-1 flex-wrap justify-end">
-                               {ensureArray(depositsWithdrawals.payment_methods).map(p => <Badge key={p} variant="secondary">{findLabel(TermsBank.depositMethods, p)}</Badge>)}
+            <Accordion type="single" collapsible className="space-y-2">
+                <AccordionItem value="trading" className="border rounded-lg px-4">
+                    <AccordionTrigger className="text-sm font-medium py-3">شروط التداول</AccordionTrigger>
+                    <AccordionContent className="pb-4">
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between py-1.5 border-b border-dashed">
+                                <span className="text-muted-foreground">نوع السبريد</span>
+                                <span className="font-medium">{findLabel(TermsBank.spreadType, tradingConditions.spread_type) || 'N/A'}</span>
                             </div>
-                        </InfoRow>
-                        <Separator className="my-2" />
-                         <InfoRow label="الحد الأدنى للإيداع" value={`$${depositsWithdrawals.min_deposit || tradingConditions.min_deposit || 'N/A'}`} />
-                         <InfoRow label="الحد الأدنى للسحب" value={`$${depositsWithdrawals.min_withdrawal}`} />
-                         <InfoRow label="سرعة السحب" value={findLabel(TermsBank.supportHours, depositsWithdrawals.withdrawal_speed)} />
-                         <Separator className="my-2" />
-                         <div className="grid md:grid-cols-2 rtl:md:grid-cols-2 gap-x-4 gap-y-2 rtl:gap-x-4">
-                             <BooleanPill value={depositsWithdrawals.deposit_fees} text="رسوم على الإيداع" />
-                             <BooleanPill value={depositsWithdrawals.withdrawal_fees} text="رسوم على السحب" />
-                         </div>
-                    </DetailCard>
-                </TabsContent>
-            </Tabs>
-             
+                            <div className="flex justify-between py-1.5 border-b border-dashed">
+                                <span className="text-muted-foreground">أدنى سبريد</span>
+                                <span className="font-medium">{tradingConditions.min_spread ?? 'N/A'} نقطة</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-dashed">
+                                <span className="text-muted-foreground">العمولة لكل لوت</span>
+                                <span className="font-medium">${tradingConditions.commission_per_lot ?? 0}</span>
+                            </div>
+                            <div className="flex justify-between py-1.5">
+                                <span className="text-muted-foreground">سرعة التنفيذ</span>
+                                <span className="font-medium">{tradingConditions.execution_speed || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="instruments" className="border rounded-lg px-4">
+                    <AccordionTrigger className="text-sm font-medium py-3">الأدوات المالية</AccordionTrigger>
+                    <AccordionContent className="pb-4">
+                        <div className="flex flex-wrap gap-2">
+                            {instruments.forex_pairs && (
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-muted">
+                                    <CheckCircle className="h-3 w-3 text-green-600" /> فوركس
+                                </span>
+                            )}
+                            {instruments.stocks && (
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-muted">
+                                    <CheckCircle className="h-3 w-3 text-green-600" /> أسهم
+                                </span>
+                            )}
+                            {instruments.commodities && (
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-muted">
+                                    <CheckCircle className="h-3 w-3 text-green-600" /> سلع
+                                </span>
+                            )}
+                            {instruments.indices && (
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-muted">
+                                    <CheckCircle className="h-3 w-3 text-green-600" /> مؤشرات
+                                </span>
+                            )}
+                            {instruments.crypto_trading && (
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-muted">
+                                    <CheckCircle className="h-3 w-3 text-green-600" /> عملات رقمية
+                                </span>
+                            )}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
+                {paymentMethods.length > 0 && (
+                    <AccordionItem value="payment" className="border rounded-lg px-4">
+                        <AccordionTrigger className="text-sm font-medium py-3">طرق الدفع</AccordionTrigger>
+                        <AccordionContent className="pb-4">
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {paymentMethods.map((method, index) => (
+                                    <Badge key={index} variant="secondary" className="text-xs">
+                                        {findLabel(TermsBank.depositMethods, method)}
+                                    </Badge>
+                                ))}
+                            </div>
+                            <div className="space-y-2 text-sm border-t pt-3">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">رسوم الإيداع</span>
+                                    <span className={depositsWithdrawals.deposit_fees ? 'text-red-600' : 'text-green-600'}>
+                                        {depositsWithdrawals.deposit_fees ? 'نعم' : 'مجاني'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">رسوم السحب</span>
+                                    <span className={depositsWithdrawals.withdrawal_fees ? 'text-red-600' : 'text-green-600'}>
+                                        {depositsWithdrawals.withdrawal_fees ? 'نعم' : 'مجاني'}
+                                    </span>
+                                </div>
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                )}
+
+                {licenses.length > 0 && (
+                    <AccordionItem value="licenses" className="border rounded-lg px-4">
+                        <AccordionTrigger className="text-sm font-medium py-3">التراخيص والتنظيم</AccordionTrigger>
+                        <AccordionContent className="pb-4">
+                            <div className="space-y-3">
+                                {licenses.map((license, index) => (
+                                    <div key={index} className="p-3 bg-muted/50 rounded-lg text-sm">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Shield className="h-4 w-4 text-primary" />
+                                            <span className="font-medium">{findLabel(TermsBank.licenseAuthority, license.authority)}</span>
+                                        </div>
+                                        {license.licenseNumber && (
+                                            <p className="text-xs text-muted-foreground">رقم الترخيص: {license.licenseNumber}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                )}
+
+                <AccordionItem value="support" className="border rounded-lg px-4">
+                    <AccordionTrigger className="text-sm font-medium py-3">الدعم والخدمة</AccordionTrigger>
+                    <AccordionContent className="pb-4">
+                        <div className="space-y-3">
+                            {ensureArray(globalReach.languages_supported).length > 0 && (
+                                <div>
+                                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                                        <Globe className="h-3 w-3" /> اللغات المدعومة
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {ensureArray<string>(globalReach.languages_supported).map((lang, i) => (
+                                            <Badge key={i} variant="outline" className="text-[10px]">
+                                                {findLabel(TermsBank.languagesSupported, lang)}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {ensureArray(globalReach.customer_support_channels).length > 0 && (
+                                <div>
+                                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                                        <Headphones className="h-3 w-3" /> قنوات الدعم
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {ensureArray<string>(globalReach.customer_support_channels).map((channel, i) => (
+                                            <Badge key={i} variant="outline" className="text-[10px]">
+                                                {findLabel(TermsBank.supportChannels, channel)}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+
+            <div className="pb-4">
+                <Button asChild className="w-full" size="lg">
+                    <Link href={`/dashboard/brokers/${brokerId}/link`}>
+                        ابدأ في كسب الكاش باك
+                    </Link>
+                </Button>
+            </div>
         </div>
     )
 }

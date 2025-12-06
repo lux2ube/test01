@@ -98,7 +98,7 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                         <StarRating rating={rating} />
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-x-auto scrollbar-hide">
                             <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
-                                الحد الأدنى للإيداع ${minDeposit}
+                                أدنى إيداع ${minDeposit}
                             </span>
                             {platforms.slice(0, 3).map((platform, index) => (
                                 <span 

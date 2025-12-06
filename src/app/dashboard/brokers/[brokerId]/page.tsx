@@ -227,7 +227,7 @@ export default function BrokerPreviewPage() {
                         </div>
                         <div className="text-center p-2 bg-muted rounded-lg">
                             <p className="text-lg font-bold">${tradingConditions.min_deposit || 0}</p>
-                            <p className="text-[10px] text-muted-foreground">الحد الأدنى للإيداع</p>
+                            <p className="text-[10px] text-muted-foreground">أدنى إيداع</p>
                         </div>
                         <div className="text-center p-2 bg-muted rounded-lg">
                             <p className="text-lg font-bold">{tradingConditions.max_leverage || 'N/A'}</p>

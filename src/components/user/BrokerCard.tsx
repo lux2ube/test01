@@ -46,7 +46,7 @@ export function BrokerCard({ broker }: { broker: Broker }) {
 
   const name = broker.name || broker.basicInfo?.broker_name || 'Unknown Broker';
   const rating = (broker.reputation?.wikifx_score ?? 0) / 2;
-  const cashbackPerLot = broker.cashback?.cashback_per_lot ?? 0;
+  const cashbackPerLot = broker.cashback?.cashback_amount ?? broker.cashback?.cashback_per_lot ?? 0;
   const cashbackFrequency = broker.cashback?.cashback_frequency || 'Monthly';
   const minDeposit = broker.tradingConditions?.min_deposit ?? 0;
   const regulationStatus = broker.regulation?.regulation_status || '';
@@ -98,7 +98,7 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                         <StarRating rating={rating} />
                         <div className="flex items-center gap-1.5 mt-1.5 overflow-x-auto scrollbar-hide">
                             <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
-                                الحد الأدنى ${minDeposit}
+                                الحد الأدنى للإيداع ${minDeposit}
                             </span>
                             {platforms.slice(0, 3).map((platform, index) => (
                                 <span 

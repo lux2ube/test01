@@ -159,11 +159,17 @@ export interface Broker {
         withdrawal_fees: boolean;
     };
     cashback: {
+        cashback_amount?: number;
         cashback_per_lot: number;
         cashback_account_type: string[];
         cashback_frequency: 'Daily' | 'Weekly' | 'Monthly';
         rebate_method: string[];
         affiliate_program_link: string;
+        offers_cashback?: boolean;
+        cashback_currency?: string;
+        minimum_withdrawal?: number;
+        eligible_instruments?: string;
+        terms_and_conditions?: string;
     };
     globalReach: {
         business_region: string[];

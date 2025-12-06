@@ -383,16 +383,23 @@ export default function BrokerLinkPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Input 
-                            placeholder="مثال: 123456789" 
-                            className="h-12 text-center text-lg"
-                            {...field} 
-                          />
+                          <div className="relative">
+                            <div className="absolute start-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center pointer-events-none">
+                              <span className="text-primary font-bold text-sm">#</span>
+                            </div>
+                            <Input 
+                              placeholder="أدخل رقم الحساب هنا" 
+                              className="h-14 ps-14 pe-4 text-lg font-medium border-2 border-primary/30 focus:border-primary bg-background rounded-xl placeholder:text-muted-foreground/50"
+                              {...field} 
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
-                        <p className="text-xs text-muted-foreground text-center mt-2">
-                          ستجد رقم الحساب في منصة التداول أو البريد الإلكتروني من الوسيط
-                        </p>
+                        <div className="mt-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                          <p className="text-xs text-blue-700 dark:text-blue-300 text-center leading-relaxed">
+                            <span className="font-semibold">رقم حساب التداول</span> هو رقم حسابك في منصة التداول مثل MT4 أو MT5 أو رقم معرّف المنصة (Platform ID)
+                          </p>
+                        </div>
                       </FormItem>
                     )}
                   />

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +13,7 @@ import { useAuthContext } from '@/hooks/useAuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { submitTradingAccount } from '@/app/actions';
 import type { Broker } from '@/types';
-import { Loader2, UserPlus, Link as LinkIcon, ExternalLink, Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Loader2, UserPlus, Link as LinkIcon, ExternalLink, Check, ArrowRight, ArrowLeft, X } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -49,6 +48,12 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const STEPS = [
+  { id: 1, title: 'نوع الحساب', desc: 'جديد أو موجود' },
+  { id: 2, title: 'التعليمات', desc: 'اتبع الخطوات' },
+  { id: 3, title: 'التأكيد', desc: 'أدخل رقم الحساب' },
+];
 
 export default function BrokerLinkPage() {
   const router = useRouter();
@@ -166,223 +171,292 @@ export default function BrokerLinkPage() {
   const existingData = getExistingData();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b px-4 py-2 flex items-center justify-between sticky top-0 bg-background z-20">
-        <Link href={`/dashboard/brokers/${brokerId}`} className="p-1.5 -m-1.5 text-muted-foreground hover:text-foreground">
-          <X className="h-5 w-5" />
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-3 border-b bg-card sticky top-0 z-10">
+        <Link href={`/dashboard/brokers/${brokerId}`} className="p-1 text-muted-foreground hover:text-foreground">
+          <X className="w-5 h-5" />
         </Link>
         <div className="flex items-center gap-2">
-          {broker.logoUrl && <Image src={broker.logoUrl} alt="" width={20} height={20} className="w-5 h-5 object-contain rounded" />}
-          <span className="text-sm font-medium">{brokerName}</span>
+          {broker.logoUrl && (
+            <Image src={broker.logoUrl} alt="" width={24} height={24} className="w-6 h-6 object-contain rounded" />
+          )}
+          <span className="font-medium text-sm">{brokerName}</span>
         </div>
-        <div className="w-8" />
-      </header>
+        <div className="w-7" />
+      </div>
 
-      <div className="px-4 py-2 border-b bg-muted/30">
-        <div className="flex items-center justify-between max-w-md mx-auto">
-          {[1, 2, 3].map((step, i) => (
-            <React.Fragment key={step}>
-              <div className="flex items-center gap-1.5">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                  currentStep > step ? 'bg-primary text-primary-foreground' :
-                  currentStep === step ? 'bg-primary text-primary-foreground' :
-                  'bg-muted-foreground/20 text-muted-foreground'
+      {/* Step Progress Bar with Titles */}
+      <div className="p-3 border-b bg-muted/30">
+        <div className="flex items-center justify-between max-w-sm mx-auto">
+          {STEPS.map((step, idx) => (
+            <React.Fragment key={step.id}>
+              <div className="flex flex-col items-center text-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-1 ${
+                  currentStep > step.id 
+                    ? 'bg-green-500 text-white' 
+                    : currentStep === step.id 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
                 }`}>
-                  {currentStep > step ? <Check className="h-3 w-3" /> : step}
+                  {currentStep > step.id ? <Check className="w-4 h-4" /> : step.id}
                 </div>
-                <span className={`text-xs hidden sm:inline ${currentStep >= step ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  {step === 1 ? 'اختيار' : step === 2 ? 'تعليمات' : 'تأكيد'}
+                <span className={`text-[10px] font-medium ${currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {step.title}
                 </span>
               </div>
-              {i < 2 && <div className={`flex-1 h-px mx-2 ${currentStep > step ? 'bg-primary' : 'bg-border'}`} />}
+              {idx < STEPS.length - 1 && (
+                <div className={`flex-1 h-1 mx-1 rounded ${currentStep > step.id ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
+              )}
             </React.Fragment>
           ))}
         </div>
       </div>
 
-      <main className="flex-1 overflow-auto pb-20">
-        <div className="max-w-md mx-auto px-4 py-4">
+      {/* Main Content */}
+      <div className="flex-1 p-4 overflow-auto">
+        <div className="max-w-sm mx-auto">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(processForm)}>
+            <form onSubmit={form.handleSubmit(processForm)} className="space-y-4">
+              
+              {/* Step 1: Account Type Selection */}
               {currentStep === 1 && (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-center mb-4">هل لديك حساب مع {brokerName}؟</p>
+                <div className="space-y-4">
+                  <h2 className="text-base font-semibold text-center">هل لديك حساب مع {brokerName}؟</h2>
                   <FormField
                     control={form.control}
                     name="hasAccount"
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <div className="space-y-2">
+                          <div className="grid gap-3">
+                            {/* New Account Option */}
                             <button
                               type="button"
                               onClick={() => field.onChange('no')}
-                              className={`w-full text-right p-3 rounded-lg border transition-all flex items-center gap-3 ${
-                                field.value === 'no' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50'
+                              className={`w-full p-4 rounded-xl border-2 text-right flex items-center gap-3 transition-all ${
+                                field.value === 'no' 
+                                  ? 'border-primary bg-primary/5' 
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                               }`}
                             >
-                              <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                field.value === 'no' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                field.value === 'no' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800'
                               }`}>
-                                <UserPlus className="h-4 w-4" />
+                                <UserPlus className="w-5 h-5" />
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium">فتح حساب جديد</p>
-                                <p className="text-[11px] text-muted-foreground">سأنشئ حساب تداول جديد</p>
+                              <div className="flex-1">
+                                <p className="font-semibold text-sm">فتح حساب جديد</p>
+                                <p className="text-xs text-muted-foreground">سأنشئ حساب تداول جديد</p>
                               </div>
-                              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                                field.value === 'no' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                field.value === 'no' ? 'border-primary bg-primary' : 'border-gray-300'
                               }`}>
-                                {field.value === 'no' && <Check className="h-full w-full text-primary-foreground p-0.5" />}
+                                {field.value === 'no' && <Check className="w-3 h-3 text-white" />}
                               </div>
                             </button>
 
+                            {/* Existing Account Option */}
                             <button
                               type="button"
                               onClick={() => field.onChange('yes')}
-                              className={`w-full text-right p-3 rounded-lg border transition-all flex items-center gap-3 ${
-                                field.value === 'yes' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50'
+                              className={`w-full p-4 rounded-xl border-2 text-right flex items-center gap-3 transition-all ${
+                                field.value === 'yes' 
+                                  ? 'border-primary bg-primary/5' 
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                               }`}
                             >
-                              <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                field.value === 'yes' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                field.value === 'yes' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800'
                               }`}>
-                                <LinkIcon className="h-4 w-4" />
+                                <LinkIcon className="w-5 h-5" />
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium">ربط حساب موجود</p>
-                                <p className="text-[11px] text-muted-foreground">لدي حساب بالفعل</p>
+                              <div className="flex-1">
+                                <p className="font-semibold text-sm">ربط حساب موجود</p>
+                                <p className="text-xs text-muted-foreground">لدي حساب بالفعل</p>
                               </div>
-                              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                                field.value === 'yes' ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                field.value === 'yes' ? 'border-primary bg-primary' : 'border-gray-300'
                               }`}>
-                                {field.value === 'yes' && <Check className="h-full w-full text-primary-foreground p-0.5" />}
+                                {field.value === 'yes' && <Check className="w-3 h-3 text-white" />}
                               </div>
                             </button>
                           </div>
                         </FormControl>
-                        <FormMessage className="text-xs mt-1" />
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
               )}
 
+              {/* Step 2: Instructions */}
               {currentStep === 2 && (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-center mb-2">
-                    {hasAccountValue === 'no' ? 'اتبع الخطوات التالية' : 'تعليمات الربط'}
-                  </p>
+                <div className="space-y-4">
+                  <h2 className="text-base font-semibold text-center">
+                    {hasAccountValue === 'no' ? 'خطوات فتح الحساب' : 'تعليمات ربط الحساب'}
+                  </h2>
                   
                   {hasAccountValue === 'no' ? (
-                    <div className="space-y-2">
-                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                        <div className="flex gap-2">
-                          <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center flex-shrink-0">1</span>
+                    <div className="space-y-3">
+                      {/* Step 1 */}
+                      <div className="p-3 rounded-lg border bg-card">
+                        <div className="flex items-start gap-3">
+                          <div className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium">افتح حساب تداول</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">{newDesc}</p>
+                            <p className="font-medium text-sm">افتح حساب تداول</p>
+                            <p className="text-xs text-muted-foreground mt-1 break-words">{newDesc}</p>
+                            {newLink && (
+                              <Button asChild size="sm" className="mt-2 h-8 text-xs w-full">
+                                <a href={newLink} target="_blank" rel="noopener noreferrer">
+                                  فتح رابط التسجيل
+                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                </a>
+                              </Button>
+                            )}
                           </div>
                         </div>
-                        {newLink && (
-                          <Button asChild size="sm" className="w-full mt-2 h-8 text-xs">
-                            <a href={newLink} target="_blank" rel="noopener noreferrer">
-                              فتح الرابط <ExternalLink className="h-3 w-3 mr-1" />
-                            </a>
-                          </Button>
-                        )}
                       </div>
-                      <div className="p-3 rounded-lg bg-muted/50 border">
-                        <div className="flex gap-2">
-                          <span className="w-5 h-5 rounded-full bg-muted text-muted-foreground text-xs flex items-center justify-center flex-shrink-0">2</span>
-                          <div>
-                            <p className="text-xs font-medium">احفظ رقم الحساب</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">ستحتاجه في الخطوة التالية</p>
+                      
+                      {/* Step 2 */}
+                      <div className="p-3 rounded-lg border bg-card">
+                        <div className="flex items-start gap-3">
+                          <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold flex items-center justify-center flex-shrink-0">2</div>
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">أكمل التسجيل</p>
+                            <p className="text-xs text-muted-foreground mt-1">أكمل نموذج التسجيل واحفظ رقم الحساب</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Step 3 */}
+                      <div className="p-3 rounded-lg border bg-card">
+                        <div className="flex items-start gap-3">
+                          <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold flex items-center justify-center flex-shrink-0">3</div>
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">عد وأدخل رقم الحساب</p>
+                            <p className="text-xs text-muted-foreground mt-1">في الخطوة التالية أدخل رقم حسابك الجديد</p>
                           </div>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-                      <div className="flex gap-2">
-                        <LinkIcon className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-xs font-medium">تعليمات مهمة</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{existingData.text}</p>
+                    <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+                      <div className="flex items-start gap-3">
+                        <LinkIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">تعليمات مهمة</p>
+                          <p className="text-xs text-muted-foreground mt-2 break-words leading-relaxed">{existingData.text}</p>
+                          {existingData.link && (
+                            <Button asChild variant="outline" size="sm" className="mt-3 h-8 text-xs w-full">
+                              <a href={existingData.link} target="_blank" rel="noopener noreferrer">
+                                {existingData.linkText || 'فتح الرابط'}
+                                <ExternalLink className="w-3 h-3 mr-1" />
+                              </a>
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      {existingData.link && (
-                        <Button asChild variant="outline" size="sm" className="w-full mt-2 h-8 text-xs">
-                          <a href={existingData.link} target="_blank" rel="noopener noreferrer">
-                            {existingData.linkText || 'فتح الرابط'} <ExternalLink className="h-3 w-3 mr-1" />
-                          </a>
-                        </Button>
-                      )}
                     </div>
                   )}
                 </div>
               )}
 
+              {/* Step 3: Account Number */}
               {currentStep === 3 && (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-center mb-2">أدخل رقم الحساب</p>
+                <div className="space-y-4">
+                  <h2 className="text-base font-semibold text-center">أدخل رقم حساب التداول</h2>
                   <FormField
                     control={form.control}
                     name="accountNumber"
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Input placeholder="رقم حساب التداول" className="h-10 text-center" {...field} />
+                          <Input 
+                            placeholder="مثال: 123456789" 
+                            className="h-12 text-center text-lg"
+                            {...field} 
+                          />
                         </FormControl>
-                        <FormMessage className="text-xs" />
-                        <p className="text-[11px] text-muted-foreground text-center">ستجده في منصة التداول أو البريد الإلكتروني</p>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground text-center mt-2">
+                          ستجد رقم الحساب في منصة التداول أو البريد الإلكتروني من الوسيط
+                        </p>
                       </FormItem>
                     )}
                   />
-                  <div className="p-3 rounded-lg bg-muted/50 text-xs space-y-1">
-                    <div className="flex justify-between"><span className="text-muted-foreground">الوسيط</span><span className="font-medium">{brokerName}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">النوع</span><span className="font-medium">{hasAccountValue === 'no' ? 'جديد' : 'موجود'}</span></div>
+                  
+                  {/* Summary */}
+                  <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">ملخص الطلب</p>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">الوسيط</span>
+                      <span className="font-medium">{brokerName}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">نوع الربط</span>
+                      <span className="font-medium">{hasAccountValue === 'no' ? 'حساب جديد' : 'حساب موجود'}</span>
+                    </div>
                   </div>
                 </div>
               )}
             </form>
           </Form>
         </div>
-      </main>
+      </div>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-background border-t px-4 py-3 z-20">
-        <div className="max-w-md mx-auto flex gap-2">
+      {/* Fixed Bottom Navigation */}
+      <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t shadow-lg">
+        <div className="max-w-sm mx-auto flex gap-3">
           {currentStep > 1 && !action && (
-            <Button type="button" onClick={prev} variant="outline" className="flex-1 h-10">
-              <ChevronRight className="h-4 w-4 ml-1" />
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={prev}
+              className="flex-1 h-12 text-base font-medium"
+            >
+              <ArrowRight className="w-4 h-4 ml-2" />
               السابق
             </Button>
           )}
           <Button 
             type="button" 
-            onClick={next} 
-            disabled={isSubmitting || !canProceed()} 
-            className={`h-10 ${currentStep > 1 && !action ? 'flex-1' : 'w-full'}`}
+            onClick={next}
+            disabled={isSubmitting || !canProceed()}
+            className={`h-12 text-base font-medium ${currentStep === 1 || action ? 'w-full' : 'flex-1'}`}
           >
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : currentStep === 3 ? (
+              'إرسال الطلب'
+            ) : (
               <>
-                {currentStep === 3 ? 'إرسال' : 'التالي'}
-                {currentStep < 3 && <ChevronLeft className="h-4 w-4 mr-1" />}
+                التالي
+                <ArrowLeft className="w-4 h-4 mr-2" />
               </>
             )}
           </Button>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }
 
 function PageSkeleton() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="border-b px-4 py-2 flex justify-center"><Skeleton className="h-5 w-24" /></div>
-      <div className="px-4 py-2 border-b"><Skeleton className="h-6 w-full max-w-md mx-auto" /></div>
-      <div className="flex-1 p-4"><div className="max-w-md mx-auto space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div></div>
+    <div className="min-h-screen bg-background">
+      <div className="p-3 border-b flex items-center justify-center">
+        <Skeleton className="h-6 w-32" />
+      </div>
+      <div className="p-3 border-b">
+        <Skeleton className="h-12 w-full max-w-sm mx-auto" />
+      </div>
+      <div className="p-4">
+        <div className="max-w-sm mx-auto space-y-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      </div>
     </div>
   );
 }

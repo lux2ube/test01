@@ -287,8 +287,25 @@ export interface Withdrawal {
     completedAt?: Date;
     txId?: string; // Transaction ID from the blockchain or internal reference
     rejectionReason?: string;
-    // New field for security check
     previousWithdrawalDetails?: Record<string, any> | null;
+    isWhitelisted?: boolean; // Whether the payment method/address is in user's whitelist
+}
+
+/**
+ * Represents a whitelisted payment method for a user.
+ * Once admin approves a withdrawal, the payment details are added to the user's whitelist.
+ */
+export interface WhitelistPayment {
+    id: string;
+    userId: string;
+    paymentMethod: string;
+    walletAddress: string;
+    paymentDetails?: Record<string, any>;
+    approvedAt: Date;
+    approvedByWithdrawalId?: string;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 

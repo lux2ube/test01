@@ -1,7 +1,71 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/server';
-import type { Withdrawal } from '@/types';
+import type { Withdrawal, WhitelistPayment } from '@/types';
+
+async function addToWhitelist(
+  userId: string,
+  paymentMethod: string,
+  walletAddress: string,
+  paymentDetails: Record<string, any>,
+  withdrawalId: string
+) {
+  const supabase = await createAdminClient();
+  
+  const { error } = await supabase
+    .from('whitelist_payments')
+    .upsert({
+      user_id: userId,
+      payment_method: paymentMethod,
+      wallet_address: walletAddress,
+      payment_details: paymentDetails,
+      approved_by_withdrawal_id: withdrawalId,
+      approved_at: new Date().toISOString(),
+      is_active: true,
+    }, {
+      onConflict: 'user_id,payment_method,wallet_address',
+      ignoreDuplicates: false
+    });
+  
+  if (error) {
+    console.error('Error adding to whitelist:', error);
+  }
+  
+  return !error;
+}
+
+async function isPaymentWhitelisted(
+  userId: string,
+  paymentMethod: string,
+  walletAddress: string
+): Promise<boolean> {
+  const supabase = await createAdminClient();
+  
+  const { data, error } = await supabase
+    .from('whitelist_payments')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('payment_method', paymentMethod)
+    .eq('wallet_address', walletAddress)
+    .eq('is_active', true)
+    .single();
+  
+  if (error || !data) {
+    return false;
+  }
+  
+  return true;
+}
+
+function extractWalletAddress(details: Record<string, any>): string {
+  const walletKeys = ['walletAddress', 'wallet_address', 'address', 'binanceId', 'accountNumber'];
+  for (const key of walletKeys) {
+    if (details[key]) {
+      return String(details[key]);
+    }
+  }
+  return JSON.stringify(details);
+}
 
 async function createNotification(
   userId: string,
@@ -40,19 +104,31 @@ export async function getWithdrawals(): Promise<Withdrawal[]> {
     return [];
   }
 
-  return (data || []).map((row) => ({
-    id: row.id,
-    userId: row.user_id,
-    amount: row.amount,
-    status: row.status,
-    paymentMethod: row.payment_method,
-    withdrawalDetails: row.withdrawal_details,
-    requestedAt: new Date(row.requested_at),
-    completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
-    txId: row.tx_id,
-    rejectionReason: row.rejection_reason,
-    previousWithdrawalDetails: row.previous_withdrawal_details,
+  const withdrawals = await Promise.all((data || []).map(async (row) => {
+    const walletAddress = extractWalletAddress(row.withdrawal_details || {});
+    const isWhitelisted = await isPaymentWhitelisted(
+      row.user_id,
+      row.payment_method,
+      walletAddress
+    );
+    
+    return {
+      id: row.id,
+      userId: row.user_id,
+      amount: row.amount,
+      status: row.status,
+      paymentMethod: row.payment_method,
+      withdrawalDetails: row.withdrawal_details,
+      requestedAt: new Date(row.requested_at),
+      completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
+      txId: row.tx_id,
+      rejectionReason: row.rejection_reason,
+      previousWithdrawalDetails: row.previous_withdrawal_details,
+      isWhitelisted,
+    };
   }));
+  
+  return withdrawals;
 }
 
 export async function approveWithdrawal(withdrawalId: string, txId: string) {
@@ -95,6 +171,15 @@ export async function approveWithdrawal(withdrawalId: string, txId: string) {
       .eq('id', withdrawalId);
 
     if (updateError) throw updateError;
+
+    const walletAddress = extractWalletAddress(withdrawal.withdrawal_details || {});
+    await addToWhitelist(
+      withdrawal.user_id,
+      withdrawal.payment_method,
+      walletAddress,
+      withdrawal.withdrawal_details || {},
+      withdrawalId
+    );
 
     const message = `تم إكمال طلب السحب الخاص بك بمبلغ ${withdrawal.amount.toFixed(2)}$.`;
     await createNotification(withdrawal.user_id, message, 'withdrawal', '/dashboard/withdraw');

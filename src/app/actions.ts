@@ -652,8 +652,6 @@ export async function submitAddressData(data: Omit<AddressData, 'status' | 'subm
             .from('users')
             .update({
                 address_country: data.country,
-                address_city: data.city,
-                address_street: data.streetAddress,
                 address_status: 'Pending',
                 address_submitted_at: new Date().toISOString(),
             })

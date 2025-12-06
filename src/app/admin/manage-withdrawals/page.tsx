@@ -121,6 +121,15 @@ function SubRow({ row }: { row: Row<EnrichedWithdrawal> }) {
                     )}
                 </CardContent>
             </Card>
+            {!withdrawal.isWhitelisted && withdrawal.status === 'Processing' && (
+                 <Card className="border-amber-500">
+                    <CardHeader className="text-amber-600"><CardTitle className="text-base flex items-center gap-2"><AlertTriangle /> عنوان جديد</CardTitle></CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                        <p>هذا العنوان غير مسجل في القائمة البيضاء للمستخدم.</p>
+                        <p className="text-muted-foreground">عند الموافقة، سيتم إضافة العنوان تلقائياً للقائمة البيضاء.</p>
+                    </CardContent>
+                </Card>
+            )}
             {detailsChanged && (
                  <Card className="border-destructive">
                     <CardHeader className="text-destructive"><CardTitle className="text-base flex items-center gap-2"><AlertTriangle /> تم تغيير التفاصيل</CardTitle></CardHeader>

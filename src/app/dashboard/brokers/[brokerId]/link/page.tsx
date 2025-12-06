@@ -295,9 +295,49 @@ function Step1({ brokerName }: { brokerName: string }) {
 
 function Step2({ hasAccount, broker }: { hasAccount: string | undefined; broker: Broker }) {
     const brokerName = broker.name || broker.basicInfo?.broker_name;
-    const description = broker.instructions?.description || "اتبع الرابط لفتح حساب جديد.";
-    const link = broker.cashback?.affiliate_program_link || (broker as any).instructions?.link;
-    const linkText = broker.instructions?.linkText || `افتح حسابًا مع ${brokerName}`;
+    
+    // Parse nested JSON instructions
+    const parseInstructions = (instructions: any) => {
+        let parsed = instructions;
+        
+        // If it's a string, try to parse it
+        if (typeof parsed === 'string') {
+            try {
+                parsed = JSON.parse(parsed);
+            } catch (e) {
+                return { description: parsed, linkText: '', link: '' };
+            }
+        }
+        
+        // If description is still a string (nested JSON), parse it again
+        if (typeof parsed?.description === 'string') {
+            try {
+                const descParsed = JSON.parse(parsed.description);
+                return {
+                    description: descParsed?.description || parsed.description,
+                    linkText: parsed.linkText || descParsed?.linkText || '',
+                    link: parsed.link || descParsed?.link || ''
+                };
+            } catch (e) {
+                return {
+                    description: parsed.description,
+                    linkText: parsed.linkText || '',
+                    link: parsed.link || ''
+                };
+            }
+        }
+        
+        return {
+            description: parsed?.description || '',
+            linkText: parsed?.linkText || '',
+            link: parsed?.link || ''
+        };
+    };
+    
+    const instructions = parseInstructions(broker.instructions);
+    const description = instructions.description || "اتبع الرابط لفتح حساب جديد.";
+    const link = instructions.link || broker.cashback?.affiliate_program_link || (broker as any).instructions?.link;
+    const linkText = instructions.linkText || `افتح حسابًا مع ${brokerName}`;
     const existingAccountInstructions = broker.existingAccountInstructions || "يرجى الاتصال بالدعم لربط حسابك الحالي تحت شبكة شركائنا.";
 
     return (

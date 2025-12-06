@@ -296,42 +296,47 @@ function Step1({ brokerName }: { brokerName: string }) {
 function Step2({ hasAccount, broker }: { hasAccount: string | undefined; broker: Broker }) {
     const brokerName = broker.name || broker.basicInfo?.broker_name;
     
-    // Parse nested JSON instructions
+    // Parse deeply nested JSON instructions
     const parseInstructions = (instructions: any) => {
         let parsed = instructions;
+        let maxDepth = 5; // Prevent infinite loops
         
-        // If it's a string, try to parse it
-        if (typeof parsed === 'string') {
+        // Parse through multiple levels of JSON encoding
+        while (typeof parsed === 'string' && maxDepth > 0) {
             try {
                 parsed = JSON.parse(parsed);
             } catch (e) {
-                return { description: parsed, linkText: '', link: '' };
+                break;
             }
+            maxDepth--;
         }
         
-        // If description is still a string (nested JSON), parse it again
-        if (typeof parsed?.description === 'string') {
-            try {
-                const descParsed = JSON.parse(parsed.description);
-                return {
-                    description: descParsed?.description || parsed.description,
-                    linkText: parsed.linkText || descParsed?.linkText || '',
-                    link: parsed.link || descParsed?.link || ''
-                };
-            } catch (e) {
-                return {
-                    description: parsed.description,
-                    linkText: parsed.linkText || '',
-                    link: parsed.link || ''
-                };
-            }
-        }
-        
-        return {
-            description: parsed?.description || '',
-            linkText: parsed?.linkText || '',
-            link: parsed?.link || ''
+        // Extract the final values
+        const result = {
+            description: '',
+            linkText: '',
+            link: ''
         };
+        
+        if (typeof parsed === 'object' && parsed !== null) {
+            // If description is still a string, try to parse it once more
+            let desc = parsed.description;
+            if (typeof desc === 'string') {
+                try {
+                    const descObj = JSON.parse(desc);
+                    result.description = descObj?.description || desc;
+                } catch (e) {
+                    result.description = desc;
+                }
+            } else {
+                result.description = parsed.description || '';
+            }
+            
+            result.linkText = parsed.linkText || '';
+            result.link = parsed.link || '';
+        }
+        
+        return result;
     };
     
     const instructions = parseInstructions(broker.instructions);

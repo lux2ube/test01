@@ -113,32 +113,23 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                     </div>
                 </div>
                 
-                <div className="flex items-center justify-between text-sm border-t border-border/40 pt-3">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1.5">
-                            {swapFree ? (
-                                <Check className="h-4 w-4 text-green-600" />
-                            ) : (
-                                <X className="h-4 w-4 text-muted-foreground/50" />
-                            )}
-                            <span className={swapFree ? 'text-foreground' : 'text-muted-foreground'}>إسلامي</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            {copyTrading ? (
-                                <Check className="h-4 w-4 text-green-600" />
-                            ) : (
-                                <X className="h-4 w-4 text-muted-foreground/50" />
-                            )}
-                            <span className={copyTrading ? 'text-foreground' : 'text-muted-foreground'}>نسخ التداول</span>
-                        </div>
+                <div className="flex items-center justify-center gap-6 text-sm border-t border-border/40 pt-3">
+                    <div className="flex items-center gap-1.5">
+                        {swapFree ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                            <X className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                        <span className={swapFree ? 'text-foreground' : 'text-muted-foreground'}>إسلامي</span>
                     </div>
-                    <Link 
-                        href={`/dashboard/brokers/${broker.id}`}
-                        className="text-primary text-xs font-medium hover:underline flex items-center gap-1"
-                    >
-                        التفاصيل
-                        <ChevronLeft className="h-3 w-3" />
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                        {copyTrading ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                            <X className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                        <span className={copyTrading ? 'text-foreground' : 'text-muted-foreground'}>نسخ التداول</span>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-1">

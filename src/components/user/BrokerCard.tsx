@@ -46,7 +46,7 @@ export function BrokerCard({ broker }: { broker: Broker }) {
 
   const name = broker.name || broker.basicInfo?.broker_name || 'Unknown Broker';
   const rating = (broker.reputation?.wikifx_score ?? 0) / 2;
-  const cashbackPerLot = broker.cashback?.cashback_amount ?? broker.cashback?.cashback_per_lot ?? 0;
+  const cashbackPerLot = broker.tradingConditions?.commission_per_lot ?? 0;
   const cashbackFrequency = broker.cashback?.cashback_frequency || 'Monthly';
   const minDeposit = broker.tradingConditions?.min_deposit ?? 0;
   const regulationStatus = broker.regulation?.regulation_status || '';

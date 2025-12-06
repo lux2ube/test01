@@ -222,7 +222,7 @@ export default function BrokerPreviewPage() {
 
                     <div className="grid grid-cols-3 gap-2 mb-4">
                         <div className="text-center p-2 bg-primary/5 rounded-lg">
-                            <p className="text-lg font-bold text-primary">${cashback.cashback_amount || cashback.cashback_per_lot || 0}</p>
+                            <p className="text-lg font-bold text-primary">${tradingConditions.commission_per_lot || 0}</p>
                             <p className="text-[10px] text-muted-foreground">كاش باك/لوت</p>
                         </div>
                         <div className="text-center p-2 bg-muted rounded-lg">

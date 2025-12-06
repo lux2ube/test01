@@ -17,14 +17,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Country is required' }, { status: 400 });
     }
 
-    // Update user's country - this updates the main country field
-    // and sets address_status to Pending for admin review
+    // Update user's country - auto-verified, no admin review needed
     const { error } = await supabase
       .from('users')
       .update({
         country: country,
         address_country: country,
-        address_status: 'Pending',
+        address_status: 'Verified',
         address_submitted_at: new Date().toISOString(),
         address_rejection_reason: null,
       })

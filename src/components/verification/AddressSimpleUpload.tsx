@@ -9,10 +9,11 @@ import { CountrySelector } from '@/components/ui/country-selector';
 interface AddressSimpleUploadProps {
   onSuccess: () => void;
   onCancel: () => void;
+  userCountry?: string | null;
 }
 
-export function AddressSimpleUpload({ onSuccess, onCancel }: AddressSimpleUploadProps) {
-  const [country, setCountry] = useState('');
+export function AddressSimpleUpload({ onSuccess, onCancel, userCountry }: AddressSimpleUploadProps) {
+  const [country, setCountry] = useState(userCountry || '');
   const [submitting, setSubmitting] = useState(false);
   
   const { toast } = useToast();
@@ -36,20 +37,23 @@ export function AddressSimpleUpload({ onSuccess, onCancel }: AddressSimpleUpload
         body: JSON.stringify({ country }),
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         toast({ 
           title: 'نجاح', 
           description: 'تم تحديث دولتك بنجاح.' 
         });
         onSuccess();
       } else {
-        throw new Error('Submission failed');
+        throw new Error(data.error || 'Submission failed');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'حدث خطأ غير متوقع';
       toast({
         variant: 'destructive',
         title: 'خطأ',
-        description: 'فشل في تحديث الدولة. يرجى المحاولة مرة أخرى.'
+        description: `فشل في تحديث الدولة: ${errorMessage}`
       });
     } finally {
       setSubmitting(false);

@@ -40,13 +40,14 @@ export default function AddressVerificationPage() {
             </Button>
             
             <PageHeader 
-                title="التحقق من العنوان" 
-                description="قم برفع مستند رسمي يثبت عنوان إقامتك"
+                title="تحديد دولة الإقامة" 
+                description="اختر الدولة التي تقيم فيها حالياً"
             />
 
             <AddressSimpleUpload
                 onSuccess={handleSuccess}
                 onCancel={handleCancel}
+                userCountry={user.profile.addressData?.country || user.profile.country}
             />
         </div>
     );

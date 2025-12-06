@@ -172,9 +172,10 @@ export async function updateVerificationStatus(
       if (status === 'Rejected') {
         if (!reason) throw new Error('Rejection reason is required.');
         updateData['address_rejection_reason'] = reason;
-        notificationMessage = `تم رفض طلب التحقق من العنوان. السبب: ${reason}`;
+        notificationMessage = `تم رفض تحديد الدولة. السبب: ${reason}`;
       } else {
-        notificationMessage = 'تم التحقق من عنوانك بنجاح.';
+        updateData['address_rejection_reason'] = null;
+        notificationMessage = 'تم تأكيد دولة إقامتك بنجاح.';
       }
     } else if (type === 'phone') {
       if (status === 'Verified') {

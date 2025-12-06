@@ -36,15 +36,21 @@ export async function getUsers(): Promise<UserProfile[]> {
     kycData: user.kyc_status ? {
       documentType: user.kyc_document_type,
       documentNumber: user.kyc_document_number,
+      fullName: user.kyc_full_name || '',
+      dateOfBirth: user.kyc_date_of_birth ? new Date(user.kyc_date_of_birth) : new Date(),
+      nationality: user.kyc_nationality || '',
+      documentIssueDate: user.kyc_document_issue_date ? new Date(user.kyc_document_issue_date) : new Date(),
+      documentExpiryDate: user.kyc_document_expiry_date ? new Date(user.kyc_document_expiry_date) : new Date(),
       gender: user.kyc_gender,
+      documentFrontUrl: user.kyc_document_front_url || '',
+      documentBackUrl: user.kyc_document_back_url,
+      selfieUrl: user.kyc_selfie_url,
       status: user.kyc_status,
       submittedAt: user.kyc_submitted_at ? new Date(user.kyc_submitted_at) : new Date(),
       rejectionReason: user.kyc_rejection_reason,
     } : undefined,
     addressData: user.address_status ? {
-      country: user.address_country,
-      city: user.address_city,
-      streetAddress: user.address_street,
+      country: user.address_country || user.country || '',
       status: user.address_status,
       submittedAt: user.address_submitted_at ? new Date(user.address_submitted_at) : new Date(),
       rejectionReason: user.address_rejection_reason,
@@ -118,9 +124,8 @@ export async function adminUpdateAddress(userId: string, addressData: AddressDat
     const { error } = await supabase
       .from('users')
       .update({
+        country: addressData.country,
         address_country: addressData.country,
-        address_city: addressData.city,
-        address_street: addressData.streetAddress,
         address_status: addressData.status,
         address_submitted_at: submittedAt,
         address_rejection_reason: addressData.rejectionReason,
@@ -294,7 +299,7 @@ export async function getUserDetails(userId: string) {
     }
 
     const userProfile: UserProfile = {
-      uid: user.id,
+      id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
@@ -312,15 +317,21 @@ export async function getUserDetails(userId: string) {
       kycData: user.kyc_status ? {
         documentType: user.kyc_document_type,
         documentNumber: user.kyc_document_number,
+        fullName: user.kyc_full_name || '',
+        dateOfBirth: user.kyc_date_of_birth ? new Date(user.kyc_date_of_birth) : new Date(),
+        nationality: user.kyc_nationality || '',
+        documentIssueDate: user.kyc_document_issue_date ? new Date(user.kyc_document_issue_date) : new Date(),
+        documentExpiryDate: user.kyc_document_expiry_date ? new Date(user.kyc_document_expiry_date) : new Date(),
         gender: user.kyc_gender,
+        documentFrontUrl: user.kyc_document_front_url || '',
+        documentBackUrl: user.kyc_document_back_url,
+        selfieUrl: user.kyc_selfie_url,
         status: user.kyc_status,
         submittedAt: user.kyc_submitted_at ? new Date(user.kyc_submitted_at) : new Date(),
         rejectionReason: user.kyc_rejection_reason,
       } : undefined,
       addressData: user.address_status ? {
-        country: user.address_country,
-        city: user.address_city,
-        streetAddress: user.address_street,
+        country: user.address_country || user.country || '',
         status: user.address_status,
         submittedAt: user.address_submitted_at ? new Date(user.address_submitted_at) : new Date(),
         rejectionReason: user.address_rejection_reason,

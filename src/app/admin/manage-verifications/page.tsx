@@ -198,16 +198,6 @@ export default function ManageVerificationsPage() {
                 />
             )}
 
-            {documentViewer.isOpen && documentViewer.request && documentViewer.request.type === 'Address' && 'documentUrl' in documentViewer.request.data && (
-                <DocumentViewer
-                    isOpen={documentViewer.isOpen}
-                    onClose={() => setDocumentViewer({ isOpen: false, request: null })}
-                    type={documentViewer.request.type}
-                    data={documentViewer.request.data}
-                    userName={documentViewer.request.userName}
-                    userEmail={documentViewer.request.userEmail}
-                />
-            )}
         </div>
     );
 }

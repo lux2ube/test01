@@ -2,7 +2,7 @@
 "use client"
 
 import { useAuthContext } from "@/hooks/useAuthContext";
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Loader2, ChevronRight, Mail, Phone, User, Home } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +49,10 @@ export default function VerificationPage() {
     const { user, isLoading, refetchUserData } = useAuthContext();
     const router = useRouter();
     const { toast } = useToast();
+    
+    useEffect(() => {
+        refetchUserData();
+    }, []);
     
     const handleSendVerificationEmail = async () => {
         const result = await sendVerificationEmail();
@@ -109,13 +113,12 @@ export default function VerificationPage() {
                 <VerificationItemContent icon={User} title="التحقق من الهوية (KYC)" status={kycStatus} />
             </button>
 
-            {/* Address Verification */}
+            {/* Country Selection */}
             <button 
                 className="w-full text-left"
-                onClick={(addressStatus === 'Not Verified' || addressStatus === 'Rejected') ? () => router.push('/dashboard/settings/verification/address') : undefined}
-                disabled={addressStatus === 'Verified' || addressStatus === 'Pending'}
+                onClick={() => router.push('/dashboard/settings/verification/address')}
             >
-                <VerificationItemContent icon={Home} title="التحقق من العنوان" status={addressStatus} />
+                <VerificationItemContent icon={Home} title="دولة الإقامة" status={addressStatus} />
             </button>
         </div>
     );

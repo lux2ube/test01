@@ -50,9 +50,9 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const STEPS = [
-  { id: 1, title: 'نوع الحساب', desc: 'جديد أو موجود' },
-  { id: 2, title: 'التعليمات', desc: 'اتبع الخطوات' },
-  { id: 3, title: 'التأكيد', desc: 'أدخل رقم الحساب' },
+  { id: 1, title: 'نوع الحساب' },
+  { id: 2, title: 'التعليمات' },
+  { id: 3, title: 'التأكيد' },
 ];
 
 export default function BrokerLinkPage() {
@@ -161,11 +161,25 @@ export default function BrokerLinkPage() {
     if (!raw) return { text: def };
     if (typeof raw === 'string') {
       if (raw.trim().startsWith('{')) {
-        try { const p = JSON.parse(raw); return { text: p.description || p.text || def, link: p.link, linkText: p.linkText }; } catch { return { text: raw }; }
+        try { 
+          const p = JSON.parse(raw); 
+          return { 
+            text: p.description || p.text || def, 
+            link: p.link, 
+            linkText: p.linkText || p.link_text 
+          }; 
+        } catch { return { text: raw }; }
       }
       return { text: raw };
     }
-    if (typeof raw === 'object') return { text: (raw as any).description || (raw as any).text || def, link: (raw as any).link, linkText: (raw as any).linkText };
+    if (typeof raw === 'object') {
+      const obj = raw as any;
+      return { 
+        text: obj.description || obj.text || def, 
+        link: obj.link, 
+        linkText: obj.linkText || obj.link_text 
+      };
+    }
     return { text: def };
   };
   const existingData = getExistingData();
@@ -186,13 +200,13 @@ export default function BrokerLinkPage() {
         <div className="w-7" />
       </div>
 
-      {/* Step Progress Bar with Titles */}
+      {/* Step Progress Bar */}
       <div className="p-3 border-b bg-muted/30">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
+        <div className="flex items-center justify-center gap-2 max-w-xs mx-auto">
           {STEPS.map((step, idx) => (
             <React.Fragment key={step.id}>
-              <div className="flex flex-col items-center text-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-1 ${
+              <div className="flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                   currentStep > step.id 
                     ? 'bg-green-500 text-white' 
                     : currentStep === step.id 
@@ -201,20 +215,20 @@ export default function BrokerLinkPage() {
                 }`}>
                   {currentStep > step.id ? <Check className="w-4 h-4" /> : step.id}
                 </div>
-                <span className={`text-[10px] font-medium ${currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'}`}>
+                <span className={`text-xs font-medium mt-1 ${currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {step.title}
                 </span>
               </div>
               {idx < STEPS.length - 1 && (
-                <div className={`flex-1 h-1 mx-1 rounded ${currentStep > step.id ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                <div className={`w-8 h-1 rounded mt-[-16px] ${currentStep > step.id ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
               )}
             </React.Fragment>
           ))}
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-4 overflow-auto">
+      {/* Main Content - with bottom padding for fixed footer */}
+      <div className="flex-1 p-4 pb-28 overflow-auto">
         <div className="max-w-sm mx-auto">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(processForm)} className="space-y-4">
@@ -230,7 +244,6 @@ export default function BrokerLinkPage() {
                       <FormItem>
                         <FormControl>
                           <div className="grid gap-3">
-                            {/* New Account Option */}
                             <button
                               type="button"
                               onClick={() => field.onChange('no')}
@@ -256,7 +269,6 @@ export default function BrokerLinkPage() {
                               </div>
                             </button>
 
-                            {/* Existing Account Option */}
                             <button
                               type="button"
                               onClick={() => field.onChange('yes')}
@@ -299,18 +311,17 @@ export default function BrokerLinkPage() {
                   
                   {hasAccountValue === 'no' ? (
                     <div className="space-y-3">
-                      {/* Step 1 */}
                       <div className="p-3 rounded-lg border bg-card">
                         <div className="flex items-start gap-3">
                           <div className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm">افتح حساب تداول</p>
-                            <p className="text-xs text-muted-foreground mt-1 break-words">{newDesc}</p>
+                            <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line break-words">{newDesc}</p>
                             {newLink && (
                               <Button asChild size="sm" className="mt-2 h-8 text-xs w-full">
                                 <a href={newLink} target="_blank" rel="noopener noreferrer">
                                   فتح رابط التسجيل
-                                  <ExternalLink className="w-3 h-3 mr-1" />
+                                  <ExternalLink className="w-3 h-3 me-1" />
                                 </a>
                               </Button>
                             )}
@@ -318,7 +329,6 @@ export default function BrokerLinkPage() {
                         </div>
                       </div>
                       
-                      {/* Step 2 */}
                       <div className="p-3 rounded-lg border bg-card">
                         <div className="flex items-start gap-3">
                           <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold flex items-center justify-center flex-shrink-0">2</div>
@@ -329,7 +339,6 @@ export default function BrokerLinkPage() {
                         </div>
                       </div>
                       
-                      {/* Step 3 */}
                       <div className="p-3 rounded-lg border bg-card">
                         <div className="flex items-start gap-3">
                           <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold flex items-center justify-center flex-shrink-0">3</div>
@@ -341,21 +350,24 @@ export default function BrokerLinkPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
-                      <div className="flex items-start gap-3">
-                        <LinkIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">تعليمات مهمة</p>
-                          <p className="text-xs text-muted-foreground mt-2 break-words leading-relaxed">{existingData.text}</p>
-                          {existingData.link && (
-                            <Button asChild variant="outline" size="sm" className="mt-3 h-8 text-xs w-full">
-                              <a href={existingData.link} target="_blank" rel="noopener noreferrer">
-                                {existingData.linkText || 'فتح الرابط'}
-                                <ExternalLink className="w-3 h-3 mr-1" />
-                              </a>
-                            </Button>
-                          )}
+                    /* Existing Account Instructions - Vertical Stack for Mobile */
+                    <div className="p-4 rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-2">
+                          <LinkIcon className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                          <p className="font-semibold text-sm">تعليمات مهمة</p>
                         </div>
+                        <p className="text-sm text-muted-foreground whitespace-pre-line break-words leading-relaxed">
+                          {existingData.text}
+                        </p>
+                        {existingData.link && (
+                          <Button asChild variant="outline" size="sm" className="h-10 text-sm w-full">
+                            <a href={existingData.link} target="_blank" rel="noopener noreferrer">
+                              {existingData.linkText || 'فتح الرابط'}
+                              <ExternalLink className="w-4 h-4 me-2" />
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -386,7 +398,6 @@ export default function BrokerLinkPage() {
                     )}
                   />
                   
-                  {/* Summary */}
                   <div className="p-3 rounded-lg bg-muted/50 space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">ملخص الطلب</p>
                     <div className="flex justify-between text-sm">
@@ -405,17 +416,17 @@ export default function BrokerLinkPage() {
         </div>
       </div>
 
-      {/* Fixed Bottom Navigation */}
-      <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t shadow-lg">
+      {/* Fixed Bottom Navigation - Always Visible */}
+      <div className="fixed inset-x-0 bottom-0 z-30 bg-background/95 backdrop-blur border-t p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         <div className="max-w-sm mx-auto flex gap-3">
-          {currentStep > 1 && !action && (
+          {currentStep > 1 && (
             <Button 
               type="button" 
               variant="outline" 
               onClick={prev}
               className="flex-1 h-12 text-base font-medium"
             >
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRight className="w-4 h-4 me-2" />
               السابق
             </Button>
           )}
@@ -423,7 +434,7 @@ export default function BrokerLinkPage() {
             type="button" 
             onClick={next}
             disabled={isSubmitting || !canProceed()}
-            className={`h-12 text-base font-medium ${currentStep === 1 || action ? 'w-full' : 'flex-1'}`}
+            className={`h-12 text-base font-medium ${currentStep === 1 ? 'w-full' : 'flex-1'}`}
           >
             {isSubmitting ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -432,7 +443,7 @@ export default function BrokerLinkPage() {
             ) : (
               <>
                 التالي
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ArrowLeft className="w-4 h-4 ms-2" />
               </>
             )}
           </Button>
@@ -449,7 +460,7 @@ function PageSkeleton() {
         <Skeleton className="h-6 w-32" />
       </div>
       <div className="p-3 border-b">
-        <Skeleton className="h-12 w-full max-w-sm mx-auto" />
+        <Skeleton className="h-14 w-full max-w-xs mx-auto" />
       </div>
       <div className="p-4">
         <div className="max-w-sm mx-auto space-y-4">

@@ -282,3 +282,153 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
     return { success: false, message: `فشل رفض السحب: ${errorMessage}` };
   }
 }
+
+/**
+ * Admin Balance Adjustment - Decrease user balance
+ * 
+ * This function creates a completed withdrawal record to decrease user balance.
+ * It follows the same financial flow as regular withdrawals:
+ * 1. Creates withdrawal in 'processing' state (increases pending_withdrawals)
+ * 2. Immediately completes it (decreases pending_withdrawals, increases total_withdrawn)
+ * 
+ * The withdrawal is marked as 'admin_adjustment' to distinguish from user withdrawals.
+ */
+export async function createAdminBalanceAdjustment(
+  userId: string,
+  amount: number,
+  reason: string
+): Promise<{ success: boolean; message: string; withdrawalId?: string }> {
+  try {
+    if (!userId || !amount || amount <= 0) {
+      return { success: false, message: 'معرف المستخدم والمبلغ مطلوبان' };
+    }
+
+    if (!reason || !reason.trim()) {
+      return { success: false, message: 'سبب التعديل مطلوب' };
+    }
+
+    const supabase = await createAdminClient();
+
+    // Check user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return { success: false, message: 'المستخدم غير موجود' };
+    }
+
+    // Check user has sufficient balance
+    const { getUserBalanceAdmin } = await import('@/app/actions/ledger');
+    const balanceResult = await getUserBalanceAdmin(userId);
+    
+    if (!balanceResult.success) {
+      return { success: false, message: 'فشل التحقق من رصيد المستخدم' };
+    }
+
+    if (balanceResult.balance.available_balance < amount) {
+      return { 
+        success: false, 
+        message: `الرصيد المتاح غير كافٍ. الرصيد الحالي: ${balanceResult.balance.available_balance.toFixed(2)}$` 
+      };
+    }
+
+    // Create withdrawal record marked as admin adjustment
+    const { data: withdrawal, error: insertError } = await supabase
+      .from('withdrawals')
+      .insert({
+        user_id: userId,
+        amount: amount,
+        status: 'Processing',
+        payment_method: 'تعديل إداري',
+        withdrawal_details: {
+          type: 'admin_adjustment',
+          reason: reason,
+          adjusted_by: 'admin'
+        },
+        requested_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError || !withdrawal) {
+      console.error('Error creating adjustment withdrawal:', insertError);
+      return { success: false, message: 'فشل إنشاء سجل التعديل' };
+    }
+
+    // Step 1: Create withdrawal in ledger (increases pending_withdrawals)
+    const { createWithdrawal } = await import('@/lib/ledger/service');
+    try {
+      await createWithdrawal({
+        userId,
+        amount,
+        referenceId: withdrawal.id,
+        metadata: {
+          type: 'admin_adjustment',
+          reason: reason,
+          _actor_id: userId,
+          _actor_action: 'admin_balance_adjustment'
+        }
+      });
+    } catch (ledgerError) {
+      // Rollback withdrawal record
+      await supabase.from('withdrawals').delete().eq('id', withdrawal.id);
+      console.error('Error creating ledger withdrawal:', ledgerError);
+      return { success: false, message: 'فشل تحديث النظام المحاسبي' };
+    }
+
+    // Step 2: Complete withdrawal in ledger (decreases pending, increases withdrawn)
+    const { changeWithdrawalStatusInLedger } = await import('@/app/actions/ledger');
+    const ledgerResult = await changeWithdrawalStatusInLedger(
+      userId,
+      withdrawal.id,
+      'processing',
+      'completed',
+      amount,
+      { 
+        type: 'admin_adjustment',
+        reason: reason,
+        _actor_action: 'admin_balance_adjustment_complete'
+      }
+    );
+
+    if (!ledgerResult.success) {
+      // Mark withdrawal as failed if ledger update fails
+      await supabase
+        .from('withdrawals')
+        .update({ status: 'Failed', rejection_reason: 'فشل في النظام المحاسبي' })
+        .eq('id', withdrawal.id);
+      return { success: false, message: ledgerResult.error || 'فشل إكمال التعديل في النظام المحاسبي' };
+    }
+
+    // Update withdrawal record to completed
+    const { error: updateError } = await supabase
+      .from('withdrawals')
+      .update({
+        status: 'Completed',
+        completed_at: new Date().toISOString(),
+        tx_id: `ADJ-${Date.now()}`
+      })
+      .eq('id', withdrawal.id);
+
+    if (updateError) {
+      console.error('Error updating withdrawal status:', updateError);
+    }
+
+    // Create notification for user
+    const message = `تم خصم مبلغ ${amount.toFixed(2)}$ من رصيدك. السبب: ${reason}`;
+    await createNotification(userId, message, 'withdrawal', '/dashboard/withdraw');
+
+    return { 
+      success: true, 
+      message: `تم خصم ${amount.toFixed(2)}$ من رصيد المستخدم بنجاح`,
+      withdrawalId: withdrawal.id
+    };
+  } catch (error) {
+    console.error('Error creating admin balance adjustment:', error);
+    const errorMessage = error instanceof Error ? error.message : 'حدث خطأ غير متوقع';
+    return { success: false, message: errorMessage };
+  }
+}

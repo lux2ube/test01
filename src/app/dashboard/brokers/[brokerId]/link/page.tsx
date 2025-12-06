@@ -185,7 +185,7 @@ export default function BrokerLinkPage() {
   const existingData = getExistingData();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b bg-card sticky top-0 z-10">
         <Link href={`/dashboard/brokers/${brokerId}`} className="p-1 text-muted-foreground hover:text-foreground">
@@ -227,8 +227,8 @@ export default function BrokerLinkPage() {
         </div>
       </div>
 
-      {/* Main Content - with bottom padding for fixed footer */}
-      <div className="flex-1 p-4 pb-28 overflow-auto">
+      {/* Main Content */}
+      <div className="p-4">
         <div className="max-w-sm mx-auto">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(processForm)} className="space-y-4">
@@ -350,7 +350,6 @@ export default function BrokerLinkPage() {
                       </div>
                     </div>
                   ) : (
-                    /* Existing Account Instructions - Vertical Stack for Mobile */
                     <div className="p-4 rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-2">
@@ -411,42 +410,42 @@ export default function BrokerLinkPage() {
                   </div>
                 </div>
               )}
+
+              {/* NAVIGATION BUTTONS - INLINE WITH CONTENT */}
+              <div className="pt-6 mt-6 border-t">
+                <div className="flex gap-3">
+                  {currentStep > 1 && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={prev}
+                      className="flex-1 h-14 text-base font-semibold"
+                    >
+                      <ArrowRight className="w-5 h-5 me-2" />
+                      السابق
+                    </Button>
+                  )}
+                  <Button 
+                    type="button" 
+                    onClick={next}
+                    disabled={isSubmitting || !canProceed()}
+                    className={`h-14 text-base font-semibold ${currentStep === 1 ? 'w-full' : 'flex-1'}`}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : currentStep === 3 ? (
+                      'إرسال الطلب'
+                    ) : (
+                      <>
+                        التالي
+                        <ArrowLeft className="w-5 h-5 ms-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </form>
           </Form>
-        </div>
-      </div>
-
-      {/* Fixed Bottom Navigation - Always Visible */}
-      <div className="fixed inset-x-0 bottom-0 z-30 bg-background/95 backdrop-blur border-t p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-        <div className="max-w-sm mx-auto flex gap-3">
-          {currentStep > 1 && (
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={prev}
-              className="flex-1 h-12 text-base font-medium"
-            >
-              <ArrowRight className="w-4 h-4 me-2" />
-              السابق
-            </Button>
-          )}
-          <Button 
-            type="button" 
-            onClick={next}
-            disabled={isSubmitting || !canProceed()}
-            className={`h-12 text-base font-medium ${currentStep === 1 ? 'w-full' : 'flex-1'}`}
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : currentStep === 3 ? (
-              'إرسال الطلب'
-            ) : (
-              <>
-                التالي
-                <ArrowLeft className="w-4 h-4 ms-2" />
-              </>
-            )}
-          </Button>
         </div>
       </div>
     </div>
@@ -466,6 +465,7 @@ function PageSkeleton() {
         <div className="max-w-sm mx-auto space-y-4">
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-14 w-full mt-6" />
         </div>
       </div>
     </div>

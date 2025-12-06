@@ -100,7 +100,7 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                             <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
                                 ${minDeposit}
                             </span>
-                            {platforms.slice(0, 2).map((platform, index) => (
+                            {platforms.slice(0, 3).map((platform, index) => (
                                 <span 
                                     key={index} 
                                     className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
@@ -108,20 +108,22 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                                     {platform}
                                 </span>
                             ))}
-                            {activeFeatures.slice(0, 3).map((feature) => (
-                                <span 
-                                    key={feature} 
-                                    className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                >
-                                    {featureLabels[feature]}
-                                </span>
-                            ))}
-                            {(platforms.length > 2 || activeFeatures.length > 3) && (
-                                <span className="flex-shrink-0 text-[10px] text-muted-foreground">
-                                    +{Math.max(0, platforms.length - 2) + Math.max(0, activeFeatures.length - 3)}
-                                </span>
+                            {platforms.length > 3 && (
+                                <span className="flex-shrink-0 text-[10px] text-muted-foreground">+{platforms.length - 3}</span>
                             )}
                         </div>
+                        {activeFeatures.length > 0 && (
+                            <div className="flex items-center gap-1.5 mt-1 overflow-x-auto scrollbar-hide">
+                                {activeFeatures.map((feature) => (
+                                    <span 
+                                        key={feature} 
+                                        className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    >
+                                        {featureLabels[feature]}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     
                     <div className="flex-shrink-0">

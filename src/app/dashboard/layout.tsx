@@ -140,7 +140,7 @@ const settingsLinks = [
     { href: "/dashboard/profile", icon: User, label: "الملف الشخصي", description: "تعديل معلوماتك الشخصية." },
     { href: "/dashboard/settings/verification", icon: ShieldCheck, label: "التحقق", description: "أكمل KYC وافتح الميزات." },
     { href: "/dashboard/settings/security", icon: Lock, label: "الأمان", description: "إدارة كلمة المرور والمصادقة الثنائية." },
-    { href: "/dashboard/settings/activity-logs", icon: Activity, label: "سجلات النشاط", description: "مراجعة نشاط الحساب الأخير." },
+    { href: "/dashboard/settings/activity-logs", icon: Activity, label: "سجل تسجيل الدخول", description: "عمليات تسجيل الدخول الأخيرة." },
 ];
 
 const WhatsAppIcon = () => (

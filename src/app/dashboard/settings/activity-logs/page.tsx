@@ -50,11 +50,11 @@ export default function UserActivityLogsPage() {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="نشاطك" description="سجل بالأحداث الأخيرة المتعلقة بالأمان." />
+            <PageHeader title="سجل تسجيل الدخول" description="آخر 20 عملية تسجيل دخول لحسابك." />
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">الأحداث الأخيرة</CardTitle>
+                    <CardTitle className="text-base">عمليات تسجيل الدخول الأخيرة</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {isLoading ? (

@@ -448,7 +448,9 @@ export async function getUserActivityLogs(userId: string): Promise<ActivityLog[]
     .from('activity_logs')
     .select('*')
     .eq('user_id', userId)
-    .order('timestamp', { ascending: false });
+    .eq('event', 'login')
+    .order('timestamp', { ascending: false })
+    .limit(20);
 
   if (error) {
     console.error('Error fetching activity logs:', error);

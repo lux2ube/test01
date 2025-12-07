@@ -217,22 +217,33 @@ export async function addDeposit(params: AddDepositParams): Promise<TransactionR
     throw new Error(`Stored procedure failed: ${result.error_message}`);
   }
 
-  // Fetch the created records from database to ensure audit trail integrity
+  // Fetch the created records from database using IDs returned by stored procedure
   const [transaction, account, immutableEvent, auditLog] = await Promise.all([
     supabase.from('transactions').select('*').eq('id', result.transaction_id).single(),
     supabase.from('accounts').select('*').eq('user_id', params.userId).single(),
-    supabase.from('immutable_events').select('*').eq('transaction_id', result.transaction_id).single(),
-    supabase.from('audit_logs').select('*').eq('resource_id', params.referenceId).order('created_at', { ascending: false }).limit(1).single(),
+    result.event_id 
+      ? supabase.from('immutable_events').select('*').eq('id', result.event_id).single()
+      : Promise.resolve({ data: null, error: null }),
+    result.audit_id
+      ? supabase.from('audit_logs').select('*').eq('id', result.audit_id).single()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (transaction.error || account.error) {
     throw new Error('Failed to fetch created records');
   }
 
+  if (!immutableEvent.data || !auditLog.data) {
+    console.warn('🟡 [LEDGER] Missing audit trail records:', {
+      event: !!immutableEvent.data,
+      audit: !!auditLog.data,
+    });
+  }
+
   return {
     transaction: transaction.data as Transaction,
-    event: (immutableEvent.data || { id: result.transaction_id }) as ImmutableEvent,
-    audit_log: (auditLog.data || { id: result.transaction_id }) as AuditLog,
+    event: immutableEvent.data as ImmutableEvent,
+    audit_log: auditLog.data as AuditLog,
     updated_account: account.data as Account,
   };
 }

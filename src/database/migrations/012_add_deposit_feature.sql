@@ -31,6 +31,8 @@ CREATE OR REPLACE FUNCTION ledger_add_deposit(
 RETURNS TABLE (
     success BOOLEAN,
     transaction_id UUID,
+    event_id UUID,
+    audit_id UUID,
     error_message TEXT,
     new_total_deposit NUMERIC(12, 2)
 ) AS $$
@@ -43,7 +45,7 @@ DECLARE
 BEGIN
     -- Validate amount
     IF p_amount <= 0 THEN
-        RETURN QUERY SELECT FALSE, NULL::UUID, 'Amount must be positive'::TEXT, NULL::NUMERIC(12,2);
+        RETURN QUERY SELECT FALSE, NULL::UUID, NULL::UUID, NULL::UUID, 'Amount must be positive'::TEXT, NULL::NUMERIC(12,2);
         RETURN;
     END IF;
 
@@ -54,7 +56,7 @@ BEGIN
     FOR UPDATE;
 
     IF v_account_before IS NULL THEN
-        RETURN QUERY SELECT FALSE, NULL::UUID, format('Account not found for user %s', p_user_id)::TEXT, NULL::NUMERIC(12,2);
+        RETURN QUERY SELECT FALSE, NULL::UUID, NULL::UUID, NULL::UUID, format('Account not found for user %s', p_user_id)::TEXT, NULL::NUMERIC(12,2);
         RETURN;
     END IF;
 
@@ -102,7 +104,7 @@ BEGIN
     )
     RETURNING id INTO v_audit_id;
 
-    RETURN QUERY SELECT TRUE, v_transaction_id, NULL::TEXT, v_new_total_deposit;
+    RETURN QUERY SELECT TRUE, v_transaction_id, v_event_id, v_audit_id, NULL::TEXT, v_new_total_deposit;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

@@ -42,9 +42,10 @@ const featureLabels: Record<string, string> = {
 interface BrokerCardProps {
   broker: Broker;
   userCountry?: string;
+  filterCountries?: string[];
 }
 
-export function BrokerCard({ broker, userCountry }: BrokerCardProps) {
+export function BrokerCard({ broker, userCountry, filterCountries = [] }: BrokerCardProps) {
   if (!broker) {
     return null; 
   }
@@ -61,6 +62,8 @@ export function BrokerCard({ broker, userCountry }: BrokerCardProps) {
   
   const restrictedCountries = broker.globalReach?.restricted_countries || [];
   const isRestrictedInUserCountry = userCountry ? restrictedCountries.includes(userCountry) : false;
+  const isRestrictedInFilterCountries = filterCountries.length > 0 && filterCountries.some((c) => restrictedCountries.includes(c));
+  const hasRestriction = isRestrictedInUserCountry || isRestrictedInFilterCountries;
   
   const activeFeatures: string[] = [];
   if (broker.tradingConditions?.swap_free) activeFeatures.push('swap_free');
@@ -71,7 +74,7 @@ export function BrokerCard({ broker, userCountry }: BrokerCardProps) {
   if (broker.additionalFeatures?.welcome_bonus) activeFeatures.push('welcome_bonus');
   
   return (
-    <Card className={`w-full overflow-hidden hover:shadow-md transition-shadow duration-200 ${isRestrictedInUserCountry ? 'border-red-300 border-2' : 'border-border/60'}`}>
+    <Card className={`w-full overflow-hidden hover:shadow-md transition-shadow duration-200 ${hasRestriction ? 'border-red-300 border-2' : 'border-border/60'}`}>
         <CardContent className="p-0">
             <Link href={`/dashboard/brokers/${broker.id}`} className="block group">
                 <div className="flex items-center gap-3 p-3 border-b border-border/40">
@@ -142,11 +145,13 @@ export function BrokerCard({ broker, userCountry }: BrokerCardProps) {
                 </div>
             </Link>
             
-            {isRestrictedInUserCountry && (
+            {hasRestriction && (
               <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
                 <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
                 <span className="text-xs text-red-600 dark:text-red-400">
-                  هذا الوسيط قد لا يقبل عملاء من دولتك
+                  {isRestrictedInUserCountry 
+                    ? 'هذا الوسيط قد لا يقبل عملاء من دولتك'
+                    : 'هذا الوسيط غير متاح في بعض الدول المحددة'}
                 </span>
               </div>
             )}

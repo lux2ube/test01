@@ -409,7 +409,7 @@ export default function BrokersPage() {
   }, []);
 
   const filteredBrokers = useMemo(() => {
-    return allBrokers.filter((broker) => {
+    const filtered = allBrokers.filter((broker: Broker) => {
       const name = broker.name || "";
       if (!name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
@@ -467,18 +467,6 @@ export default function BrokersPage() {
         }
       }
 
-      if (filters.availableInCountries.length > 0) {
-        const restrictedCountries = broker.globalReach?.restricted_countries || [];
-        if (restrictedCountries.length > 0) {
-          const isAvailableInAllSelectedCountries = filters.availableInCountries.every(
-            (country) => !restrictedCountries.includes(country)
-          );
-          if (!isAvailableInAllSelectedCountries) {
-            return false;
-          }
-        }
-      }
-
       if (filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0) {
         const threshold = parseInt(filters.maxMinDeposit);
         const brokerDeposit = broker.tradingConditions?.min_deposit;
@@ -501,6 +489,22 @@ export default function BrokersPage() {
 
       return true;
     });
+
+    if (filters.availableInCountries.length > 0) {
+      filtered.sort((a: Broker, b: Broker) => {
+        const aRestricted = a.globalReach?.restricted_countries || [];
+        const bRestricted = b.globalReach?.restricted_countries || [];
+        
+        const aIsRestricted = filters.availableInCountries.some((c) => aRestricted.includes(c));
+        const bIsRestricted = filters.availableInCountries.some((c) => bRestricted.includes(c));
+        
+        if (aIsRestricted && !bIsRestricted) return 1;
+        if (!aIsRestricted && bIsRestricted) return -1;
+        return 0;
+      });
+    }
+
+    return filtered;
   }, [allBrokers, searchQuery, filters]);
 
   const clearAllFilters = () => {
@@ -532,7 +536,12 @@ export default function BrokersPage() {
     return (
       <div className="flex flex-col space-y-4">
         {brokers.map((broker) => (
-          <BrokerCard key={broker.id} broker={broker} userCountry={userCountry} />
+          <BrokerCard 
+            key={broker.id} 
+            broker={broker} 
+            userCountry={userCountry}
+            filterCountries={filters.availableInCountries}
+          />
         ))}
       </div>
     );

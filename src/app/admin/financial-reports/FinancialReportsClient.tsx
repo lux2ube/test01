@@ -24,6 +24,7 @@ import {
   getAvailableAccounts,
   getAvailableProducts,
   getReferralSourceTypes,
+  getWithdrawalPaymentMethods,
   getFilteredReport,
   getDetailedReport,
 } from './actions';
@@ -44,6 +45,7 @@ export default function FinancialReportsClient() {
   const [accounts, setAccounts] = useState<FilterOption[]>([]);
   const [products, setProducts] = useState<FilterOption[]>([]);
   const [referralSourceTypes, setReferralSourceTypes] = useState<FilterOption[]>([]);
+  const [withdrawalPaymentMethods, setWithdrawalPaymentMethods] = useState<FilterOption[]>([]);
   
   const [selectedRecordType, setSelectedRecordType] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
@@ -51,6 +53,7 @@ export default function FinancialReportsClient() {
   const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [selectedReferralSourceType, setSelectedReferralSourceType] = useState<string>('');
+  const [selectedWithdrawalPaymentMethod, setSelectedWithdrawalPaymentMethod] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   
@@ -77,18 +80,20 @@ export default function FinancialReportsClient() {
     async function loadInitialData() {
       setIsLoadingFilters(true);
       try {
-        const [types, usersData, brokersData, productsData, referralTypes] = await Promise.all([
+        const [types, usersData, brokersData, productsData, referralTypes, paymentMethods] = await Promise.all([
           getAvailableRecordTypes(),
           getAvailableUsers(),
           getAvailableBrokers(),
           getAvailableProducts(),
           getReferralSourceTypes(),
+          getWithdrawalPaymentMethods(),
         ]);
         setRecordTypes(types);
         setUsers(usersData);
         setBrokers(brokersData);
         setProducts(productsData);
         setReferralSourceTypes(referralTypes);
+        setWithdrawalPaymentMethods(paymentMethods);
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
@@ -153,6 +158,9 @@ export default function FinancialReportsClient() {
         referralSourceType: selectedReferralSourceType && selectedReferralSourceType !== 'all' 
           ? selectedReferralSourceType as 'cashback' | 'store_purchase' 
           : undefined,
+        withdrawalPaymentMethod: selectedWithdrawalPaymentMethod && selectedWithdrawalPaymentMethod !== 'all' 
+          ? selectedWithdrawalPaymentMethod 
+          : undefined,
       };
       
       const reportResult = await getFilteredReport(filters);
@@ -172,6 +180,7 @@ export default function FinancialReportsClient() {
     setSelectedAccount('');
     setSelectedProduct('');
     setSelectedReferralSourceType('');
+    setSelectedWithdrawalPaymentMethod('');
     setDateFrom('');
     setDateTo('');
     setUserSearch('');
@@ -198,6 +207,9 @@ export default function FinancialReportsClient() {
         productId: selectedProduct && selectedProduct !== 'all' ? selectedProduct : undefined,
         referralSourceType: selectedReferralSourceType && selectedReferralSourceType !== 'all' 
           ? selectedReferralSourceType as 'cashback' | 'store_purchase' 
+          : undefined,
+        withdrawalPaymentMethod: selectedWithdrawalPaymentMethod && selectedWithdrawalPaymentMethod !== 'all' 
+          ? selectedWithdrawalPaymentMethod 
           : undefined,
       };
       
@@ -229,6 +241,7 @@ export default function FinancialReportsClient() {
       status: 'الحالة',
       sourceType: 'المصدر',
       referredUserName: 'المستخدم المُحال',
+      paymentMethod: 'طريقة الدفع',
     };
     
     const getRelevantHeaders = (): string[] => {
@@ -243,7 +256,7 @@ export default function FinancialReportsClient() {
           return baseHeaders;
         case 'withdrawal_completed':
         case 'withdrawal_processing':
-          return baseHeaders;
+          return [...baseHeaders, 'paymentMethod'];
         case 'order_created':
           return [...baseHeaders, 'productName', 'status'];
         default:
@@ -453,6 +466,27 @@ export default function FinancialReportsClient() {
               </div>
             )}
 
+            {(selectedRecordType === 'withdrawal_completed' || selectedRecordType === 'withdrawal_processing') && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  طريقة الدفع
+                </Label>
+                <Select value={selectedWithdrawalPaymentMethod} onValueChange={setSelectedWithdrawalPaymentMethod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="جميع طرق الدفع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {withdrawalPaymentMethods.map((method) => (
+                      <SelectItem key={method.value} value={method.value}>
+                        {method.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -536,6 +570,7 @@ export default function FinancialReportsClient() {
                     {result.appliedFilters.account && <span className="font-medium"> | الحساب: {result.appliedFilters.account}</span>}
                     {result.appliedFilters.product && <span className="font-medium"> | المنتج: {result.appliedFilters.product}</span>}
                     {result.appliedFilters.referralSourceType && <span className="font-medium"> | المصدر: {result.appliedFilters.referralSourceType}</span>}
+                    {result.appliedFilters.paymentMethod && <span className="font-medium"> | طريقة الدفع: {result.appliedFilters.paymentMethod}</span>}
                     {result.appliedFilters.period && <span className="font-medium"> | الفترة: {result.appliedFilters.period}</span>}
                   </CardDescription>
                 )}
@@ -676,6 +711,9 @@ export default function FinancialReportsClient() {
                                 <TableHead className="text-right">الحالة</TableHead>
                               </>
                             )}
+                            {(selectedRecordType === 'withdrawal_completed' || selectedRecordType === 'withdrawal_processing') && (
+                              <TableHead className="text-right">طريقة الدفع</TableHead>
+                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -710,6 +748,9 @@ export default function FinancialReportsClient() {
                                   <TableCell>{record.productName || '-'}</TableCell>
                                   <TableCell>{record.status || '-'}</TableCell>
                                 </>
+                              )}
+                              {(selectedRecordType === 'withdrawal_completed' || selectedRecordType === 'withdrawal_processing') && (
+                                <TableCell>{record.paymentMethod || '-'}</TableCell>
                               )}
                             </TableRow>
                           ))}

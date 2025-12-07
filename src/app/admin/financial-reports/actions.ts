@@ -16,6 +16,7 @@ export interface ReportFilters {
   dateTo?: string;
   productId?: string;
   referralSourceType?: 'cashback' | 'store_purchase' | 'all';
+  withdrawalPaymentMethod?: string;
 }
 
 export interface FilteredReportResult {
@@ -29,6 +30,7 @@ export interface FilteredReportResult {
     period?: string;
     product?: string;
     referralSourceType?: string;
+    paymentMethod?: string;
   };
 }
 
@@ -44,6 +46,7 @@ export interface DetailedRecord {
   status?: string;
   sourceType?: string;
   referredUserName?: string;
+  paymentMethod?: string;
 }
 
 export interface DetailedReportResult {
@@ -166,6 +169,36 @@ export async function getReferralSourceTypes(): Promise<FilterOption[]> {
   ];
 }
 
+export async function getWithdrawalPaymentMethods(): Promise<FilterOption[]> {
+  const supabase = await createAdminClient();
+  
+  const { data, error } = await supabase
+    .from('withdrawals')
+    .select('payment_method')
+    .not('payment_method', 'is', null);
+  
+  if (error || !data) {
+    console.error('Error fetching withdrawal payment methods:', error);
+    return [];
+  }
+  
+  const uniqueMethods = [...new Set(data.map(d => d.payment_method).filter(Boolean))];
+  
+  const options: FilterOption[] = [
+    { value: 'all', label: 'الكل' },
+    { value: 'admin_adjustment', label: 'تعديل إداري' },
+  ];
+  
+  uniqueMethods
+    .filter(m => m !== 'تعديل إداري')
+    .sort()
+    .forEach(method => {
+      options.push({ value: method, label: method });
+    });
+  
+  return options;
+}
+
 export async function getFilteredReport(filters: ReportFilters): Promise<FilteredReportResult> {
   const supabase = await createAdminClient();
   
@@ -218,6 +251,14 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
   
   if (filters.referralSourceType && filters.referralSourceType !== 'all') {
     appliedFilters.referralSourceType = filters.referralSourceType === 'cashback' ? 'من الكاش باك' : 'من المتجر';
+  }
+  
+  if (filters.withdrawalPaymentMethod && filters.withdrawalPaymentMethod !== 'all') {
+    if (filters.withdrawalPaymentMethod === 'admin_adjustment') {
+      appliedFilters.paymentMethod = 'تعديل إداري';
+    } else {
+      appliedFilters.paymentMethod = filters.withdrawalPaymentMethod;
+    }
   }
   
   if (filters.recordType === 'cashback') {
@@ -330,7 +371,7 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
   } else if (filters.recordType === 'withdrawal_completed') {
     let query = supabase
       .from('withdrawals')
-      .select('id, amount, user_id, requested_at, completed_at')
+      .select('id, amount, user_id, requested_at, completed_at, payment_method')
       .eq('status', 'Completed');
     
     if (filters.userId) {
@@ -345,6 +386,14 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
       query = query.lte('completed_at', filters.dateTo);
     }
     
+    if (filters.withdrawalPaymentMethod && filters.withdrawalPaymentMethod !== 'all') {
+      if (filters.withdrawalPaymentMethod === 'admin_adjustment') {
+        query = query.eq('payment_method', 'تعديل إداري');
+      } else {
+        query = query.eq('payment_method', filters.withdrawalPaymentMethod);
+      }
+    }
+    
     const { data, error } = await query;
     
     if (!error && data) {
@@ -354,7 +403,7 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
   } else if (filters.recordType === 'withdrawal_processing') {
     let query = supabase
       .from('withdrawals')
-      .select('id, amount, user_id, requested_at')
+      .select('id, amount, user_id, requested_at, payment_method')
       .eq('status', 'Processing');
     
     if (filters.userId) {
@@ -367,6 +416,14 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
     
     if (filters.dateTo) {
       query = query.lte('requested_at', filters.dateTo);
+    }
+    
+    if (filters.withdrawalPaymentMethod && filters.withdrawalPaymentMethod !== 'all') {
+      if (filters.withdrawalPaymentMethod === 'admin_adjustment') {
+        query = query.eq('payment_method', 'تعديل إداري');
+      } else {
+        query = query.eq('payment_method', filters.withdrawalPaymentMethod);
+      }
     }
     
     const { data, error } = await query;
@@ -587,6 +644,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         amount, 
         requested_at, 
         completed_at,
+        payment_method,
         user_id,
         users!withdrawals_user_id_fkey(name, email)
       `)
@@ -605,6 +663,14 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
       query = query.lte('completed_at', filters.dateTo);
     }
     
+    if (filters.withdrawalPaymentMethod && filters.withdrawalPaymentMethod !== 'all') {
+      if (filters.withdrawalPaymentMethod === 'admin_adjustment') {
+        query = query.eq('payment_method', 'تعديل إداري');
+      } else {
+        query = query.eq('payment_method', filters.withdrawalPaymentMethod);
+      }
+    }
+    
     const { data, error } = await query;
     
     if (!error && data) {
@@ -618,6 +684,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
           amount,
           userName: user?.name || undefined,
           userEmail: user?.email,
+          paymentMethod: tx.payment_method,
         });
       }
     }
@@ -628,6 +695,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         id, 
         amount, 
         requested_at,
+        payment_method,
         user_id,
         users!withdrawals_user_id_fkey(name, email)
       `)
@@ -646,6 +714,14 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
       query = query.lte('requested_at', filters.dateTo);
     }
     
+    if (filters.withdrawalPaymentMethod && filters.withdrawalPaymentMethod !== 'all') {
+      if (filters.withdrawalPaymentMethod === 'admin_adjustment') {
+        query = query.eq('payment_method', 'تعديل إداري');
+      } else {
+        query = query.eq('payment_method', filters.withdrawalPaymentMethod);
+      }
+    }
+    
     const { data, error } = await query;
     
     if (!error && data) {
@@ -659,6 +735,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
           amount,
           userName: user?.name || undefined,
           userEmail: user?.email,
+          paymentMethod: tx.payment_method,
         });
       }
     }

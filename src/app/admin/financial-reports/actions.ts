@@ -32,6 +32,27 @@ export interface FilteredReportResult {
   };
 }
 
+export interface DetailedRecord {
+  id: string;
+  date: string;
+  amount: number;
+  userName?: string;
+  userEmail?: string;
+  broker?: string;
+  accountNumber?: string;
+  productName?: string;
+  status?: string;
+  sourceType?: string;
+  referredUserName?: string;
+}
+
+export interface DetailedReportResult {
+  records: DetailedRecord[];
+  total: number;
+  count: number;
+  recordType: string;
+}
+
 export async function getAvailableRecordTypes(): Promise<FilterOption[]> {
   return [
     { value: 'cashback', label: 'الكاش باك' },
@@ -388,5 +409,315 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
     count,
     recordType: filters.recordType,
     appliedFilters,
+  };
+}
+
+export async function getDetailedReport(filters: ReportFilters): Promise<DetailedReportResult> {
+  const supabase = await createAdminClient();
+  
+  const records: DetailedRecord[] = [];
+  let total = 0;
+  
+  if (filters.recordType === 'cashback') {
+    let query = supabase
+      .from('cashback_transactions')
+      .select(`
+        id, 
+        cashback_amount, 
+        date, 
+        broker,
+        user_id,
+        account_id,
+        users!cashback_transactions_user_id_fkey(name, email),
+        trading_accounts!cashback_transactions_account_id_fkey(account_number)
+      `)
+      .order('date', { ascending: false });
+    
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+    
+    if (filters.broker) {
+      query = query.eq('broker', filters.broker);
+    }
+    
+    if (filters.accountId) {
+      query = query.eq('account_id', filters.accountId);
+    }
+    
+    if (filters.dateFrom) {
+      query = query.gte('date', filters.dateFrom);
+    }
+    
+    if (filters.dateTo) {
+      query = query.lte('date', filters.dateTo);
+    }
+    
+    const { data, error } = await query;
+    
+    if (!error && data) {
+      for (const tx of data) {
+        const amount = parseFloat(tx.cashback_amount || '0');
+        total += amount;
+        const user = tx.users as { name: string | null; email: string } | null;
+        const account = tx.trading_accounts as { account_number: string } | null;
+        records.push({
+          id: tx.id,
+          date: tx.date,
+          amount,
+          userName: user?.name || undefined,
+          userEmail: user?.email,
+          broker: tx.broker,
+          accountNumber: account?.account_number,
+        });
+      }
+    }
+  } else if (filters.recordType === 'referral') {
+    let query = supabase
+      .from('transactions')
+      .select(`
+        id, 
+        amount, 
+        created_at, 
+        metadata,
+        user_id,
+        users!transactions_user_id_fkey(name, email)
+      `)
+      .eq('type', 'referral_commission')
+      .order('created_at', { ascending: false });
+    
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+    
+    if (filters.dateFrom) {
+      query = query.gte('created_at', filters.dateFrom);
+    }
+    
+    if (filters.dateTo) {
+      query = query.lte('created_at', filters.dateTo);
+    }
+    
+    const { data, error } = await query;
+    
+    if (!error && data) {
+      for (const tx of data) {
+        const metadata = tx.metadata as Record<string, any> | null;
+        
+        if (filters.broker) {
+          if (!metadata || metadata.broker !== filters.broker) {
+            continue;
+          }
+        }
+        
+        if (filters.accountId) {
+          if (!metadata || metadata.account_id !== filters.accountId) {
+            continue;
+          }
+        }
+        
+        if (filters.referralSourceType && filters.referralSourceType !== 'all') {
+          if (!metadata || metadata.source_type !== filters.referralSourceType) {
+            continue;
+          }
+        }
+        
+        const amount = parseFloat(tx.amount || '0');
+        total += amount;
+        const user = tx.users as { name: string | null; email: string } | null;
+        records.push({
+          id: tx.id,
+          date: tx.created_at,
+          amount,
+          userName: user?.name || undefined,
+          userEmail: user?.email,
+          broker: metadata?.broker,
+          accountNumber: metadata?.account_number,
+          sourceType: metadata?.source_type === 'cashback' ? 'من الكاش باك' : metadata?.source_type === 'store_purchase' ? 'من المتجر' : undefined,
+          referredUserName: metadata?.referred_user_name,
+        });
+      }
+    }
+  } else if (filters.recordType === 'deposit') {
+    let query = supabase
+      .from('transactions')
+      .select(`
+        id, 
+        amount, 
+        created_at,
+        user_id,
+        users!transactions_user_id_fkey(name, email)
+      `)
+      .eq('type', 'deposit')
+      .order('created_at', { ascending: false });
+    
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+    
+    if (filters.dateFrom) {
+      query = query.gte('created_at', filters.dateFrom);
+    }
+    
+    if (filters.dateTo) {
+      query = query.lte('created_at', filters.dateTo);
+    }
+    
+    const { data, error } = await query;
+    
+    if (!error && data) {
+      for (const tx of data) {
+        const amount = parseFloat(tx.amount || '0');
+        total += amount;
+        const user = tx.users as { name: string | null; email: string } | null;
+        records.push({
+          id: tx.id,
+          date: tx.created_at,
+          amount,
+          userName: user?.name || undefined,
+          userEmail: user?.email,
+        });
+      }
+    }
+  } else if (filters.recordType === 'withdrawal_completed') {
+    let query = supabase
+      .from('withdrawals')
+      .select(`
+        id, 
+        amount, 
+        requested_at, 
+        completed_at,
+        user_id,
+        users!withdrawals_user_id_fkey(name, email)
+      `)
+      .eq('status', 'Completed')
+      .order('completed_at', { ascending: false });
+    
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+    
+    if (filters.dateFrom) {
+      query = query.gte('completed_at', filters.dateFrom);
+    }
+    
+    if (filters.dateTo) {
+      query = query.lte('completed_at', filters.dateTo);
+    }
+    
+    const { data, error } = await query;
+    
+    if (!error && data) {
+      for (const tx of data) {
+        const amount = parseFloat(tx.amount || '0');
+        total += amount;
+        const user = tx.users as { name: string | null; email: string } | null;
+        records.push({
+          id: tx.id,
+          date: tx.completed_at || tx.requested_at,
+          amount,
+          userName: user?.name || undefined,
+          userEmail: user?.email,
+        });
+      }
+    }
+  } else if (filters.recordType === 'withdrawal_processing') {
+    let query = supabase
+      .from('withdrawals')
+      .select(`
+        id, 
+        amount, 
+        requested_at,
+        user_id,
+        users!withdrawals_user_id_fkey(name, email)
+      `)
+      .eq('status', 'Processing')
+      .order('requested_at', { ascending: false });
+    
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+    
+    if (filters.dateFrom) {
+      query = query.gte('requested_at', filters.dateFrom);
+    }
+    
+    if (filters.dateTo) {
+      query = query.lte('requested_at', filters.dateTo);
+    }
+    
+    const { data, error } = await query;
+    
+    if (!error && data) {
+      for (const tx of data) {
+        const amount = parseFloat(tx.amount || '0');
+        total += amount;
+        const user = tx.users as { name: string | null; email: string } | null;
+        records.push({
+          id: tx.id,
+          date: tx.requested_at,
+          amount,
+          userName: user?.name || undefined,
+          userEmail: user?.email,
+        });
+      }
+    }
+  } else if (filters.recordType === 'order_created') {
+    let query = supabase
+      .from('orders')
+      .select(`
+        id, 
+        product_price, 
+        created_at, 
+        status,
+        user_id,
+        product_id,
+        users!orders_user_id_fkey(name, email),
+        products!orders_product_id_fkey(name)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+    
+    if (filters.productId) {
+      query = query.eq('product_id', filters.productId);
+    }
+    
+    if (filters.dateFrom) {
+      query = query.gte('created_at', filters.dateFrom);
+    }
+    
+    if (filters.dateTo) {
+      query = query.lte('created_at', filters.dateTo);
+    }
+    
+    const { data, error } = await query;
+    
+    if (!error && data) {
+      for (const order of data) {
+        const amount = parseFloat(order.product_price || '0');
+        total += amount;
+        const user = order.users as { name: string | null; email: string } | null;
+        const product = order.products as { name: string } | null;
+        records.push({
+          id: order.id,
+          date: order.created_at,
+          amount,
+          userName: user?.name || undefined,
+          userEmail: user?.email,
+          productName: product?.name,
+          status: order.status,
+        });
+      }
+    }
+  }
+  
+  return {
+    records,
+    total,
+    count: records.length,
+    recordType: filters.recordType,
   };
 }

@@ -250,7 +250,7 @@ export default function PublicBrokerDetailPage() {
                             </Button>
                         )}
                         <Button asChild>
-                            <Link href={`/login?next=/dashboard/brokers/${brokerId}`}>
+                            <Link href={`/login?next=/dashboard/brokers/${brokerId}/link`}>
                                 <Gift className="h-4 w-4 ml-2" />
                                 احصل على كاش باك
                             </Link>

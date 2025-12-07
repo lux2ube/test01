@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { getClientLevels, getUserReferralData } from '@/app/actions';
 import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
+import { siteConfig } from '@/lib/site-config';
 
 type ReferralInfo = Pick<UserProfile, 'id' | 'name' | 'createdAt' | 'status'>;
 
@@ -272,9 +273,9 @@ export default function ReferralsPage() {
     };
     
      const handleShare = () => {
-        const shareText = `أنا أستخدم رفيق الكاش باك لكسب المال على تداولاتي. استخدم الكود الخاص بي '${referralCode}' عند التسجيل!`;
+        const shareText = `أنا أستخدم ${siteConfig.name} لكسب المال على تداولاتي. استخدم الكود الخاص بي '${referralCode}' عند التسجيل!`;
         const shareData = {
-            title: 'انضم إلى رفيق الكاش باك!',
+            title: `انضم إلى ${siteConfig.name}!`,
             text: shareText,
             url: referralLink,
         };

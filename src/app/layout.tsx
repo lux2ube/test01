@@ -1,9 +1,9 @@
-
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { Inter, Cairo, Tajawal } from 'next/font/google';
 import { cn } from '@/lib/utils';
+import { siteConfig } from '@/lib/site-config';
 
 const fontBody = Inter({
   subsets: ['latin'],
@@ -22,8 +22,9 @@ const fontArabic = Tajawal({
 });
 
 export const metadata: Metadata = {
-  title: 'رفيق الكاش باك',
-  description: 'تحليلات مدعومة بالذكاء الاصطناعي لمشروع Cashback1 على GitHub.',
+  title: siteConfig.seo.title,
+  description: siteConfig.description,
+  keywords: [...siteConfig.seo.keywords],
 };
 
 export default function RootLayout({

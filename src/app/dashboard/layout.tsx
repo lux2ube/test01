@@ -52,6 +52,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { siteConfig } from "@/lib/site-config";
 
 
 function NotificationBell() {
@@ -409,7 +410,7 @@ function DesktopSidebar() {
                     <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                         <svg className="w-6 h-6 text-primary-foreground" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"></path><path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
                     </div>
-                    <span className="font-headline text-lg">رفيق الكاش باك</span>
+                    <span className="font-headline text-lg">{siteConfig.name}</span>
                 </Link>
 
                 <nav className="flex-1 space-y-2">

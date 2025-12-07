@@ -10,62 +10,8 @@ import Image from 'next/image';
 import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
 import { AnimatedCard } from "@/components/shared/AnimatedCard";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-
-function Footer() {
-    return (
-        <footer className="w-full border-t bg-gradient-to-br from-primary/10 via-background to-background text-foreground">
-             <div className="max-w-5xl mx-auto px-4 py-8">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-8 text-center md:text-left">
-                  <div className="col-span-2 md:col-span-1">
-                      <Link href="/" className="flex items-center justify-center md:justify-start gap-2 font-semibold">
-                          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                              <svg className="w-6 h-6 text-primary-foreground" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"></path><path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
-                          </div>
-                          <span className="font-headline text-lg">رفيق الكاش باك</span>
-                      </Link>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        اكسب كاش باك في كل مرة تتداول.
-                      </p>
-                  </div>
-                  <div>
-                      <h3 className="font-semibold mb-2 font-headline">روابط سريعة</h3>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                          <li><Link href="/about" className="hover:text-primary">من نحن</Link></li>
-                          <li><Link href="/contact" className="hover:text-primary">اتصل بنا</Link></li>
-                          <li><Link href="/help" className="hover:text-primary">مركز المساعدة</Link></li>
-                      </ul>
-                  </div>
-                  <div>
-                      <h3 className="font-semibold mb-2 font-headline">الحساب</h3>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                          <li><Link href="/login" className="hover:text-primary">تسجيل الدخول</Link></li>
-                          <li><Link href="/register" className="hover:text-primary">إنشاء حساب</Link></li>
-                          <li><Link href="/dashboard" className="hover:text-primary">لوحة التحكم</Link></li>
-                      </ul>
-                  </div>
-                   <div>
-                      <h3 className="font-semibold mb-2 font-headline">قانوني</h3>
-                       <ul className="space-y-1 text-sm text-muted-foreground">
-                          <li><Link href="/privacy" className="hover:text-primary">سياسة الخصوصية</Link></li>
-                          <li><Link href="/terms" className="hover:text-primary">شروط الخدمة</Link></li>
-                      </ul>
-                  </div>
-                   <div>
-                        <h3 className="font-semibold mb-2 font-headline">تابعنا</h3>
-                        <div className="flex justify-center md:justify-start gap-4">
-                            <Link href="#" className="text-muted-foreground hover:text-primary"><svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></Link>
-                            <Link href="#" className="text-muted-foreground hover:text-primary"><svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path></svg></Link>
-                            <Link href="#" className="text-muted-foreground hover:text-primary"><svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg></Link>
-                        </div>
-                   </div>
-              </div>
-              <div className="text-center text-xs text-muted-foreground pt-8 mt-8 border-t">
-                  © {new Date().getFullYear()} رفيق الكاش باك. جميع الحقوق محفوظة.
-              </div>
-          </div>
-        </footer>
-    );
-}
+import { SiteFooter } from "@/components/shared/SiteFooter";
+import { siteConfig } from "@/lib/site-config";
 
 const StatBubble = ({ icon: Icon, to, prefix, postfix, title, delay, className }: { icon: React.ElementType, to: number, prefix?: string, postfix?: string, title: string, delay: number, className?: string }) => {
     return (
@@ -152,7 +98,7 @@ export default function Home() {
                         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                             <svg className="w-6 h-6 text-primary-foreground" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"></path><path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
                         </div>
-                        <span className="font-headline text-lg hidden sm:inline-block">رفيق الكاش باك</span>
+                        <span className="font-headline text-lg hidden sm:inline-block">{siteConfig.name}</span>
                     </Link>
                     <nav className="flex items-center gap-4">
                         <Button variant="ghost" asChild><Link href="/about">من نحن</Link></Button>
@@ -306,7 +252,7 @@ export default function Home() {
         </section>
       </main>
       
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

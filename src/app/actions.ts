@@ -170,6 +170,40 @@ export async function getClientLevels(): Promise<ClientLevel[]> {
     return data || [];
 }
 
+/**
+ * Get the current month's earnings for the authenticated user
+ * Only counts 'cashback' and 'referral' transaction types
+ * Resets automatically at the start of each month
+ */
+export async function getCurrentMonthEarnings(): Promise<number> {
+    try {
+        const user = await getAuthenticatedUser();
+        const supabase = await createAdminClient();
+        
+        const now = new Date();
+        const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', user.id)
+            .in('type', ['cashback', 'referral'])
+            .gte('created_at', startDate.toISOString())
+            .lte('created_at', endDate.toISOString());
+        
+        if (error) {
+            console.error('Error fetching current month earnings:', error);
+            return 0;
+        }
+        
+        return data?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+    } catch (error) {
+        console.error('Error getting current month earnings:', error);
+        return 0;
+    }
+}
+
 export async function getNotificationsForUser(): Promise<Notification[]> {
     const user = await getAuthenticatedUser();
     const userId = user.id;

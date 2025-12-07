@@ -10,27 +10,32 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { ClientLevel } from '@/types';
 import { useRouter } from 'next/navigation';
-import { getClientLevels } from '@/app/actions';
+import { getClientLevels, getCurrentMonthEarnings } from '@/app/actions';
 
 export default function LoyaltyPage() {
     const { user, isLoading: isUserLoading } = useAuthContext();
     const [levels, setLevels] = useState<ClientLevel[]>([]);
+    const [monthlyEarnings, setMonthlyEarnings] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
-        async function fetchLevels() {
+        async function fetchData() {
             setIsLoading(true);
             try {
-                const data = await getClientLevels();
-                setLevels(data);
+                const [levelsData, earnings] = await Promise.all([
+                    getClientLevels(),
+                    getCurrentMonthEarnings()
+                ]);
+                setLevels(levelsData);
+                setMonthlyEarnings(earnings);
             } catch (error) {
-                console.error("Failed to fetch client levels", error);
+                console.error("Failed to fetch data", error);
             } finally {
                 setIsLoading(false);
             }
         }
-        fetchLevels();
+        fetchData();
     }, []);
 
     const getCurrentLevel = (userLevel: number): ClientLevel | undefined => {
@@ -52,11 +57,11 @@ export default function LoyaltyPage() {
 
     const currentLevel = getCurrentLevel(user.profile.level) || levels[0];
     const nextLevel = getNextLevel(user.profile.level);
-    
-    const monthlyEarnings = user.profile.monthlyEarnings || 0;
 
     const progress = nextLevel ? Math.min((monthlyEarnings / nextLevel.required_total) * 100, 100) : 100;
     const earningsNeeded = nextLevel ? Math.max(0, nextLevel.required_total - monthlyEarnings) : 0;
+
+    const currentMonth = new Date().toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' });
 
     return (
         <div className="max-w-md mx-auto w-full px-4 py-4 space-y-6">
@@ -95,6 +100,7 @@ export default function LoyaltyPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">تقدمك الشهري</CardTitle>
+                    <p className="text-xs text-muted-foreground">{currentMonth}</p>
                 </CardHeader>
                 <CardContent>
                     {nextLevel ? (
@@ -119,7 +125,7 @@ export default function LoyaltyPage() {
                     <CardTitle className="text-base">المستويات التالية</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {levels.filter(l => l.id > user.profile.level).slice(0, 3).map(level => (
+                    {levels.filter(l => l.id > (user.profile?.level || 1)).slice(0, 3).map(level => (
                         <div key={level.id} className="p-3 rounded-md border">
                             <div className="flex justify-between items-center">
                                <h3 className="font-semibold">{level.name}</h3>

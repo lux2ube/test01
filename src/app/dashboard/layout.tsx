@@ -39,7 +39,7 @@ import { AuthProvider, useAuthContext } from "@/hooks/useAuthContext";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import { useEffect, useState, useCallback } from "react";
 import type { Notification, ClientLevel } from "@/types";
-import { getNotificationsForUser, markNotificationsAsRead, getClientLevels } from "@/app/actions";
+import { getNotificationsForUser, markNotificationsAsRead, getClientLevels, getCurrentMonthEarnings } from "@/app/actions";
 import { formatDistanceToNow } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -163,9 +163,26 @@ function SettingsSidebar() {
     const { toast } = useToast();
     const [theme, setTheme] = useState('light');
     const [levels, setLevels] = useState<ClientLevel[]>([]);
+    const [monthlyEarnings, setMonthlyEarnings] = useState<number>(0);
+    const [isLoadingEarnings, setIsLoadingEarnings] = useState(true);
 
     useEffect(() => {
-        getClientLevels().then(setLevels);
+        const fetchData = async () => {
+            setIsLoadingEarnings(true);
+            try {
+                const [levelsData, earnings] = await Promise.all([
+                    getClientLevels(),
+                    getCurrentMonthEarnings()
+                ]);
+                setLevels(levelsData);
+                setMonthlyEarnings(earnings);
+            } catch (error) {
+                console.error('Error fetching sidebar data:', error);
+            } finally {
+                setIsLoadingEarnings(false);
+            }
+        };
+        fetchData();
         const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
         setTheme(currentTheme);
     }, []);
@@ -202,8 +219,7 @@ function SettingsSidebar() {
     const levelName = levels.find(l => l.id === userLevel)?.name || 'New';
     const currentLevel = levels.find(l => l.id === userLevel);
     const nextLevel = levels.find(l => l.id === (userLevel || 0) + 1);
-    const monthlyEarnings = user?.profile?.monthlyEarnings || 0;
-    const progress = nextLevel && !isLoading ? Math.min((monthlyEarnings / nextLevel.required_total) * 100, 100) : 0;
+    const progress = nextLevel && !isLoading && !isLoadingEarnings ? Math.min((monthlyEarnings / nextLevel.required_total) * 100, 100) : 0;
 
 
     return (
@@ -231,9 +247,9 @@ function SettingsSidebar() {
                                 </div>
                             </Link>
                              <div className="space-y-2">
-                                { isLoading ? <Skeleton className="h-1.5 w-full" /> : <Progress value={progress} className="h-1.5" /> }
+                                { (isLoading || isLoadingEarnings) ? <Skeleton className="h-1.5 w-full" /> : <Progress value={progress} className="h-1.5" /> }
                                 <div className="text-center">
-                                    {isLoading ? (
+                                    {(isLoading || isLoadingEarnings) ? (
                                         <Skeleton className="h-5 w-28 mx-auto" />
                                     ) : nextLevel ? (
                                         <SheetClose asChild>

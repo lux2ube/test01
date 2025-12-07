@@ -427,10 +427,47 @@ function DesktopSidebar() {
                         </Link>
                     ))}
                 </nav>
-                <div className="mt-auto space-y-2">
-                    <Button variant="ghost" className="w-full justify-start" asChild>
-                        <Link href="/dashboard/profile"><Settings className="h-4 w-4" /> الإعدادات</Link>
-                    </Button>
+                <Separator className="my-4" />
+                
+                <p className="px-3 text-xs font-semibold text-muted-foreground mb-2">الإعدادات</p>
+                <nav className="space-y-1 mb-4">
+                    {settingsLinks.map(item => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm", {
+                                "bg-primary/10 text-primary": pathname === item.href,
+                            })}
+                        >
+                            <item.icon className="h-4 w-4" />
+                            {item.label}
+                        </Link>
+                    ))}
+                </nav>
+
+                <p className="px-3 text-xs font-semibold text-muted-foreground mb-2">الدعم</p>
+                <nav className="space-y-1 mb-4">
+                    <a
+                        href={siteConfig.social.whatsapp}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm"
+                    >
+                        <WhatsAppIcon />
+                        واتساب
+                    </a>
+                    <a
+                        href={siteConfig.social.telegram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm"
+                    >
+                        <TelegramIcon />
+                        تليجرام
+                    </a>
+                </nav>
+
+                <div className="mt-auto">
                     <Button variant="ghost" onClick={onLogout} className="w-full justify-start">
                         <LogOut className="h-4 w-4" /> تسجيل الخروج
                     </Button>

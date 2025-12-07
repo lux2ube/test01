@@ -1,19 +1,21 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { getAllDeposits, getDepositStats, type AdminDeposit } from "./actions";
 import { createAdminDeposit } from "../manage-withdrawals/actions";
 import { getUsers } from "../users/actions";
 import type { UserProfile } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { Loader2, Plus, DollarSign, TrendingUp, Calendar, User, Copy, Check, ClipboardList, Shield, Hash, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { ar } from "date-fns/locale";
 import {
     Dialog,
     DialogContent,
@@ -23,14 +25,179 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/data-table/data-table";
+import { columns } from "./columns";
+import { Row, FilterFn } from "@tanstack/react-table";
+
+const globalFilterFn: FilterFn<AdminDeposit> = (row, columnId, value) => {
+    const search = value.toLowerCase();
+    const deposit = row.original;
+    
+    return (
+        deposit.userName?.toLowerCase().includes(search) ||
+        deposit.userEmail?.toLowerCase().includes(search) ||
+        deposit.reason?.toLowerCase().includes(search) ||
+        deposit.adminName?.toLowerCase().includes(search) ||
+        deposit.amount.toString().includes(search)
+    );
+};
+
+function CopyButton({ text, label }: { text: string; label?: string }) {
+    const [copied, setCopied] = useState(false);
+    const { toast } = useToast();
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            toast({ title: 'تم النسخ', description: label ? `تم نسخ ${label}` : 'تم النسخ إلى الحافظة' });
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'فشل النسخ' });
+        }
+    };
+
+    return (
+        <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleCopy}
+            className="h-6 w-6 p-0 hover:bg-primary/10"
+        >
+            {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+        </Button>
+    );
+}
+
+function SubRow({ row }: { row: Row<AdminDeposit> }) {
+    const deposit = row.original;
+    const { toast } = useToast();
+    
+    const copyAllDetails = async () => {
+        const detailsText = `المستخدم: ${deposit.userName}
+البريد: ${deposit.userEmail}
+المبلغ: $${deposit.amount.toFixed(2)}
+السبب: ${deposit.reason}
+المدير: ${deposit.adminName}
+التاريخ: ${format(new Date(deposit.createdAt), 'PPpp', { locale: ar })}`;
+        
+        try {
+            await navigator.clipboard.writeText(detailsText);
+            toast({ title: 'تم النسخ', description: 'تم نسخ جميع التفاصيل' });
+        } catch {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'فشل النسخ' });
+        }
+    };
+    
+    return (
+        <div className="p-4 space-y-4 bg-muted/50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                معلومات المستخدم
+                            </CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between gap-2 py-1 px-2 rounded hover:bg-muted">
+                            <span className="text-muted-foreground text-xs">الاسم:</span>
+                            <div className="flex items-center gap-1">
+                                <span className="font-medium text-sm">{deposit.userName}</span>
+                                <CopyButton text={deposit.userName} label="الاسم" />
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 py-1 px-2 rounded hover:bg-muted">
+                            <span className="text-muted-foreground text-xs">البريد:</span>
+                            <div className="flex items-center gap-1">
+                                <span className="font-mono text-xs">{deposit.userEmail}</span>
+                                <CopyButton text={deposit.userEmail} label="البريد" />
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 py-1 px-2 rounded hover:bg-muted">
+                            <span className="text-muted-foreground text-xs">معرف المستخدم:</span>
+                            <div className="flex items-center gap-1">
+                                <span className="font-mono text-xs">{deposit.userId.substring(0, 12)}...</span>
+                                <CopyButton text={deposit.userId} label="معرف المستخدم" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <Card className="border-green-200 bg-green-50/50">
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-base flex items-center gap-2 text-green-700">
+                                <DollarSign className="h-4 w-4" />
+                                تفاصيل الإيداع
+                            </CardTitle>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={copyAllDetails}
+                                className="h-7 text-xs"
+                            >
+                                <ClipboardList className="w-3 h-3 ml-1" />
+                                نسخ الكل
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between gap-2 py-1 px-2 rounded hover:bg-green-100/50">
+                            <span className="text-muted-foreground text-xs">المبلغ:</span>
+                            <span className="font-bold text-green-600 text-lg">${deposit.amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 py-1 px-2 rounded hover:bg-green-100/50">
+                            <span className="text-muted-foreground text-xs">التاريخ:</span>
+                            <span className="text-sm">{format(new Date(deposit.createdAt), 'PPpp', { locale: ar })}</span>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="md:col-span-2">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4" />
+                            سبب الإيداع
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm bg-muted p-3 rounded-md">{deposit.reason || 'إيداع إداري'}</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="md:col-span-2 border-blue-200 bg-blue-50/50">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2 text-blue-700">
+                            <Shield className="h-4 w-4" />
+                            معلومات المدير
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between gap-2 py-1 px-2 rounded hover:bg-blue-100/50">
+                            <span className="text-muted-foreground text-xs">اسم المدير:</span>
+                            <Badge variant="secondary" className="gap-1">
+                                <Shield className="h-3 w-3" />
+                                {deposit.adminName || 'مدير'}
+                            </Badge>
+                        </div>
+                        {deposit.adminId && (
+                            <div className="flex items-center justify-between gap-2 py-1 px-2 rounded hover:bg-blue-100/50">
+                                <span className="text-muted-foreground text-xs">معرف المدير:</span>
+                                <div className="flex items-center gap-1">
+                                    <span className="font-mono text-xs">{deposit.adminId.substring(0, 12)}...</span>
+                                    <CopyButton text={deposit.adminId} label="معرف المدير" />
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+}
 
 export default function ManageDepositsPage() {
     const [deposits, setDeposits] = useState<AdminDeposit[]>([]);
@@ -47,7 +214,7 @@ export default function ManageDepositsPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
             const [depositsResult, statsResult, usersData] = await Promise.all([
@@ -63,11 +230,11 @@ export default function ManageDepositsPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const filteredUsers = useMemo(() => {
         if (!depositData.userSearch.trim()) return [];
@@ -114,12 +281,12 @@ export default function ManageDepositsPage() {
     };
 
     if (isLoading) {
-        return <div className="container mx-auto flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
     return (
         <div className="container mx-auto space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
                 <PageHeader
                     title="إدارة الإيداعات"
                     description="عرض وإضافة إيداعات رصيد المستخدمين."
@@ -129,8 +296,8 @@ export default function ManageDepositsPage() {
                     if (!open) setDepositData({ userId: '', amount: '', reason: '', userSearch: '' });
                 }}>
                     <DialogTrigger asChild>
-                        <Button className="bg-green-600 hover:bg-green-700">
-                            <Plus className="ml-2 h-4 w-4" />
+                        <Button className="bg-green-600 hover:bg-green-700 gap-2">
+                            <Plus className="h-4 w-4" />
                             إضافة إيداع
                         </Button>
                     </DialogTrigger>
@@ -253,58 +420,14 @@ export default function ManageDepositsPage() {
                 </Card>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>سجل الإيداعات</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="text-right">التاريخ</TableHead>
-                                    <TableHead className="text-right">المستخدم</TableHead>
-                                    <TableHead className="text-right">المبلغ</TableHead>
-                                    <TableHead className="text-right">السبب</TableHead>
-                                    <TableHead className="text-right">بواسطة</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {deposits.length > 0 ? (
-                                    deposits.map((deposit) => (
-                                        <TableRow key={deposit.id}>
-                                            <TableCell className="text-sm">
-                                                {format(new Date(deposit.createdAt), "PP")}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-medium text-sm">{deposit.userName}</p>
-                                                    <p className="text-xs text-muted-foreground">{deposit.userEmail}</p>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-medium text-green-600">
-                                                +${deposit.amount.toFixed(2)}
-                                            </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                                                {deposit.reason}
-                                            </TableCell>
-                                            <TableCell className="text-sm">
-                                                {deposit.adminName}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                                            لا يوجد إيداعات حتى الآن
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
+            <DataTable 
+                columns={columns} 
+                data={deposits}
+                globalFilterFn={globalFilterFn}
+                searchPlaceholder='بحث حسب المستخدم، المبلغ، السبب...'
+                renderSubComponent={({ row }) => <SubRow row={row} />}
+                getRowCanExpand={() => true}
+            />
         </div>
     );
 }

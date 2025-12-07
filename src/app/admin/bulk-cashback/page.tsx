@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, Download, CheckCircle, XCircle, AlertCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getApprovedAccounts, confirmSingleCashback, type BulkCashbackRecord } from './actions';
+import { getApprovedAccounts, confirmSingleCashback, getRecentCashbackTransactions, type BulkCashbackRecord, type RecentCashback } from './actions';
 
 export default function BulkCashbackPage() {
     const { toast } = useToast();
@@ -35,8 +35,14 @@ export default function BulkCashbackPage() {
         setRecords([]);
 
         try {
-            const approvedAccounts = await getApprovedAccounts();
+            const [approvedAccounts, recentCashbacks] = await Promise.all([
+                getApprovedAccounts(),
+                getRecentCashbackTransactions()
+            ]);
             const accountsMap = new Map(approvedAccounts.map(acc => [acc.accountNumber, acc]));
+            const recentCashbackSet = new Set(
+                recentCashbacks.map(tx => `${tx.accountNumber}-${tx.cashbackAmount}`)
+            );
             
             const reader = new FileReader();
             reader.onerror = () => {
@@ -65,7 +71,7 @@ export default function BulkCashbackPage() {
                     const amount = parseFloat(String(row[1] || '0'));
                     const note = String(row[2] || 'Bulk import').trim();
 
-                    const rowIdentifier = `${accountNumber}-${amount}-${i}`;
+                    const rowIdentifier = `${accountNumber}-${amount}`;
                     const uniqueId = `bulk-${Date.now()}-${i}`;
                     
                     let status: BulkCashbackRecord['status'] = 'pending';
@@ -79,7 +85,10 @@ export default function BulkCashbackPage() {
                     } else if (isNaN(amount) || amount <= 0) {
                         status = 'rejected';
                         reason = 'المبلغ غير صالح';
-                    } else if (seen.has(`${accountNumber}-${amount}`)) {
+                    } else if (recentCashbackSet.has(rowIdentifier)) {
+                        status = 'rejected';
+                        reason = 'مكرر: نفس الحساب والمبلغ موجود خلال 24 ساعة';
+                    } else if (seen.has(rowIdentifier)) {
                         status = 'rejected';
                         reason = 'سجل مكرر في الملف';
                     } else {

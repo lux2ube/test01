@@ -55,12 +55,24 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
+  const nextUrl = searchParams.get('next');
+
   useEffect(() => {
     const refCode = searchParams.get('ref');
     if (refCode) {
         setReferralCode(refCode);
     }
   }, [searchParams]);
+
+  const isValidRedirectUrl = (url: string | null): boolean => {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url, window.location.origin);
+      return parsed.origin === window.location.origin && url.startsWith('/');
+    } catch {
+      return url.startsWith('/') && !url.startsWith('//');
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,9 +106,13 @@ function RegisterForm() {
                 throw new Error(loginData.error || 'Login failed');
             }
 
-            // Session cookie is now set, redirect to phone verification
             await new Promise(resolve => setTimeout(resolve, 200));
-            window.location.href = `/phone-verification?userId=${result.userId}`;
+            
+            let redirectUrl = `/phone-verification?userId=${result.userId}`;
+            if (nextUrl && isValidRedirectUrl(nextUrl)) {
+              redirectUrl += `&next=${encodeURIComponent(nextUrl)}`;
+            }
+            window.location.href = redirectUrl;
         } catch (loginError) {
             toast({ variant: 'destructive', title: "فشل تسجيل الدخول التلقائي", description: "يرجى تسجيل الدخول يدويًا." });
             window.location.href = '/login';
@@ -160,7 +176,7 @@ function RegisterForm() {
       </div>
       <div className="text-center text-sm">
         لديك حساب بالفعل؟{' '}
-        <Link href="/login" className="underline text-primary">
+        <Link href={nextUrl ? `/login?next=${encodeURIComponent(nextUrl)}` : "/login"} className="underline text-primary">
           تسجيل الدخول
         </Link>
       </div>

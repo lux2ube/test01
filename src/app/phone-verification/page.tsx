@@ -22,8 +22,20 @@ function PhoneVerificationForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [defaultCountry, setDefaultCountry] = useState<string>('SA');
     const targetUserId = searchParams.get('userId');
-    // Only admin mode if user is actually an admin AND targetUserId differs from current user
+    const nextUrl = searchParams.get('next');
     const isAdminMode = user?.profile?.role === 'admin' && targetUserId && targetUserId !== user?.id;
+
+    const isValidRedirectUrl = (url: string | null): boolean => {
+        if (!url) return false;
+        return url.startsWith('/') && !url.startsWith('//');
+    };
+
+    const getRedirectUrl = (defaultUrl: string): string => {
+        if (nextUrl && isValidRedirectUrl(nextUrl)) {
+            return nextUrl;
+        }
+        return defaultUrl;
+    };
     
     useEffect(() => {
         if (!targetUserId && !user) {
@@ -77,7 +89,7 @@ function PhoneVerificationForm() {
                 if (isAdminMode) {
                     router.push('/admin/users');
                 } else {
-                    router.push('/dashboard');
+                    router.push(getRedirectUrl('/dashboard'));
                 }
             } else {
                 toast({ variant: 'destructive', title: 'خطأ', description: result.error || 'فشل حفظ رقم الهاتف.' });
@@ -89,8 +101,7 @@ function PhoneVerificationForm() {
     };
 
     const handleSkip = () => {
-        // If user skips, just send them to the dashboard
-        router.push('/dashboard');
+        router.push(getRedirectUrl('/dashboard'));
     };
 
     if (!targetUserId && !user) {

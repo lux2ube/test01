@@ -2,8 +2,8 @@
 "use client";
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
 import {
   Card,
   CardContent,
@@ -32,7 +32,7 @@ const AppleIcon = () => (
 );
 
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,13 +41,31 @@ export default function LoginPage() {
   const [resetEmail, setResetEmail] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
+  const nextUrl = searchParams.get('next');
+
+  const isValidRedirectUrl = (url: string | null): boolean => {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url, window.location.origin);
+      return parsed.origin === window.location.origin && url.startsWith('/');
+    } catch {
+      return url.startsWith('/') && !url.startsWith('//');
+    }
+  };
+
+  const getRedirectUrl = (defaultUrl: string): string => {
+    if (nextUrl && isValidRedirectUrl(nextUrl)) {
+      return nextUrl;
+    }
+    return defaultUrl;
+  };
+
   const handleLoginSuccess = async (userId: string) => {
-    // Log login activity
     await logLoginActivity(userId);
 
-    // Fetch user profile to check role
     const supabase = createClient();
     const { data: profile } = await supabase
       .from('users')
@@ -55,18 +73,13 @@ export default function LoginPage() {
       .eq('id', userId)
       .single();
 
-    // Show success message
     toast({
       title: "Success",
       description: "Logged in successfully. Redirecting...",
     });
 
-    // Use window.location.href for full page redirect (ensures session is picked up)
-    if (profile?.role === 'admin') {
-      window.location.href = '/admin/dashboard';
-    } else {
-      window.location.href = '/dashboard';
-    }
+    const defaultRedirect = profile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    window.location.href = getRedirectUrl(defaultRedirect);
   }
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -77,7 +90,7 @@ export default function LoginPage() {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // CRITICAL: Allow cookies to be set
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -88,7 +101,6 @@ export default function LoginPage() {
       }
 
       if (data.success) {
-        // Log activity
         await logLoginActivity(data.userId);
 
         toast({
@@ -96,11 +108,10 @@ export default function LoginPage() {
           description: "Logged in successfully. Redirecting...",
         });
 
-        // Dispatch event to trigger AuthContext refresh
         window.dispatchEvent(new Event('userLoggedIn'));
 
-        // Full page redirect to ensure cookies are picked up
-        window.location.href = data.redirectUrl;
+        const redirectUrl = getRedirectUrl(data.redirectUrl);
+        window.location.href = redirectUrl;
       }
     } catch (error: any) {
       toast({
@@ -117,10 +128,16 @@ export default function LoginPage() {
     setIsSocialLoading(true);
     try {
       const supabase = createClient();
+      
+      let callbackUrl = `${window.location.origin}/auth/callback`;
+      if (nextUrl && isValidRedirectUrl(nextUrl)) {
+        callbackUrl += `?next=${encodeURIComponent(nextUrl)}`;
+      }
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
         },
       });
 
@@ -256,11 +273,23 @@ export default function LoginPage() {
         </Card>
         <div className="text-center text-sm">
             ليس لديك حساب؟{' '}
-            <Link href="/register" className="underline text-primary">
+            <Link href={nextUrl ? `/register?next=${encodeURIComponent(nextUrl)}` : "/register"} className="underline text-primary">
                 إنشاء حساب
             </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

@@ -487,22 +487,16 @@ export default function BrokersPage() {
       if (filters.features.tradingContests && !broker.additionalFeatures?.trading_contests) return false;
       if (filters.features.regulatoryAlerts && !broker.additionalFeatures?.regulatory_alerts) return false;
 
+      if (filters.availableInCountries.length > 0) {
+        const restrictedCountries = broker.globalReach?.restricted_countries || [];
+        const isRestrictedInSelectedCountries = filters.availableInCountries.some((c) => restrictedCountries.includes(c));
+        if (isRestrictedInSelectedCountries) {
+          return false;
+        }
+      }
+
       return true;
     });
-
-    if (filters.availableInCountries.length > 0) {
-      filtered.sort((a: Broker, b: Broker) => {
-        const aRestricted = a.globalReach?.restricted_countries || [];
-        const bRestricted = b.globalReach?.restricted_countries || [];
-        
-        const aIsRestricted = filters.availableInCountries.some((c) => aRestricted.includes(c));
-        const bIsRestricted = filters.availableInCountries.some((c) => bRestricted.includes(c));
-        
-        if (aIsRestricted && !bIsRestricted) return 1;
-        if (!aIsRestricted && bIsRestricted) return -1;
-        return 0;
-      });
-    }
 
     return filtered;
   }, [allBrokers, searchQuery, filters]);
@@ -533,14 +527,15 @@ export default function BrokersPage() {
       );
     }
 
+    const showUserCountryWarning = filters.availableInCountries.length === 0;
+    
     return (
       <div className="flex flex-col space-y-4">
         {brokers.map((broker) => (
           <BrokerCard 
             key={broker.id} 
             broker={broker} 
-            userCountry={userCountry}
-            filterCountries={filters.availableInCountries}
+            userCountry={showUserCountryWarning ? userCountry : undefined}
           />
         ))}
       </div>

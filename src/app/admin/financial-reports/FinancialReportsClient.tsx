@@ -10,6 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DollarSign, Filter, Loader2, Search, Calendar, User, Briefcase, CreditCard, FileText, Package, GitBranch, Download, List, BarChart3 } from "lucide-react";
 import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
 import { 
   FilterOption, 
   ReportFilters, 
@@ -256,7 +258,7 @@ export default function FinancialReportsClient() {
       relevantHeaders.forEach(key => {
         const headerLabel = headers[key] || key;
         if (key === 'date') {
-          row[headerLabel] = new Date(record[key as keyof DetailedRecord] as string).toLocaleDateString('ar-SA');
+          row[headerLabel] = format(new Date(record[key as keyof DetailedRecord] as string), 'PP', { locale: ar });
         } else if (key === 'amount') {
           row[headerLabel] = `$${(record[key as keyof DetailedRecord] as number).toFixed(2)}`;
         } else {
@@ -681,7 +683,7 @@ export default function FinancialReportsClient() {
                             <TableRow key={record.id}>
                               <TableCell>{index + 1}</TableCell>
                               <TableCell>
-                                {new Date(record.date).toLocaleDateString('ar-SA')}
+                                {format(new Date(record.date), 'PP', { locale: ar })}
                               </TableCell>
                               <TableCell className="font-medium">
                                 ${record.amount.toFixed(2)}

@@ -143,13 +143,37 @@ export async function adminUpdateAddress(userId: string, addressData: AddressDat
 export async function adminUpdatePhoneNumber(userId: string, phoneNumber: string) {
   try {
     const supabase = await createAdminClient();
+    const { parsePhoneNumber } = await import('libphonenumber-js');
+    
+    // First, check if the user already has a country set
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('country')
+      .eq('id', userId)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    
+    const updateData: Record<string, any> = {
+      phone_number: phoneNumber,
+      phone_number_verified: false,
+    };
+    
+    // Only set country from phone if user doesn't have a country set
+    if (!existingUser?.country) {
+      try {
+        const parsed = parsePhoneNumber(phoneNumber);
+        if (parsed?.country) {
+          updateData.country = parsed.country;
+        }
+      } catch {
+        // If phone parsing fails, just don't set country
+      }
+    }
     
     const { error } = await supabase
       .from('users')
-      .update({
-        phone_number: phoneNumber,
-        phone_number_verified: false,
-      })
+      .update(updateData)
       .eq('id', userId);
 
     if (error) throw error;

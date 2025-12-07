@@ -598,11 +598,11 @@ export async function sendVerificationEmail(): Promise<{ success: boolean; error
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
                        (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS}` : 'http://localhost:5000');
         
-        const { error } = await supabase.auth.resend({
-            type: 'signup',
+        const { error } = await supabase.auth.signInWithOtp({
             email: user.email,
             options: {
-                emailRedirectTo: `${siteUrl}/auth/confirm`
+                shouldCreateUser: false,
+                emailRedirectTo: `${siteUrl}/auth/confirm?type=email`
             }
         });
 

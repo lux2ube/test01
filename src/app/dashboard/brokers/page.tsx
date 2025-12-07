@@ -79,6 +79,8 @@ const brokerTypeTranslations: Record<string, string> = {
   "dma": "DMA",
   "ECN/STP": "ECN/STP",
   "STP/ECN": "ECN/STP",
+  "Proprietary": "منصة خاصة بالوسيط",
+  "proprietary": "منصة خاصة بالوسيط",
 };
 
 const translateBrokerType = (type: string): string => {
@@ -264,9 +266,17 @@ export default function BrokersPage() {
         brokerAccountTypes.forEach((a) => accountTypes.add(a));
       }
       
-      const brokerRegulators = broker.regulation?.regulator_name;
-      if (Array.isArray(brokerRegulators)) {
-        brokerRegulators.forEach((r) => regulators.add(r));
+      const brokerLicenses = broker.regulation?.licenses;
+      if (Array.isArray(brokerLicenses)) {
+        brokerLicenses.forEach((license) => {
+          if (license.authority) {
+            regulators.add(license.authority);
+          }
+        });
+      }
+      const brokerRegulatorNames = broker.regulation?.regulator_name;
+      if (Array.isArray(brokerRegulatorNames)) {
+        brokerRegulatorNames.forEach((r) => regulators.add(r));
       }
       
       const brokerType = broker.basicInfo?.broker_type;
@@ -361,8 +371,13 @@ export default function BrokersPage() {
       }
 
       if (filters.regulators.length > 0) {
-        const brokerRegulators = broker.regulation?.regulator_name;
-        if (!Array.isArray(brokerRegulators) || !filters.regulators.some((r) => brokerRegulators.includes(r))) {
+        const brokerLicenses = broker.regulation?.licenses || [];
+        const brokerRegulatorNames = broker.regulation?.regulator_name || [];
+        const allRegulators = [
+          ...brokerLicenses.map((l) => l.authority).filter(Boolean),
+          ...brokerRegulatorNames,
+        ];
+        if (allRegulators.length === 0 || !filters.regulators.some((r) => allRegulators.includes(r))) {
           return false;
         }
       }

@@ -58,7 +58,10 @@ export async function GET(request: Request) {
     });
 
     if (error) {
-      console.error('Email verification error:', error.message);
+      console.error('Token verification error:', error.message);
+      if (type === 'recovery') {
+        return NextResponse.redirect(`${origin}/reset-password?error=invalid_link&message=${encodeURIComponent(error.message)}`);
+      }
       return NextResponse.redirect(`${origin}/verify-email?error=verification_failed&message=${encodeURIComponent(error.message)}`);
     }
 
@@ -69,7 +72,7 @@ export async function GET(request: Request) {
 
     const { session, user } = data;
 
-    console.log('✅ Email verification successful for user:', user?.id);
+    console.log('✅ Token verification successful for user:', user?.id, 'type:', type);
 
     const allowInsecure = process.env.DEV_ALLOW_INSECURE_COOKIES === 'true';
     const cookieOptions = {
@@ -87,9 +90,15 @@ export async function GET(request: Request) {
       session.expires_at || 0
     );
     
-    const redirectUrl = type === 'signup' || type === 'email' 
-      ? `${origin}/verify-email?success=true&next=${encodeURIComponent(next)}`
-      : `${origin}${next}`;
+    let redirectUrl: string;
+    
+    if (type === 'recovery') {
+      redirectUrl = `${origin}/reset-password?verified=true`;
+    } else if (type === 'signup' || type === 'email') {
+      redirectUrl = `${origin}/verify-email?success=true&next=${encodeURIComponent(next)}`;
+    } else {
+      redirectUrl = `${origin}${next}`;
+    }
     
     const finalResponse = NextResponse.redirect(redirectUrl);
     

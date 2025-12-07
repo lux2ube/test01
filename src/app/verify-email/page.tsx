@@ -205,6 +205,13 @@ function VerifyEmailContent() {
             )}
           </Button>
 
+          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <p className="text-xs text-amber-700 dark:text-amber-300 text-center">
+              <strong>ملاحظة:</strong> تحقق من مجلد البريد المزعج (Spam) إذا لم يصل الرابط. 
+              يمكن إرسال 3 رسائل كحد أقصى في الساعة.
+            </p>
+          </div>
+
           <div className="text-center">
             <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-primary">
               تخطي الآن

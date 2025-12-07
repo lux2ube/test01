@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/hooks/useAuthContext";
+import { MultiCountrySelector } from "@/components/ui/country-selector";
 
 const accountTypeTranslations: Record<string, string> = {
   "Standard": "قياسي",
@@ -170,6 +171,7 @@ interface FilterState {
   wikiFxRatings: string[];
   regulators: string[];
   brokerTypes: string[];
+  availableInCountries: string[];
   instruments: {
     crypto: boolean;
     stocks: boolean;
@@ -194,6 +196,7 @@ const defaultFilters: FilterState = {
   wikiFxRatings: [],
   regulators: [],
   brokerTypes: [],
+  availableInCountries: [],
   instruments: {
     crypto: false,
     stocks: false,
@@ -382,6 +385,7 @@ export default function BrokersPage() {
     if (filters.wikiFxRatings.length > 0) count++;
     if (filters.regulators.length > 0) count++;
     if (filters.brokerTypes.length > 0) count++;
+    if (filters.availableInCountries.length > 0) count++;
     if (filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0) count++;
     if (Object.values(filters.instruments).some(Boolean)) count++;
     if (Object.values(filters.features).some(Boolean)) count++;
@@ -460,6 +464,18 @@ export default function BrokersPage() {
         const brokerType = broker.basicInfo?.broker_type || "";
         if (!filters.brokerTypes.includes(brokerType)) {
           return false;
+        }
+      }
+
+      if (filters.availableInCountries.length > 0) {
+        const restrictedCountries = broker.globalReach?.restricted_countries || [];
+        if (restrictedCountries.length > 0) {
+          const isAvailableInAllSelectedCountries = filters.availableInCountries.every(
+            (country) => !restrictedCountries.includes(country)
+          );
+          if (!isAvailableInAllSelectedCountries) {
+            return false;
+          }
         }
       }
 
@@ -774,6 +790,18 @@ export default function BrokersPage() {
 
                   <Separator />
 
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">الدول المتاحة</Label>
+                    <MultiCountrySelector
+                      value={filters.availableInCountries}
+                      onChange={(countries) => setFilters((f) => ({ ...f, availableInCountries: countries }))}
+                      placeholder="اختر الدول..."
+                    />
+                    <p className="text-xs text-muted-foreground">يعرض الوسطاء المتاحين في هذه الدول</p>
+                  </div>
+
+                  <Separator />
+
                   <MultiSelectDropdown
                     label="الجهة الرقابية"
                     options={availableOptions.regulators}
@@ -849,6 +877,15 @@ export default function BrokersPage() {
                 <X
                   className="h-3 w-3 cursor-pointer"
                   onClick={() => setFilters((f) => ({ ...f, brokerTypes: [] }))}
+                />
+              </Badge>
+            )}
+            {filters.availableInCountries.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                الدول ({filters.availableInCountries.length})
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, availableInCountries: [] }))}
                 />
               </Badge>
             )}

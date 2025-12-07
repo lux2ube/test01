@@ -2,7 +2,6 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { PageHeader } from "@/components/shared/PageHeader";
 import { getUserActivityLogs } from '@/app/admin/users/actions';
 import type { ActivityLog } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,8 +49,6 @@ export default function UserActivityLogsPage() {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="سجل تسجيل الدخول" description="آخر 20 عملية تسجيل دخول لحسابك." />
-
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">عمليات تسجيل الدخول الأخيرة</CardTitle>

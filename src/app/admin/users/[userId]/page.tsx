@@ -20,7 +20,7 @@ import { updateUser, adminUpdateKyc, adminUpdateAddress, adminUpdatePhoneNumber 
 import { getBrokers } from "../../manage-brokers/actions";
 import { adminAddTradingAccount } from "../../manage-accounts/actions";
 import { getUserDetails } from "../actions";
-import { Loader2, User, Wallet, Briefcase, Gift, ArrowRight, ArrowUpFromLine, ShoppingBag, PlusCircle, Globe, Phone, Check, X, ShieldAlert, Home, Edit2, ShieldCheck, FileText, ArrowLeft } from "lucide-react";
+import { Loader2, User, Wallet, Briefcase, Gift, ArrowRight, PlusCircle, Globe, Phone, Check, X, ShieldAlert, Home, Edit2, ShieldCheck, FileText, ArrowLeft } from "lucide-react";
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -500,7 +500,7 @@ export default function UserDetailPage() {
         return notFound();
     }
     
-    const { userProfile, balance, tradingAccounts, cashbackTransactions, withdrawals, orders, referredByName, referralsWithNames } = details;
+    const { userProfile, balance, tradingAccounts, referredByName, referralsWithNames } = details;
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -643,75 +643,6 @@ export default function UserDetailPage() {
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">سجل الكاش باك</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>التاريخ</TableHead>
-                                        <TableHead>التفاصيل</TableHead>
-                                        <TableHead className="text-left">المبلغ</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                     {cashbackTransactions.length > 0 ? cashbackTransactions.map(tx => (
-                                        <TableRow key={tx.id}>
-                                            <TableCell>{format(tx.date, 'PP')}</TableCell>
-                                            <TableCell>{tx.tradeDetails}</TableCell>
-                                            <TableCell className="text-left font-medium text-primary">${tx.cashbackAmount.toFixed(2)}</TableCell>
-                                        </TableRow>
-                                    )) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center">لا توجد معاملات كاش باك.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader><CardTitle className="text-base flex items-center gap-2"><ArrowUpFromLine /> سجل السحب</CardTitle></CardHeader>
-                        <CardContent>
-                             <Table>
-                                <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>الطريقة</TableHead><TableHead>الحالة</TableHead><TableHead className="text-left">المبلغ</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                     {withdrawals.length > 0 ? withdrawals.map(w => (
-                                        <TableRow key={w.id}>
-                                            <TableCell>{format(w.requestedAt, 'PP')}</TableCell>
-                                            <TableCell>{w.paymentMethod}</TableCell>
-                                            <TableCell><Badge variant={getStatusVariant(w.status)}>{getStatusText(w.status)}</Badge></TableCell>
-                                            <TableCell className="text-left font-medium">${w.amount.toFixed(2)}</TableCell>
-                                        </TableRow>
-                                    )) : (
-                                        <TableRow><TableCell colSpan={4} className="text-center">لا توجد طلبات سحب.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-
-                     <Card>
-                        <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShoppingBag /> سجل طلبات المتجر</CardTitle></CardHeader>
-                        <CardContent>
-                             <Table>
-                                <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>المنتج</TableHead><TableHead>الحالة</TableHead><TableHead className="text-left">السعر</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                     {orders.length > 0 ? orders.map(o => (
-                                        <TableRow key={o.id}>
-                                            <TableCell>{format(o.createdAt, 'PP')}</TableCell>
-                                            <TableCell>{o.productName}</TableCell>
-                                            <TableCell><Badge variant={getStatusVariant(o.status)}>{getStatusText(o.status)}</Badge></TableCell>
-                                            <TableCell className="text-left font-medium">${o.price.toFixed(2)}</TableCell>
-                                        </TableRow>
-                                    )) : (
-                                        <TableRow><TableCell colSpan={4} className="text-center">لا توجد طلبات من المتجر.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
                 </div>
             </div>
         </div>

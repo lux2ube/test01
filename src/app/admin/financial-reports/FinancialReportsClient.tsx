@@ -6,11 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { DollarSign, Filter, Loader2, Search, Calendar, User, Briefcase, CreditCard, FileText, Package, GitBranch } from "lucide-react";
+import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DollarSign, Filter, Loader2, Search, Calendar, User, Briefcase, CreditCard, FileText, Package, GitBranch, Download, List, BarChart3 } from "lucide-react";
+import * as XLSX from 'xlsx';
 import { 
   FilterOption, 
   ReportFilters, 
   FilteredReportResult,
+  DetailedRecord,
+  DetailedReportResult,
   getAvailableRecordTypes,
   getAvailableUsers,
   getAvailableBrokers,
@@ -18,6 +23,7 @@ import {
   getAvailableProducts,
   getReferralSourceTypes,
   getFilteredReport,
+  getDetailedReport,
 } from './actions';
 
 const RECORD_TYPE_LABELS: Record<string, string> = {
@@ -51,8 +57,11 @@ export default function FinancialReportsClient() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingFilters, setIsLoadingFilters] = useState(true);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [result, setResult] = useState<FilteredReportResult | null>(null);
+  const [detailedResult, setDetailedResult] = useState<DetailedReportResult | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showDetailedView, setShowDetailedView] = useState(false);
   
   const filteredUsers = users.filter(user => 
     user.label.toLowerCase().includes(userSearch.toLowerCase())
@@ -166,7 +175,108 @@ export default function FinancialReportsClient() {
     setUserSearch('');
     setAccountSearch('');
     setResult(null);
+    setDetailedResult(null);
     setHasSearched(false);
+    setShowDetailedView(false);
+  };
+
+  const handleFetchDetails = async () => {
+    if (!selectedRecordType) return;
+    
+    setIsLoadingDetails(true);
+    
+    try {
+      const filters: ReportFilters = {
+        recordType: selectedRecordType,
+        userId: selectedUser && selectedUser !== 'all' ? selectedUser : undefined,
+        broker: selectedBroker && selectedBroker !== 'all' ? selectedBroker : undefined,
+        accountId: selectedAccount && selectedAccount !== 'all' ? selectedAccount : undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+        productId: selectedProduct && selectedProduct !== 'all' ? selectedProduct : undefined,
+        referralSourceType: selectedReferralSourceType && selectedReferralSourceType !== 'all' 
+          ? selectedReferralSourceType as 'cashback' | 'store_purchase' 
+          : undefined,
+      };
+      
+      const detailedData = await getDetailedReport(filters);
+      setDetailedResult(detailedData);
+    } catch (error) {
+      console.error('Error fetching detailed report:', error);
+      setDetailedResult(null);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!detailedResult || detailedResult.records.length === 0) return;
+    
+    const recordType = selectedRecordType;
+    const recordTypeLabel = RECORD_TYPE_LABELS[recordType] || recordType;
+    
+    const headers: Record<string, string> = {
+      id: 'المعرف',
+      date: 'التاريخ',
+      amount: 'المبلغ',
+      userName: 'اسم المستخدم',
+      userEmail: 'البريد الإلكتروني',
+      broker: 'الوسيط',
+      accountNumber: 'رقم الحساب',
+      productName: 'المنتج',
+      status: 'الحالة',
+      sourceType: 'المصدر',
+      referredUserName: 'المستخدم المُحال',
+    };
+    
+    const getRelevantHeaders = (): string[] => {
+      const baseHeaders = ['date', 'amount', 'userName', 'userEmail'];
+      
+      switch (recordType) {
+        case 'cashback':
+          return [...baseHeaders, 'broker', 'accountNumber'];
+        case 'referral':
+          return [...baseHeaders, 'broker', 'accountNumber', 'sourceType', 'referredUserName'];
+        case 'deposit':
+          return baseHeaders;
+        case 'withdrawal_completed':
+        case 'withdrawal_processing':
+          return baseHeaders;
+        case 'order_created':
+          return [...baseHeaders, 'productName', 'status'];
+        default:
+          return baseHeaders;
+      }
+    };
+    
+    const relevantHeaders = getRelevantHeaders();
+    
+    const excelData = detailedResult.records.map(record => {
+      const row: Record<string, any> = {};
+      relevantHeaders.forEach(key => {
+        const headerLabel = headers[key] || key;
+        if (key === 'date') {
+          row[headerLabel] = new Date(record[key as keyof DetailedRecord] as string).toLocaleDateString('ar-SA');
+        } else if (key === 'amount') {
+          row[headerLabel] = `$${(record[key as keyof DetailedRecord] as number).toFixed(2)}`;
+        } else {
+          row[headerLabel] = record[key as keyof DetailedRecord] || '-';
+        }
+      });
+      return row;
+    });
+    
+    excelData.push({
+      [headers['date']]: 'المجموع',
+      [headers['amount']]: `$${detailedResult.total.toFixed(2)}`,
+    });
+    
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, recordTypeLabel);
+    
+    const fileName = `تقرير_${recordTypeLabel}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   if (isLoadingFilters) {
@@ -410,23 +520,40 @@ export default function FinancialReportsClient() {
       {hasSearched && result && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              نتيجة التقرير
-            </CardTitle>
-            {Object.keys(result.appliedFilters).length > 0 && (
-              <CardDescription>
-                الفلاتر المطبقة: {' '}
-                {result.appliedFilters.user && <span className="font-medium">المستخدم: {result.appliedFilters.user}</span>}
-                {result.appliedFilters.broker && <span className="font-medium"> | الوسيط: {result.appliedFilters.broker}</span>}
-                {result.appliedFilters.account && <span className="font-medium"> | الحساب: {result.appliedFilters.account}</span>}
-                {result.appliedFilters.product && <span className="font-medium"> | المنتج: {result.appliedFilters.product}</span>}
-                {result.appliedFilters.referralSourceType && <span className="font-medium"> | المصدر: {result.appliedFilters.referralSourceType}</span>}
-                {result.appliedFilters.period && <span className="font-medium"> | الفترة: {result.appliedFilters.period}</span>}
-              </CardDescription>
-            )}
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  نتيجة التقرير
+                </CardTitle>
+                {Object.keys(result.appliedFilters).length > 0 && (
+                  <CardDescription className="mt-2">
+                    الفلاتر المطبقة: {' '}
+                    {result.appliedFilters.user && <span className="font-medium">المستخدم: {result.appliedFilters.user}</span>}
+                    {result.appliedFilters.broker && <span className="font-medium"> | الوسيط: {result.appliedFilters.broker}</span>}
+                    {result.appliedFilters.account && <span className="font-medium"> | الحساب: {result.appliedFilters.account}</span>}
+                    {result.appliedFilters.product && <span className="font-medium"> | المنتج: {result.appliedFilters.product}</span>}
+                    {result.appliedFilters.referralSourceType && <span className="font-medium"> | المصدر: {result.appliedFilters.referralSourceType}</span>}
+                    {result.appliedFilters.period && <span className="font-medium"> | الفترة: {result.appliedFilters.period}</span>}
+                  </CardDescription>
+                )}
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="view-mode" className="text-sm">ملخص</Label>
+                  <Switch
+                    id="view-mode"
+                    checked={showDetailedView}
+                    onCheckedChange={setShowDetailedView}
+                  />
+                  <Label htmlFor="view-mode" className="text-sm">تفصيلي</Label>
+                  <List className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
               <Card className="bg-muted/50">
                 <CardHeader className="pb-2">
@@ -467,6 +594,138 @@ export default function FinancialReportsClient() {
                 </CardContent>
               </Card>
             </div>
+
+            {showDetailedView && (
+              <div className="space-y-4 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <List className="h-5 w-5" />
+                    السجلات التفصيلية
+                  </h3>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleFetchDetails}
+                      disabled={isLoadingDetails}
+                    >
+                      {isLoadingDetails ? (
+                        <>
+                          <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                          جاري التحميل...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="ml-2 h-4 w-4" />
+                          {detailedResult ? 'تحديث السجلات' : 'جلب السجلات'}
+                        </>
+                      )}
+                    </Button>
+                    {detailedResult && detailedResult.records.length > 0 && (
+                      <Button
+                        variant="default"
+                        onClick={handleExportExcel}
+                      >
+                        <Download className="ml-2 h-4 w-4" />
+                        تصدير Excel
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {!detailedResult && !isLoadingDetails && (
+                  <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                    اضغط على &quot;جلب السجلات&quot; لعرض التفاصيل
+                  </div>
+                )}
+
+                {detailedResult && detailedResult.records.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                    لا توجد سجلات مطابقة للفلاتر المحددة
+                  </div>
+                )}
+
+                {detailedResult && detailedResult.records.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="max-h-[500px] overflow-auto">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-background">
+                          <TableRow>
+                            <TableHead className="text-right">#</TableHead>
+                            <TableHead className="text-right">التاريخ</TableHead>
+                            <TableHead className="text-right">المبلغ</TableHead>
+                            <TableHead className="text-right">المستخدم</TableHead>
+                            {selectedRecordType === 'cashback' && (
+                              <>
+                                <TableHead className="text-right">الوسيط</TableHead>
+                                <TableHead className="text-right">رقم الحساب</TableHead>
+                              </>
+                            )}
+                            {selectedRecordType === 'referral' && (
+                              <>
+                                <TableHead className="text-right">الوسيط</TableHead>
+                                <TableHead className="text-right">رقم الحساب</TableHead>
+                                <TableHead className="text-right">المصدر</TableHead>
+                                <TableHead className="text-right">المُحال</TableHead>
+                              </>
+                            )}
+                            {selectedRecordType === 'order_created' && (
+                              <>
+                                <TableHead className="text-right">المنتج</TableHead>
+                                <TableHead className="text-right">الحالة</TableHead>
+                              </>
+                            )}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {detailedResult.records.map((record, index) => (
+                            <TableRow key={record.id}>
+                              <TableCell>{index + 1}</TableCell>
+                              <TableCell>
+                                {new Date(record.date).toLocaleDateString('ar-SA')}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                ${record.amount.toFixed(2)}
+                              </TableCell>
+                              <TableCell>
+                                {record.userName || record.userEmail || '-'}
+                              </TableCell>
+                              {selectedRecordType === 'cashback' && (
+                                <>
+                                  <TableCell>{record.broker || '-'}</TableCell>
+                                  <TableCell>{record.accountNumber || '-'}</TableCell>
+                                </>
+                              )}
+                              {selectedRecordType === 'referral' && (
+                                <>
+                                  <TableCell>{record.broker || '-'}</TableCell>
+                                  <TableCell>{record.accountNumber || '-'}</TableCell>
+                                  <TableCell>{record.sourceType || '-'}</TableCell>
+                                  <TableCell>{record.referredUserName || '-'}</TableCell>
+                                </>
+                              )}
+                              {selectedRecordType === 'order_created' && (
+                                <>
+                                  <TableCell>{record.productName || '-'}</TableCell>
+                                  <TableCell>{record.status || '-'}</TableCell>
+                                </>
+                              )}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="p-3 bg-muted/50 border-t flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        إجمالي السجلات: {detailedResult.count.toLocaleString()}
+                      </span>
+                      <span className="font-bold text-primary">
+                        المجموع: ${detailedResult.total.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

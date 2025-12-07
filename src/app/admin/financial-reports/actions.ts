@@ -459,8 +459,8 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
       for (const tx of data) {
         const amount = parseFloat(tx.cashback_amount || '0');
         total += amount;
-        const user = tx.users as { name: string | null; email: string } | null;
-        const account = tx.trading_accounts as { account_number: string } | null;
+        const user = (tx as any).users;
+        const account = (tx as any).trading_accounts;
         records.push({
           id: tx.id,
           date: tx.date,
@@ -524,7 +524,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         
         const amount = parseFloat(tx.amount || '0');
         total += amount;
-        const user = tx.users as { name: string | null; email: string } | null;
+        const user = (tx as any).users;
         records.push({
           id: tx.id,
           date: tx.created_at,
@@ -569,7 +569,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
       for (const tx of data) {
         const amount = parseFloat(tx.amount || '0');
         total += amount;
-        const user = tx.users as { name: string | null; email: string } | null;
+        const user = (tx as any).users;
         records.push({
           id: tx.id,
           date: tx.created_at,
@@ -611,7 +611,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
       for (const tx of data) {
         const amount = parseFloat(tx.amount || '0');
         total += amount;
-        const user = tx.users as { name: string | null; email: string } | null;
+        const user = (tx as any).users;
         records.push({
           id: tx.id,
           date: tx.completed_at || tx.requested_at,
@@ -652,7 +652,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
       for (const tx of data) {
         const amount = parseFloat(tx.amount || '0');
         total += amount;
-        const user = tx.users as { name: string | null; email: string } | null;
+        const user = (tx as any).users;
         records.push({
           id: tx.id,
           date: tx.requested_at,
@@ -699,8 +699,8 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
       for (const order of data) {
         const amount = parseFloat(order.product_price || '0');
         total += amount;
-        const user = order.users as { name: string | null; email: string } | null;
-        const product = order.products as { name: string } | null;
+        const user = (order as any).users;
+        const product = (order as any).products;
         records.push({
           id: order.id,
           date: order.created_at,

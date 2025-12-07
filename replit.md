@@ -45,6 +45,7 @@ The platform is built with Next.js 15.3.3 and Turbopack, using TypeScript and st
 - **Project Structure:** Organized into `src/app` for routes, `src/components` for UI, `src/lib` for utilities, `src/hooks` for custom hooks, `src/types` for TypeScript definitions, and `src/database` for migrations.
 - **Centralized Site Configuration:** All website details (company name, contact info, social media links, support links, working hours) are stored in `src/lib/site-config.ts` for easy editing. This file can be modified without coding knowledge - just change the values and redeploy.
 - **Authentication System:** Custom session-based authentication with iron-session, automatic token refresh with 5-minute expiry buffer, and session integrity validation.
+- **Secure Password Reset Flow:** International-standard PKCE flow for password reset. Magic link is verified server-side via `/auth/confirm` route before redirecting to `/reset-password?verified=true`. Security checkpoints: (1) Server-side token verification, (2) Session validation, (3) Password strength enforcement (6+ chars), (4) Password confirmation match, (5) Session invalidation after password change, (6) Secure cookies (httpOnly, sameSite strict, secure), (7) Protection against invalid/expired tokens.
 
 ## External Dependencies
 - **Supabase:** PostgreSQL database, Authentication (user auth), Row Level Security.

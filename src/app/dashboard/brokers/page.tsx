@@ -682,7 +682,7 @@ export default function BrokersPage() {
                             }))
                           }
                         />
-                        <Label htmlFor="welcomeBonus" className="text-sm cursor-pointer">مكافأة ترحيب</Label>
+                        <Label htmlFor="welcomeBonus" className="text-sm cursor-pointer">بونص ع الايداع</Label>
                       </div>
                       <div className="flex items-center gap-2">
                         <Checkbox

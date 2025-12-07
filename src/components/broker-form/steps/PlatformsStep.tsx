@@ -114,7 +114,7 @@ export function PlatformsStep({ form }: PlatformsStepProps) {
             <div className="space-y-0.5">
               <FormLabel className="text-base">
                 <span className="ltr:inline hidden">Custom/Proprietary Platform</span>
-                <span className="rtl:inline hidden">منصة مخصصة/ملكية</span>
+                <span className="rtl:inline hidden">منصة خاصة بالوسيط</span>
               </FormLabel>
               <FormDescription>
                 <span className="ltr:inline hidden">Offers custom trading platform</span>

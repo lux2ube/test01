@@ -29,7 +29,7 @@ export const TermsBank = {
     { key: "MT5", label: "MT5" },
     { key: "cTrader", label: "cTrader" },
     { key: "WebTrader", label: "WebTrader" },
-    { key: "Proprietary", label: "منصة مملوكة" }
+    { key: "Proprietary", label: "منصة خاصة بالوسيط" }
   ],
   accountTypes: [
     { key: "Standard", label: "قياسي" },

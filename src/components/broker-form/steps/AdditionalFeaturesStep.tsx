@@ -110,11 +110,11 @@ export function AdditionalFeaturesStep({ form }: AdditionalFeaturesStepProps) {
               <div className="space-y-0.5">
                 <FormLabel className="text-base">
                   <span className="ltr:inline hidden">Welcome Bonus</span>
-                  <span className="rtl:inline hidden">مكافأة الترحيب</span>
+                  <span className="rtl:inline hidden">بونص ع الايداع</span>
                 </FormLabel>
                 <FormDescription>
                   <span className="ltr:inline hidden">Offers welcome bonus for new clients</span>
-                  <span className="rtl:inline hidden">يقدم مكافأة ترحيب للعملاء الجدد</span>
+                  <span className="rtl:inline hidden">يقدم بونص ع الايداع للعملاء الجدد</span>
                 </FormDescription>
               </div>
               <FormControl>

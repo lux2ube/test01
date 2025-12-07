@@ -309,7 +309,7 @@ export default function BrokerPreviewPage() {
                             <BooleanPill value={additionalFeatures.copy_trading} text="نسخ التداول" />
                             <BooleanPill value={additionalFeatures.demo_account} text="حسابات تجريبية" />
                             <BooleanPill value={additionalFeatures.education_center} text="مركز تعليمي" />
-                            <BooleanPill value={additionalFeatures.welcome_bonus} text="بونص ترحيبي" />
+                            <BooleanPill value={additionalFeatures.welcome_bonus} text="بونص ع الايداع" />
                             <BooleanPill value={additionalFeatures.trading_contests} text="مسابقات تداول" />
                         </div>
                     </DetailCard>

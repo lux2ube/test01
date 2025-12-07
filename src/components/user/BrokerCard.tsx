@@ -36,7 +36,7 @@ const featureLabels: Record<string, string> = {
     copy_trading: 'نسخ',
     demo_account: 'تجريبي',
     trading_contests: 'مسابقات',
-    welcome_bonus: 'مكافأة',
+    welcome_bonus: 'بونص ع الايداع',
 };
 
 export function BrokerCard({ broker }: { broker: Broker }) {

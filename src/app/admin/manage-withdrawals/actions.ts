@@ -452,8 +452,8 @@ export async function createAdminBalanceAdjustment(
       console.error('Error updating withdrawal status:', updateError);
     }
 
-    // Create notification for user
-    const message = `تم خصم مبلغ ${amount.toFixed(2)}$ من رصيدك. السبب: ${reason}`;
+    // Create simple notification for user - only amount and reason
+    const message = `تم خصم ${amount.toFixed(2)}$ - ${reason}`;
     await createNotification(userId, message, 'withdrawal', '/dashboard/withdraw');
 
     return { 

@@ -17,6 +17,13 @@ export interface ReportFilters {
   productId?: string;
   referralSourceType?: 'cashback' | 'store_purchase' | 'all';
   withdrawalPaymentMethod?: string;
+  extraColumns?: string[];
+}
+
+export interface ExtraColumnOption {
+  key: string;
+  label: string;
+  recordTypes: string[];
 }
 
 export interface FilteredReportResult {
@@ -47,6 +54,18 @@ export interface DetailedRecord {
   sourceType?: string;
   referredUserName?: string;
   paymentMethod?: string;
+  tradeDetails?: string;
+  note?: string;
+  transactionId?: string;
+  txId?: string;
+  rejectionReason?: string;
+  requestedAt?: string;
+  completedAt?: string;
+  withdrawalDetails?: Record<string, any>;
+  productImage?: string;
+  deliveryPhoneNumber?: string;
+  referralCommissionAwarded?: boolean;
+  clientId?: string;
 }
 
 export interface DetailedReportResult {
@@ -166,6 +185,23 @@ export async function getReferralSourceTypes(): Promise<FilterOption[]> {
     { value: 'all', label: 'الكل' },
     { value: 'cashback', label: 'من الكاش باك' },
     { value: 'store_purchase', label: 'من المتجر' },
+  ];
+}
+
+export async function getAvailableExtraColumns(): Promise<ExtraColumnOption[]> {
+  return [
+    { key: 'tradeDetails', label: 'تفاصيل الصفقة', recordTypes: ['cashback'] },
+    { key: 'note', label: 'ملاحظة', recordTypes: ['cashback'] },
+    { key: 'transactionId', label: 'معرف المعاملة', recordTypes: ['cashback'] },
+    { key: 'clientId', label: 'رقم العميل', recordTypes: ['cashback', 'referral', 'deposit', 'withdrawal_completed', 'withdrawal_processing', 'order_created'] },
+    { key: 'txId', label: 'رقم التحويل (TX ID)', recordTypes: ['withdrawal_completed'] },
+    { key: 'rejectionReason', label: 'سبب الرفض', recordTypes: ['withdrawal_completed', 'withdrawal_processing'] },
+    { key: 'requestedAt', label: 'تاريخ الطلب', recordTypes: ['withdrawal_completed'] },
+    { key: 'completedAt', label: 'تاريخ الإكمال', recordTypes: ['withdrawal_completed'] },
+    { key: 'withdrawalDetails', label: 'تفاصيل السحب', recordTypes: ['withdrawal_completed', 'withdrawal_processing'] },
+    { key: 'productImage', label: 'صورة المنتج', recordTypes: ['order_created'] },
+    { key: 'deliveryPhoneNumber', label: 'رقم هاتف التوصيل', recordTypes: ['order_created'] },
+    { key: 'referralCommissionAwarded', label: 'عمولة الإحالة ممنوحة', recordTypes: ['order_created'] },
   ];
 }
 
@@ -475,19 +511,28 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
   const records: DetailedRecord[] = [];
   let total = 0;
   
+  const extraColumns = filters.extraColumns || [];
+  const hasExtraColumn = (col: string) => extraColumns.includes(col);
+  
   if (filters.recordType === 'cashback') {
+    let selectFields = `
+      id, 
+      cashback_amount, 
+      date, 
+      broker,
+      user_id,
+      account_id,
+      users!cashback_transactions_user_id_fkey(name, email, client_id),
+      trading_accounts!cashback_transactions_account_id_fkey(account_number)
+    `;
+    
+    if (hasExtraColumn('tradeDetails')) selectFields += ', trade_details';
+    if (hasExtraColumn('note')) selectFields += ', note';
+    if (hasExtraColumn('transactionId')) selectFields += ', transaction_id';
+    
     let query = supabase
       .from('cashback_transactions')
-      .select(`
-        id, 
-        cashback_amount, 
-        date, 
-        broker,
-        user_id,
-        account_id,
-        users!cashback_transactions_user_id_fkey(name, email),
-        trading_accounts!cashback_transactions_account_id_fkey(account_number)
-      `)
+      .select(selectFields)
       .order('date', { ascending: false });
     
     if (filters.userId) {
@@ -518,7 +563,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         total += amount;
         const user = (tx as any).users;
         const account = (tx as any).trading_accounts;
-        records.push({
+        const record: DetailedRecord = {
           id: tx.id,
           date: tx.date,
           amount,
@@ -526,7 +571,14 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
           userEmail: user?.email,
           broker: tx.broker,
           accountNumber: account?.account_number,
-        });
+        };
+        
+        if (hasExtraColumn('clientId')) record.clientId = user?.client_id;
+        if (hasExtraColumn('tradeDetails')) record.tradeDetails = (tx as any).trade_details;
+        if (hasExtraColumn('note')) record.note = (tx as any).note;
+        if (hasExtraColumn('transactionId')) record.transactionId = (tx as any).transaction_id;
+        
+        records.push(record);
       }
     }
   } else if (filters.recordType === 'referral') {
@@ -538,7 +590,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         created_at, 
         metadata,
         user_id,
-        users!transactions_user_id_fkey(name, email)
+        users!transactions_user_id_fkey(name, email, client_id)
       `)
       .eq('type', 'referral_commission')
       .order('created_at', { ascending: false });
@@ -582,7 +634,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         const amount = parseFloat(tx.amount || '0');
         total += amount;
         const user = (tx as any).users;
-        records.push({
+        const record: DetailedRecord = {
           id: tx.id,
           date: tx.created_at,
           amount,
@@ -592,7 +644,11 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
           accountNumber: metadata?.account_number,
           sourceType: metadata?.source_type === 'cashback' ? 'من الكاش باك' : metadata?.source_type === 'store_purchase' ? 'من المتجر' : undefined,
           referredUserName: metadata?.referred_user_name,
-        });
+        };
+        
+        if (hasExtraColumn('clientId')) record.clientId = user?.client_id;
+        
+        records.push(record);
       }
     }
   } else if (filters.recordType === 'deposit') {
@@ -603,7 +659,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         amount, 
         created_at,
         user_id,
-        users!transactions_user_id_fkey(name, email)
+        users!transactions_user_id_fkey(name, email, client_id)
       `)
       .eq('type', 'deposit')
       .order('created_at', { ascending: false });
@@ -627,27 +683,37 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         const amount = parseFloat(tx.amount || '0');
         total += amount;
         const user = (tx as any).users;
-        records.push({
+        const record: DetailedRecord = {
           id: tx.id,
           date: tx.created_at,
           amount,
           userName: user?.name || undefined,
           userEmail: user?.email,
-        });
+        };
+        
+        if (hasExtraColumn('clientId')) record.clientId = user?.client_id;
+        
+        records.push(record);
       }
     }
   } else if (filters.recordType === 'withdrawal_completed') {
+    let selectFields = `
+      id, 
+      amount, 
+      requested_at, 
+      completed_at,
+      payment_method,
+      user_id,
+      users!withdrawals_user_id_fkey(name, email, client_id)
+    `;
+    
+    if (hasExtraColumn('txId')) selectFields += ', tx_id';
+    if (hasExtraColumn('rejectionReason')) selectFields += ', rejection_reason';
+    if (hasExtraColumn('withdrawalDetails')) selectFields += ', withdrawal_details';
+    
     let query = supabase
       .from('withdrawals')
-      .select(`
-        id, 
-        amount, 
-        requested_at, 
-        completed_at,
-        payment_method,
-        user_id,
-        users!withdrawals_user_id_fkey(name, email)
-      `)
+      .select(selectFields)
       .eq('status', 'Completed')
       .order('completed_at', { ascending: false });
     
@@ -678,27 +744,41 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         const amount = parseFloat(tx.amount || '0');
         total += amount;
         const user = (tx as any).users;
-        records.push({
+        const record: DetailedRecord = {
           id: tx.id,
           date: tx.completed_at || tx.requested_at,
           amount,
           userName: user?.name || undefined,
           userEmail: user?.email,
           paymentMethod: tx.payment_method,
-        });
+        };
+        
+        if (hasExtraColumn('clientId')) record.clientId = user?.client_id;
+        if (hasExtraColumn('txId')) record.txId = (tx as any).tx_id;
+        if (hasExtraColumn('rejectionReason')) record.rejectionReason = (tx as any).rejection_reason;
+        if (hasExtraColumn('requestedAt')) record.requestedAt = tx.requested_at;
+        if (hasExtraColumn('completedAt')) record.completedAt = tx.completed_at;
+        if (hasExtraColumn('withdrawalDetails')) record.withdrawalDetails = (tx as any).withdrawal_details;
+        
+        records.push(record);
       }
     }
   } else if (filters.recordType === 'withdrawal_processing') {
+    let selectFields = `
+      id, 
+      amount, 
+      requested_at,
+      payment_method,
+      user_id,
+      users!withdrawals_user_id_fkey(name, email, client_id)
+    `;
+    
+    if (hasExtraColumn('rejectionReason')) selectFields += ', rejection_reason';
+    if (hasExtraColumn('withdrawalDetails')) selectFields += ', withdrawal_details';
+    
     let query = supabase
       .from('withdrawals')
-      .select(`
-        id, 
-        amount, 
-        requested_at,
-        payment_method,
-        user_id,
-        users!withdrawals_user_id_fkey(name, email)
-      `)
+      .select(selectFields)
       .eq('status', 'Processing')
       .order('requested_at', { ascending: false });
     
@@ -729,29 +809,41 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         const amount = parseFloat(tx.amount || '0');
         total += amount;
         const user = (tx as any).users;
-        records.push({
+        const record: DetailedRecord = {
           id: tx.id,
           date: tx.requested_at,
           amount,
           userName: user?.name || undefined,
           userEmail: user?.email,
           paymentMethod: tx.payment_method,
-        });
+        };
+        
+        if (hasExtraColumn('clientId')) record.clientId = user?.client_id;
+        if (hasExtraColumn('rejectionReason')) record.rejectionReason = (tx as any).rejection_reason;
+        if (hasExtraColumn('withdrawalDetails')) record.withdrawalDetails = (tx as any).withdrawal_details;
+        
+        records.push(record);
       }
     }
   } else if (filters.recordType === 'order_created') {
+    let selectFields = `
+      id, 
+      product_price, 
+      created_at, 
+      status,
+      user_id,
+      product_id,
+      users!orders_user_id_fkey(name, email, client_id),
+      products!orders_product_id_fkey(name)
+    `;
+    
+    if (hasExtraColumn('productImage')) selectFields += ', product_image';
+    if (hasExtraColumn('deliveryPhoneNumber')) selectFields += ', delivery_phone_number';
+    if (hasExtraColumn('referralCommissionAwarded')) selectFields += ', referral_commission_awarded';
+    
     let query = supabase
       .from('orders')
-      .select(`
-        id, 
-        product_price, 
-        created_at, 
-        status,
-        user_id,
-        product_id,
-        users!orders_user_id_fkey(name, email),
-        products!orders_product_id_fkey(name)
-      `)
+      .select(selectFields)
       .order('created_at', { ascending: false });
     
     if (filters.userId) {
@@ -778,7 +870,7 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
         total += amount;
         const user = (order as any).users;
         const product = (order as any).products;
-        records.push({
+        const record: DetailedRecord = {
           id: order.id,
           date: order.created_at,
           amount,
@@ -786,7 +878,14 @@ export async function getDetailedReport(filters: ReportFilters): Promise<Detaile
           userEmail: user?.email,
           productName: product?.name,
           status: order.status,
-        });
+        };
+        
+        if (hasExtraColumn('clientId')) record.clientId = user?.client_id;
+        if (hasExtraColumn('productImage')) record.productImage = (order as any).product_image;
+        if (hasExtraColumn('deliveryPhoneNumber')) record.deliveryPhoneNumber = (order as any).delivery_phone_number;
+        if (hasExtraColumn('referralCommissionAwarded')) record.referralCommissionAwarded = (order as any).referral_commission_awarded;
+        
+        records.push(record);
       }
     }
   }

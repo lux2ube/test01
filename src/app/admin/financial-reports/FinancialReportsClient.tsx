@@ -18,6 +18,7 @@ import {
   FilteredReportResult,
   DetailedRecord,
   DetailedReportResult,
+  ExtraColumnOption,
   getAvailableRecordTypes,
   getAvailableUsers,
   getAvailableBrokers,
@@ -25,9 +26,11 @@ import {
   getAvailableProducts,
   getReferralSourceTypes,
   getWithdrawalPaymentMethods,
+  getAvailableExtraColumns,
   getFilteredReport,
   getDetailedReport,
 } from './actions';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const RECORD_TYPE_LABELS: Record<string, string> = {
   'cashback': 'الكاش باك',
@@ -46,6 +49,7 @@ export default function FinancialReportsClient() {
   const [products, setProducts] = useState<FilterOption[]>([]);
   const [referralSourceTypes, setReferralSourceTypes] = useState<FilterOption[]>([]);
   const [withdrawalPaymentMethods, setWithdrawalPaymentMethods] = useState<FilterOption[]>([]);
+  const [allExtraColumns, setAllExtraColumns] = useState<ExtraColumnOption[]>([]);
   
   const [selectedRecordType, setSelectedRecordType] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
@@ -54,6 +58,7 @@ export default function FinancialReportsClient() {
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [selectedReferralSourceType, setSelectedReferralSourceType] = useState<string>('');
   const [selectedWithdrawalPaymentMethod, setSelectedWithdrawalPaymentMethod] = useState<string>('');
+  const [selectedExtraColumns, setSelectedExtraColumns] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   
@@ -80,13 +85,14 @@ export default function FinancialReportsClient() {
     async function loadInitialData() {
       setIsLoadingFilters(true);
       try {
-        const [types, usersData, brokersData, productsData, referralTypes, paymentMethods] = await Promise.all([
+        const [types, usersData, brokersData, productsData, referralTypes, paymentMethods, extraCols] = await Promise.all([
           getAvailableRecordTypes(),
           getAvailableUsers(),
           getAvailableBrokers(),
           getAvailableProducts(),
           getReferralSourceTypes(),
           getWithdrawalPaymentMethods(),
+          getAvailableExtraColumns(),
         ]);
         setRecordTypes(types);
         setUsers(usersData);
@@ -94,6 +100,7 @@ export default function FinancialReportsClient() {
         setProducts(productsData);
         setReferralSourceTypes(referralTypes);
         setWithdrawalPaymentMethods(paymentMethods);
+        setAllExtraColumns(extraCols);
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
@@ -181,6 +188,7 @@ export default function FinancialReportsClient() {
     setSelectedProduct('');
     setSelectedReferralSourceType('');
     setSelectedWithdrawalPaymentMethod('');
+    setSelectedExtraColumns([]);
     setDateFrom('');
     setDateTo('');
     setUserSearch('');
@@ -189,6 +197,18 @@ export default function FinancialReportsClient() {
     setDetailedResult(null);
     setHasSearched(false);
     setShowDetailedView(false);
+  };
+  
+  const availableExtraColumnsForType = allExtraColumns.filter(col => 
+    col.recordTypes.includes(selectedRecordType)
+  );
+  
+  const toggleExtraColumn = (key: string) => {
+    setSelectedExtraColumns(prev => 
+      prev.includes(key) 
+        ? prev.filter(k => k !== key)
+        : [...prev, key]
+    );
   };
 
   const handleFetchDetails = async () => {
@@ -211,6 +231,7 @@ export default function FinancialReportsClient() {
         withdrawalPaymentMethod: selectedWithdrawalPaymentMethod && selectedWithdrawalPaymentMethod !== 'all' 
           ? selectedWithdrawalPaymentMethod 
           : undefined,
+        extraColumns: selectedExtraColumns.length > 0 ? selectedExtraColumns : undefined,
       };
       
       const detailedData = await getDetailedReport(filters);
@@ -242,26 +263,44 @@ export default function FinancialReportsClient() {
       sourceType: 'المصدر',
       referredUserName: 'المستخدم المُحال',
       paymentMethod: 'طريقة الدفع',
+      clientId: 'رقم العميل',
+      tradeDetails: 'تفاصيل الصفقة',
+      note: 'ملاحظة',
+      transactionId: 'معرف المعاملة',
+      txId: 'معرف التحويل',
+      rejectionReason: 'سبب الرفض',
+      withdrawalDetails: 'تفاصيل السحب',
+      productImage: 'صورة المنتج',
+      deliveryPhoneNumber: 'رقم الهاتف للتوصيل',
+      referralCommissionAwarded: 'عمولة الإحالة',
     };
     
     const getRelevantHeaders = (): string[] => {
       const baseHeaders = ['date', 'amount', 'userName', 'userEmail'];
       
+      let typeHeaders: string[];
       switch (recordType) {
         case 'cashback':
-          return [...baseHeaders, 'broker', 'accountNumber'];
+          typeHeaders = [...baseHeaders, 'broker', 'accountNumber'];
+          break;
         case 'referral':
-          return [...baseHeaders, 'broker', 'accountNumber', 'sourceType', 'referredUserName'];
+          typeHeaders = [...baseHeaders, 'broker', 'accountNumber', 'sourceType', 'referredUserName'];
+          break;
         case 'deposit':
-          return baseHeaders;
+          typeHeaders = baseHeaders;
+          break;
         case 'withdrawal_completed':
         case 'withdrawal_processing':
-          return [...baseHeaders, 'paymentMethod'];
+          typeHeaders = [...baseHeaders, 'paymentMethod'];
+          break;
         case 'order_created':
-          return [...baseHeaders, 'productName', 'status'];
+          typeHeaders = [...baseHeaders, 'productName', 'status'];
+          break;
         default:
-          return baseHeaders;
+          typeHeaders = baseHeaders;
       }
+      
+      return [...typeHeaders, ...selectedExtraColumns];
     };
     
     const relevantHeaders = getRelevantHeaders();
@@ -274,6 +313,12 @@ export default function FinancialReportsClient() {
           row[headerLabel] = format(new Date(record[key as keyof DetailedRecord] as string), 'PP', { locale: ar });
         } else if (key === 'amount') {
           row[headerLabel] = `$${(record[key as keyof DetailedRecord] as number).toFixed(2)}`;
+        } else if (key === 'withdrawalDetails') {
+          const val = record[key as keyof DetailedRecord];
+          row[headerLabel] = val ? JSON.stringify(val) : '-';
+        } else if (key === 'referralCommissionAwarded') {
+          const val = record[key as keyof DetailedRecord];
+          row[headerLabel] = val !== undefined ? (val ? 'نعم' : 'لا') : '-';
         } else {
           row[headerLabel] = record[key as keyof DetailedRecord] || '-';
         }
@@ -668,6 +713,29 @@ export default function FinancialReportsClient() {
                     )}
                   </div>
                 </div>
+                
+                {availableExtraColumnsForType.length > 0 && (
+                  <div className="p-4 border rounded-lg bg-muted/30">
+                    <h4 className="text-sm font-medium mb-3">أعمدة إضافية (اختياري)</h4>
+                    <div className="flex flex-wrap gap-4">
+                      {availableExtraColumnsForType.map((col) => (
+                        <div key={col.key} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`col-${col.key}`}
+                            checked={selectedExtraColumns.includes(col.key)}
+                            onCheckedChange={() => toggleExtraColumn(col.key)}
+                          />
+                          <label
+                            htmlFor={`col-${col.key}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {col.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {!detailedResult && !isLoadingDetails && (
                   <div className="text-center py-8 text-muted-foreground border rounded-lg">
@@ -714,6 +782,36 @@ export default function FinancialReportsClient() {
                             {(selectedRecordType === 'withdrawal_completed' || selectedRecordType === 'withdrawal_processing') && (
                               <TableHead className="text-right">طريقة الدفع</TableHead>
                             )}
+                            {selectedExtraColumns.includes('clientId') && (
+                              <TableHead className="text-right">رقم العميل</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('tradeDetails') && (
+                              <TableHead className="text-right">تفاصيل الصفقة</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('note') && (
+                              <TableHead className="text-right">ملاحظة</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('transactionId') && (
+                              <TableHead className="text-right">معرف المعاملة</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('txId') && (
+                              <TableHead className="text-right">معرف التحويل</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('rejectionReason') && (
+                              <TableHead className="text-right">سبب الرفض</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('withdrawalDetails') && (
+                              <TableHead className="text-right">تفاصيل السحب</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('productImage') && (
+                              <TableHead className="text-right">صورة المنتج</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('deliveryPhoneNumber') && (
+                              <TableHead className="text-right">رقم الهاتف للتوصيل</TableHead>
+                            )}
+                            {selectedExtraColumns.includes('referralCommissionAwarded') && (
+                              <TableHead className="text-right">عمولة الإحالة</TableHead>
+                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -751,6 +849,64 @@ export default function FinancialReportsClient() {
                               )}
                               {(selectedRecordType === 'withdrawal_completed' || selectedRecordType === 'withdrawal_processing') && (
                                 <TableCell>{record.paymentMethod || '-'}</TableCell>
+                              )}
+                              {selectedExtraColumns.includes('clientId') && (
+                                <TableCell>{record.clientId || '-'}</TableCell>
+                              )}
+                              {selectedExtraColumns.includes('tradeDetails') && (
+                                <TableCell className="max-w-[200px] truncate" title={record.tradeDetails || ''}>
+                                  {record.tradeDetails || '-'}
+                                </TableCell>
+                              )}
+                              {selectedExtraColumns.includes('note') && (
+                                <TableCell className="max-w-[200px] truncate" title={record.note || ''}>
+                                  {record.note || '-'}
+                                </TableCell>
+                              )}
+                              {selectedExtraColumns.includes('transactionId') && (
+                                <TableCell className="font-mono text-xs">
+                                  {record.transactionId || '-'}
+                                </TableCell>
+                              )}
+                              {selectedExtraColumns.includes('txId') && (
+                                <TableCell className="font-mono text-xs max-w-[150px] truncate" title={record.txId || ''}>
+                                  {record.txId || '-'}
+                                </TableCell>
+                              )}
+                              {selectedExtraColumns.includes('rejectionReason') && (
+                                <TableCell className="max-w-[200px] truncate" title={record.rejectionReason || ''}>
+                                  {record.rejectionReason || '-'}
+                                </TableCell>
+                              )}
+                              {selectedExtraColumns.includes('withdrawalDetails') && (
+                                <TableCell className="max-w-[200px] truncate">
+                                  {record.withdrawalDetails ? (
+                                    <span title={JSON.stringify(record.withdrawalDetails, null, 2)}>
+                                      تفاصيل متوفرة
+                                    </span>
+                                  ) : '-'}
+                                </TableCell>
+                              )}
+                              {selectedExtraColumns.includes('productImage') && (
+                                <TableCell>
+                                  {record.productImage ? (
+                                    <img 
+                                      src={record.productImage} 
+                                      alt="صورة المنتج" 
+                                      className="w-10 h-10 object-cover rounded"
+                                    />
+                                  ) : '-'}
+                                </TableCell>
+                              )}
+                              {selectedExtraColumns.includes('deliveryPhoneNumber') && (
+                                <TableCell dir="ltr">{record.deliveryPhoneNumber || '-'}</TableCell>
+                              )}
+                              {selectedExtraColumns.includes('referralCommissionAwarded') && (
+                                <TableCell>
+                                  {record.referralCommissionAwarded !== undefined 
+                                    ? (record.referralCommissionAwarded ? 'نعم' : 'لا')
+                                    : '-'}
+                                </TableCell>
                               )}
                             </TableRow>
                           ))}

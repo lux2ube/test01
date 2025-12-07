@@ -292,6 +292,7 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
  * 2. Immediately completes it (decreases pending_withdrawals, increases total_withdrawn)
  * 
  * The withdrawal is marked as 'admin_adjustment' to distinguish from user withdrawals.
+ * SECURITY: Requires admin authentication and records admin ID in audit trail.
  */
 export async function createAdminBalanceAdjustment(
   userId: string,
@@ -299,6 +300,35 @@ export async function createAdminBalanceAdjustment(
   reason: string
 ): Promise<{ success: boolean; message: string; withdrawalId?: string }> {
   try {
+    // SECURITY: Verify admin authentication using Supabase auth.getUser() 
+    // This validates the session token through Supabase, not just reading cookies
+    const { getAuthenticatedUser } = await import('@/lib/auth/server-auth');
+    
+    let authenticatedUser;
+    try {
+      authenticatedUser = await getAuthenticatedUser();
+    } catch {
+      return { success: false, message: 'غير مصرح: يرجى تسجيل الدخول' };
+    }
+
+    // Verify user has admin role (getAuthenticatedUser already fetches role from database)
+    if (authenticatedUser.role !== 'admin') {
+      console.error('Admin verification failed: User role is', authenticatedUser.role);
+      return { success: false, message: 'غير مصرح: صلاحيات المدير مطلوبة' };
+    }
+
+    const adminId = authenticatedUser.id;
+    
+    // Fetch admin name for audit trail
+    const supabase = await createAdminClient();
+    const { data: adminProfile } = await supabase
+      .from('users')
+      .select('name')
+      .eq('id', adminId)
+      .single();
+    
+    const adminName = adminProfile?.name || 'مدير';
+
     if (!userId || !amount || amount <= 0) {
       return { success: false, message: 'معرف المستخدم والمبلغ مطلوبان' };
     }
@@ -306,8 +336,6 @@ export async function createAdminBalanceAdjustment(
     if (!reason || !reason.trim()) {
       return { success: false, message: 'سبب التعديل مطلوب' };
     }
-
-    const supabase = await createAdminClient();
 
     // Check user exists
     const { data: user, error: userError } = await supabase
@@ -335,7 +363,7 @@ export async function createAdminBalanceAdjustment(
       };
     }
 
-    // Create withdrawal record marked as admin adjustment
+    // Create withdrawal record marked as admin adjustment with admin attribution
     const { data: withdrawal, error: insertError } = await supabase
       .from('withdrawals')
       .insert({
@@ -346,7 +374,9 @@ export async function createAdminBalanceAdjustment(
         withdrawal_details: {
           type: 'admin_adjustment',
           reason: reason,
-          adjusted_by: 'admin'
+          adjusted_by_admin_id: adminId,
+          adjusted_by_admin_name: adminName,
+          adjusted_at: new Date().toISOString()
         },
         requested_at: new Date().toISOString()
       })
@@ -359,6 +389,7 @@ export async function createAdminBalanceAdjustment(
     }
 
     // Step 1: Create withdrawal in ledger (increases pending_withdrawals)
+    // SECURITY: Use admin ID as actor for proper audit trail
     const { createWithdrawal } = await import('@/lib/ledger/service');
     try {
       await createWithdrawal({
@@ -368,7 +399,8 @@ export async function createAdminBalanceAdjustment(
         metadata: {
           type: 'admin_adjustment',
           reason: reason,
-          _actor_id: userId,
+          target_user_id: userId,
+          _actor_id: adminId,
           _actor_action: 'admin_balance_adjustment'
         }
       });
@@ -380,6 +412,7 @@ export async function createAdminBalanceAdjustment(
     }
 
     // Step 2: Complete withdrawal in ledger (decreases pending, increases withdrawn)
+    // SECURITY: Use admin ID as actor for proper audit trail
     const { changeWithdrawalStatusInLedger } = await import('@/app/actions/ledger');
     const ledgerResult = await changeWithdrawalStatusInLedger(
       userId,
@@ -390,6 +423,8 @@ export async function createAdminBalanceAdjustment(
       { 
         type: 'admin_adjustment',
         reason: reason,
+        target_user_id: userId,
+        _actor_id: adminId,
         _actor_action: 'admin_balance_adjustment_complete'
       }
     );

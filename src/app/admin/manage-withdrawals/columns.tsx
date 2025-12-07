@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import type { Withdrawal, UserProfile } from "@/types"
-import { Copy, ChevronDown, AlertTriangle, ShieldCheck } from "lucide-react"
+import { Copy, ChevronDown, AlertTriangle, ShieldCheck, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 type EnrichedWithdrawal = Withdrawal & { userProfile?: UserProfile };
@@ -101,27 +101,37 @@ export const columns: ColumnDef<EnrichedWithdrawal>[] = [
   {
     accessorKey: "paymentMethod",
     header: "الطريقة",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-1.5">
-        <Badge variant="outline">{row.original.paymentMethod}</Badge>
-        {row.original.status === 'Processing' && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {row.original.isWhitelisted ? (
-                  <ShieldCheck className="h-4 w-4 text-green-600" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                )}
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{row.original.isWhitelisted ? 'عنوان موثق' : 'عنوان جديد - يحتاج مراجعة'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const isAdminAdjustment = row.original.withdrawalDetails?.type === 'admin_adjustment';
+      return (
+        <div className="flex items-center gap-1.5">
+          {isAdminAdjustment ? (
+            <Badge variant="secondary" className="gap-1">
+              <Settings className="h-3 w-3" />
+              تعديل إداري
+            </Badge>
+          ) : (
+            <Badge variant="outline">{row.original.paymentMethod}</Badge>
+          )}
+          {!isAdminAdjustment && row.original.status === 'Processing' && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {row.original.isWhitelisted ? (
+                    <ShieldCheck className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{row.original.isWhitelisted ? 'عنوان موثق' : 'عنوان جديد - يحتاج مراجعة'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "status",

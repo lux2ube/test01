@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { PageHeader } from "@/components/shared/PageHeader";
-import { approveWithdrawal, getWithdrawals, rejectWithdrawal } from './actions';
+import { approveWithdrawal, getWithdrawals, rejectWithdrawal, createAdminBalanceAdjustment } from './actions';
 import { getUsers } from '../users/actions';
 import type { Withdrawal, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Hash, MessageSquare, CheckCircle, XCircle, Check } from 'lucide-react';
+import { Loader2, Hash, MessageSquare, CheckCircle, XCircle, Check, MinusCircle, Search, DollarSign, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -182,6 +182,7 @@ function SubRow({ row }: { row: Row<EnrichedWithdrawal> }) {
 
 export default function ManageWithdrawalsPage() {
     const [withdrawals, setWithdrawals] = useState<EnrichedWithdrawal[]>([]);
+    const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [dialogState, setDialogState] = useState<{
         type: 'approve' | 'reject' | null;
@@ -189,6 +190,14 @@ export default function ManageWithdrawalsPage() {
     }>({ type: null, withdrawalIds: [] });
     const [dialogInputValue, setDialogInputValue] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+    const [adjustmentData, setAdjustmentData] = useState<{
+        userId: string;
+        amount: string;
+        reason: string;
+        userSearch: string;
+    }>({ userId: '', amount: '', reason: '', userSearch: '' });
+    const [isAdjusting, setIsAdjusting] = useState(false);
     const { toast } = useToast();
 
     const fetchData = useCallback(async () => {
@@ -199,6 +208,7 @@ export default function ManageWithdrawalsPage() {
                 getUsers()
             ]);
             
+            setAllUsers(usersData);
             const usersMap = new Map(usersData.map(u => [u.id, u]));
             
             const enrichedData = data.map(w => ({
@@ -214,6 +224,58 @@ export default function ManageWithdrawalsPage() {
             setIsLoading(false);
         }
     }, [toast]);
+
+    const filteredUsers = useMemo(() => {
+        if (!adjustmentData.userSearch.trim()) return [];
+        const search = adjustmentData.userSearch.toLowerCase();
+        return allUsers.filter(u => 
+            u.name?.toLowerCase().includes(search) ||
+            u.email?.toLowerCase().includes(search) ||
+            u.clientId?.toString().includes(search)
+        ).slice(0, 10);
+    }, [allUsers, adjustmentData.userSearch]);
+
+    const selectedUser = useMemo(() => {
+        return allUsers.find(u => u.id === adjustmentData.userId);
+    }, [allUsers, adjustmentData.userId]);
+
+    const handleAdjustmentSubmit = async () => {
+        const amount = parseFloat(adjustmentData.amount);
+        if (!adjustmentData.userId) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'يرجى اختيار مستخدم' });
+            return;
+        }
+        if (isNaN(amount) || amount <= 0) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'يرجى إدخال مبلغ صحيح' });
+            return;
+        }
+        if (!adjustmentData.reason.trim()) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'يرجى إدخال سبب التعديل' });
+            return;
+        }
+
+        setIsAdjusting(true);
+        try {
+            const result = await createAdminBalanceAdjustment(
+                adjustmentData.userId,
+                amount,
+                adjustmentData.reason
+            );
+
+            if (result.success) {
+                toast({ title: 'نجاح', description: result.message });
+                setAdjustmentDialogOpen(false);
+                setAdjustmentData({ userId: '', amount: '', reason: '', userSearch: '' });
+                fetchData();
+            } else {
+                toast({ variant: 'destructive', title: 'خطأ', description: result.message });
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'حدث خطأ غير متوقع' });
+        } finally {
+            setIsAdjusting(false);
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -271,7 +333,17 @@ export default function ManageWithdrawalsPage() {
 
     return (
         <div className="container mx-auto space-y-6">
-            <PageHeader title="إدارة السحوبات" description="معالجة طلبات السحب من المستخدمين." />
+            <div className="flex items-center justify-between">
+                <PageHeader title="إدارة السحوبات" description="معالجة طلبات السحب من المستخدمين." />
+                <Button 
+                    variant="outline" 
+                    onClick={() => setAdjustmentDialogOpen(true)}
+                    className="gap-2"
+                >
+                    <MinusCircle className="h-4 w-4 text-destructive" />
+                    تعديل رصيد (خصم)
+                </Button>
+            </div>
             <DataTable 
                 columns={columns} 
                 data={withdrawals} 
@@ -377,6 +449,119 @@ export default function ManageWithdrawalsPage() {
                         <AlertDialogAction onClick={handleDialogSubmit} disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                             {dialogState.type === 'approve' ? 'الموافقة' : 'تأكيد الرفض'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
+                <AlertDialogContent className="max-w-lg">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <MinusCircle className="h-5 w-5 text-destructive" />
+                            تعديل رصيد المستخدم (خصم)
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            خصم مبلغ من رصيد المستخدم لتصحيح الأخطاء. سيتم تسجيل هذا التعديل في سجلات السحب.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>اختر المستخدم</Label>
+                            {selectedUser ? (
+                                <Card className="p-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <User className="h-4 w-4 text-muted-foreground" />
+                                            <div>
+                                                <p className="font-medium text-sm">{selectedUser.name}</p>
+                                                <p className="text-xs text-muted-foreground">{selectedUser.email}</p>
+                                            </div>
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm"
+                                            onClick={() => setAdjustmentData(prev => ({ ...prev, userId: '', userSearch: '' }))}
+                                        >
+                                            تغيير
+                                        </Button>
+                                    </div>
+                                </Card>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="ابحث بالاسم أو البريد أو رقم العميل..."
+                                            value={adjustmentData.userSearch}
+                                            onChange={(e) => setAdjustmentData(prev => ({ ...prev, userSearch: e.target.value }))}
+                                            className="pr-10"
+                                        />
+                                    </div>
+                                    {filteredUsers.length > 0 && (
+                                        <Card className="max-h-48 overflow-y-auto">
+                                            {filteredUsers.map(user => (
+                                                <div 
+                                                    key={user.id}
+                                                    className="p-2 hover:bg-muted cursor-pointer border-b last:border-0"
+                                                    onClick={() => setAdjustmentData(prev => ({ 
+                                                        ...prev, 
+                                                        userId: user.id, 
+                                                        userSearch: '' 
+                                                    }))}
+                                                >
+                                                    <p className="font-medium text-sm">{user.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{user.email} | #{user.clientId}</p>
+                                                </div>
+                                            ))}
+                                        </Card>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="adjustment-amount">المبلغ المراد خصمه</Label>
+                            <div className="relative">
+                                <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    id="adjustment-amount"
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={adjustmentData.amount}
+                                    onChange={(e) => setAdjustmentData(prev => ({ ...prev, amount: e.target.value }))}
+                                    className="pr-10"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="adjustment-reason">سبب التعديل</Label>
+                            <Textarea
+                                id="adjustment-reason"
+                                placeholder="اكتب سبب الخصم بالتفصيل..."
+                                value={adjustmentData.reason}
+                                onChange={(e) => setAdjustmentData(prev => ({ ...prev, reason: e.target.value }))}
+                                className="min-h-[80px]"
+                            />
+                        </div>
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setAdjustmentDialogOpen(false);
+                            setAdjustmentData({ userId: '', amount: '', reason: '', userSearch: '' });
+                        }}>
+                            إلغاء
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={handleAdjustmentSubmit} 
+                            disabled={isAdjusting || !adjustmentData.userId || !adjustmentData.amount || !adjustmentData.reason}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            {isAdjusting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                            تأكيد الخصم
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

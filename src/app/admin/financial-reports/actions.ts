@@ -14,6 +14,8 @@ export interface ReportFilters {
   accountId?: string;
   dateFrom?: string;
   dateTo?: string;
+  productId?: string;
+  referralSourceType?: 'cashback' | 'store_purchase' | 'all';
 }
 
 export interface FilteredReportResult {
@@ -25,6 +27,8 @@ export interface FilteredReportResult {
     broker?: string;
     account?: string;
     period?: string;
+    product?: string;
+    referralSourceType?: string;
   };
 }
 
@@ -114,6 +118,33 @@ export async function getAvailableAccounts(userId?: string, broker?: string): Pr
   }));
 }
 
+export async function getAvailableProducts(): Promise<FilterOption[]> {
+  const supabase = await createAdminClient();
+  
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name')
+    .order('name');
+  
+  if (error || !data) {
+    console.error('Error fetching products:', error);
+    return [];
+  }
+  
+  return data.map(product => ({
+    value: product.id,
+    label: product.name,
+  }));
+}
+
+export async function getReferralSourceTypes(): Promise<FilterOption[]> {
+  return [
+    { value: 'all', label: 'الكل' },
+    { value: 'cashback', label: 'من الكاش باك' },
+    { value: 'store_purchase', label: 'من المتجر' },
+  ];
+}
+
 export async function getFilteredReport(filters: ReportFilters): Promise<FilteredReportResult> {
   const supabase = await createAdminClient();
   
@@ -151,6 +182,21 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
     const from = filters.dateFrom || 'البداية';
     const to = filters.dateTo || 'الآن';
     appliedFilters.period = `${from} إلى ${to}`;
+  }
+  
+  if (filters.productId) {
+    const { data: productData } = await supabase
+      .from('products')
+      .select('name')
+      .eq('id', filters.productId)
+      .single();
+    if (productData) {
+      appliedFilters.product = productData.name;
+    }
+  }
+  
+  if (filters.referralSourceType && filters.referralSourceType !== 'all') {
+    appliedFilters.referralSourceType = filters.referralSourceType === 'cashback' ? 'من الكاش باك' : 'من المتجر';
   }
   
   if (filters.recordType === 'cashback') {
@@ -207,17 +253,26 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
     if (!error && data) {
       let filteredData = data;
       
-      if (filters.broker || filters.accountId) {
+      if (filters.broker || filters.accountId || (filters.referralSourceType && filters.referralSourceType !== 'all')) {
         filteredData = data.filter(tx => {
           const metadata = tx.metadata as Record<string, any> | null;
-          if (!metadata) return false;
           
-          if (filters.broker && metadata.broker !== filters.broker) {
-            return false;
+          if (filters.broker) {
+            if (!metadata || metadata.broker !== filters.broker) {
+              return false;
+            }
           }
           
-          if (filters.accountId && metadata.account_id !== filters.accountId) {
-            return false;
+          if (filters.accountId) {
+            if (!metadata || metadata.account_id !== filters.accountId) {
+              return false;
+            }
+          }
+          
+          if (filters.referralSourceType && filters.referralSourceType !== 'all') {
+            if (!metadata || metadata.source_type !== filters.referralSourceType) {
+              return false;
+            }
           }
           
           return true;
@@ -302,10 +357,14 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
   } else if (filters.recordType === 'order_created') {
     let query = supabase
       .from('orders')
-      .select('id, price, user_id, created_at, status');
+      .select('id, product_price, user_id, created_at, status, product_id');
     
     if (filters.userId) {
       query = query.eq('user_id', filters.userId);
+    }
+    
+    if (filters.productId) {
+      query = query.eq('product_id', filters.productId);
     }
     
     if (filters.dateFrom) {
@@ -320,7 +379,7 @@ export async function getFilteredReport(filters: ReportFilters): Promise<Filtere
     
     if (!error && data) {
       count = data.length;
-      total = data.reduce((sum, order) => sum + parseFloat(order.price || '0'), 0);
+      total = data.reduce((sum, order) => sum + parseFloat(order.product_price || '0'), 0);
     }
   }
   

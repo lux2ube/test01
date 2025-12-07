@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { DollarSign, Filter, Loader2, Search, Calendar, User, Briefcase, CreditCard, FileText } from "lucide-react";
+import { DollarSign, Filter, Loader2, Search, Calendar, User, Briefcase, CreditCard, FileText, Package, GitBranch } from "lucide-react";
 import { 
   FilterOption, 
   ReportFilters, 
@@ -15,6 +15,8 @@ import {
   getAvailableUsers,
   getAvailableBrokers,
   getAvailableAccounts,
+  getAvailableProducts,
+  getReferralSourceTypes,
   getFilteredReport,
 } from './actions';
 
@@ -32,32 +34,50 @@ export default function FinancialReportsClient() {
   const [users, setUsers] = useState<FilterOption[]>([]);
   const [brokers, setBrokers] = useState<FilterOption[]>([]);
   const [accounts, setAccounts] = useState<FilterOption[]>([]);
+  const [products, setProducts] = useState<FilterOption[]>([]);
+  const [referralSourceTypes, setReferralSourceTypes] = useState<FilterOption[]>([]);
   
   const [selectedRecordType, setSelectedRecordType] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedBroker, setSelectedBroker] = useState<string>('');
   const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [selectedReferralSourceType, setSelectedReferralSourceType] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  
+  const [userSearch, setUserSearch] = useState<string>('');
+  const [accountSearch, setAccountSearch] = useState<string>('');
   
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingFilters, setIsLoadingFilters] = useState(true);
   const [result, setResult] = useState<FilteredReportResult | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  
+  const filteredUsers = users.filter(user => 
+    user.label.toLowerCase().includes(userSearch.toLowerCase())
+  );
+  
+  const filteredAccounts = accounts.filter(account => 
+    account.label.toLowerCase().includes(accountSearch.toLowerCase())
+  );
 
   useEffect(() => {
     async function loadInitialData() {
       setIsLoadingFilters(true);
       try {
-        const [types, usersData] = await Promise.all([
+        const [types, usersData, brokersData, productsData, referralTypes] = await Promise.all([
           getAvailableRecordTypes(),
           getAvailableUsers(),
+          getAvailableBrokers(),
+          getAvailableProducts(),
+          getReferralSourceTypes(),
         ]);
         setRecordTypes(types);
         setUsers(usersData);
-        
-        const brokersData = await getAvailableBrokers();
         setBrokers(brokersData);
+        setProducts(productsData);
+        setReferralSourceTypes(referralTypes);
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
@@ -118,6 +138,10 @@ export default function FinancialReportsClient() {
         accountId: selectedAccount && selectedAccount !== 'all' ? selectedAccount : undefined,
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
+        productId: selectedProduct && selectedProduct !== 'all' ? selectedProduct : undefined,
+        referralSourceType: selectedReferralSourceType && selectedReferralSourceType !== 'all' 
+          ? selectedReferralSourceType as 'cashback' | 'store_purchase' 
+          : undefined,
       };
       
       const reportResult = await getFilteredReport(filters);
@@ -135,8 +159,12 @@ export default function FinancialReportsClient() {
     setSelectedUser('');
     setSelectedBroker('');
     setSelectedAccount('');
+    setSelectedProduct('');
+    setSelectedReferralSourceType('');
     setDateFrom('');
     setDateTo('');
+    setUserSearch('');
+    setAccountSearch('');
     setResult(null);
     setHasSearched(false);
   };
@@ -187,17 +215,31 @@ export default function FinancialReportsClient() {
                 <User className="h-4 w-4" />
                 المستخدم
               </Label>
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
+              <Select value={selectedUser} onValueChange={(value) => { setSelectedUser(value); setUserSearch(''); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="جميع المستخدمين" />
                 </SelectTrigger>
                 <SelectContent>
+                  <div className="p-2 sticky top-0 bg-background">
+                    <Input
+                      placeholder="بحث عن مستخدم..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="h-8"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
                   <SelectItem value="all">جميع المستخدمين</SelectItem>
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <SelectItem key={user.value} value={user.value}>
                       {user.label}
                     </SelectItem>
                   ))}
+                  {filteredUsers.length === 0 && userSearch && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      لا توجد نتائج
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -227,20 +269,77 @@ export default function FinancialReportsClient() {
                 <CreditCard className="h-4 w-4" />
                 حساب التداول
               </Label>
-              <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+              <Select value={selectedAccount} onValueChange={(value) => { setSelectedAccount(value); setAccountSearch(''); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="جميع الحسابات" />
                 </SelectTrigger>
                 <SelectContent>
+                  <div className="p-2 sticky top-0 bg-background">
+                    <Input
+                      placeholder="بحث عن حساب..."
+                      value={accountSearch}
+                      onChange={(e) => setAccountSearch(e.target.value)}
+                      className="h-8"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
                   <SelectItem value="all">جميع الحسابات</SelectItem>
-                  {accounts.map((account) => (
+                  {filteredAccounts.map((account) => (
                     <SelectItem key={account.value} value={account.value}>
                       {account.label}
                     </SelectItem>
                   ))}
+                  {filteredAccounts.length === 0 && accountSearch && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      لا توجد نتائج
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
+
+            {selectedRecordType === 'order_created' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  المنتج
+                </Label>
+                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="جميع المنتجات" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع المنتجات</SelectItem>
+                    {products.map((product) => (
+                      <SelectItem key={product.value} value={product.value}>
+                        {product.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {selectedRecordType === 'referral' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  مصدر العمولة
+                </Label>
+                <Select value={selectedReferralSourceType} onValueChange={setSelectedReferralSourceType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="جميع المصادر" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {referralSourceTypes.map((sourceType) => (
+                      <SelectItem key={sourceType.value} value={sourceType.value}>
+                        {sourceType.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
@@ -321,6 +420,8 @@ export default function FinancialReportsClient() {
                 {result.appliedFilters.user && <span className="font-medium">المستخدم: {result.appliedFilters.user}</span>}
                 {result.appliedFilters.broker && <span className="font-medium"> | الوسيط: {result.appliedFilters.broker}</span>}
                 {result.appliedFilters.account && <span className="font-medium"> | الحساب: {result.appliedFilters.account}</span>}
+                {result.appliedFilters.product && <span className="font-medium"> | المنتج: {result.appliedFilters.product}</span>}
+                {result.appliedFilters.referralSourceType && <span className="font-medium"> | المصدر: {result.appliedFilters.referralSourceType}</span>}
                 {result.appliedFilters.period && <span className="font-medium"> | الفترة: {result.appliedFilters.period}</span>}
               </CardDescription>
             )}

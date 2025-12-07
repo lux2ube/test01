@@ -27,6 +27,7 @@ The platform is built with Next.js 15.3.3 and Turbopack, using TypeScript and st
 - Referral program with commission tracking.
 - **Financial-Grade Ledger System:** ACID-compliant double-entry accounting with PostgreSQL stored procedures, immutable audit trail, and running balance totals. All financial operations (cashback, referrals, withdrawals, orders) use stored procedures with row-level locking. Admin-only server actions with role-based authorization.
 - Admin dashboard for comprehensive management of users, brokers, and transactions, including an admin KYC review system with data extraction capabilities.
+- **Bulk Cashback Import:** Excel file upload with per-record confirmation workflow. Records are validated against approved trading accounts, displayed in a table with status tracking (pending/confirmed/rejected/error), and each record is confirmed individually using the standard `addCashbackTransaction` function which handles ledger updates, notifications, referral commissions, and monthly earnings automatically.
 - Content management features including a blog system with Markdown support.
 - E-commerce functionality with a store/marketplace.
 - Activity logging for security tracking.

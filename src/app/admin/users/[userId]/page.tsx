@@ -560,9 +560,10 @@ export default function UserDetailPage() {
                         <CardContent className="space-y-1 divide-y">
                            <InfoRow label="الرصيد المتاح"><span className="text-primary font-bold">${balance.availableBalance.toFixed(2)}</span></InfoRow>
                            <InfoRow label="إجمالي المكتسب" value={`$${balance.totalEarned.toFixed(2)}`} />
-                           <InfoRow label="إجمالي المسحوب" value={`$${balance.completedWithdrawals.toFixed(2)}`} />
-                           <InfoRow label="سحوبات معلقة" value={`$${balance.pendingWithdrawals.toFixed(2)}`} />
-                           <InfoRow label="المصروف في المتجر" value={`$${balance.totalSpentOnOrders.toFixed(2)}`} />
+                           <InfoRow label="إجمالي الإيداعات" value={`$${balance.totalDeposit.toFixed(2)}`} />
+                           <InfoRow label="إجمالي المسحوب" value={`$${balance.totalWithdrawn.toFixed(2)}`} />
+                           <InfoRow label="سحوبات معلقة" value={`$${balance.totalPendingWithdrawals.toFixed(2)}`} />
+                           <InfoRow label="المصروف في المتجر" value={`$${balance.totalOrders.toFixed(2)}`} />
                         </CardContent>
                     </Card>
                      <Card>

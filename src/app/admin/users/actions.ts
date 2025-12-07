@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/server';
-import type { UserProfile, UserStatus, ClientLevel, TradingAccount, CashbackTransaction, Withdrawal, Order, KycData, AddressData, ActivityLog } from '@/types';
+import type { UserProfile, UserStatus, ClientLevel, TradingAccount, KycData, AddressData, ActivityLog } from '@/types';
 import { startOfMonth } from 'date-fns';
 import { getClientLevels } from '@/app/actions';
 
@@ -338,16 +338,12 @@ export async function getUserDetails(userId: string) {
       } : undefined,
     };
 
-    const balanceData = { availableBalance: 0, totalEarned: 0, completedWithdrawals: 0, pendingWithdrawals: 0, totalSpentOnOrders: 0 };
-
-    const [accountsResult, transactionsResult, withdrawalsResult, ordersResult] = await Promise.all([
+    const [tradingAccountsResult, ledgerAccountResult] = await Promise.all([
       supabase.from('trading_accounts').select('*').eq('user_id', userId),
-      supabase.from('cashback_transactions').select('*').eq('user_id', userId),
-      supabase.from('withdrawals').select('*').eq('user_id', userId),
-      supabase.from('orders').select('*').eq('user_id', userId),
+      supabase.from('accounts').select('*').eq('user_id', userId).single(),
     ]);
 
-    const tradingAccounts: TradingAccount[] = (accountsResult.data || []).map((acc) => ({
+    const tradingAccounts: TradingAccount[] = (tradingAccountsResult.data || []).map((acc) => ({
       id: acc.id,
       userId: acc.user_id,
       broker: acc.broker,
@@ -357,46 +353,23 @@ export async function getUserDetails(userId: string) {
       rejectionReason: acc.rejection_reason,
     }));
 
-    const cashbackTransactions: CashbackTransaction[] = (transactionsResult.data || []).map((tx) => ({
-      id: tx.id,
-      userId: tx.user_id,
-      accountId: tx.account_id,
-      accountNumber: tx.account_number,
-      broker: tx.broker,
-      date: new Date(tx.date),
-      tradeDetails: tx.trade_details,
-      cashbackAmount: tx.cashback_amount,
-    }));
+    const ledgerAccount = ledgerAccountResult.data;
+    const totalEarned = parseFloat(ledgerAccount?.total_earned || '0');
+    const totalDeposit = parseFloat(ledgerAccount?.total_deposit || '0');
+    const totalWithdrawn = parseFloat(ledgerAccount?.total_withdrawn || '0');
+    const totalPendingWithdrawals = parseFloat(ledgerAccount?.total_pending_withdrawals || '0');
+    const totalOrders = parseFloat(ledgerAccount?.total_orders || '0');
+    
+    const availableBalance = totalEarned + totalDeposit - totalWithdrawn - totalPendingWithdrawals - totalOrders;
 
-    const withdrawals: Withdrawal[] = (withdrawalsResult.data || []).map((w) => ({
-      id: w.id,
-      userId: w.user_id,
-      amount: w.amount,
-      status: w.status,
-      paymentMethod: w.payment_method,
-      withdrawalDetails: w.withdrawal_details,
-      requestedAt: new Date(w.requested_at),
-      completedAt: w.completed_at ? new Date(w.completed_at) : undefined,
-      txId: w.tx_id,
-      rejectionReason: w.rejection_reason,
-      previousWithdrawalDetails: w.previous_withdrawal_details,
-    }));
-
-    const orders: Order[] = (ordersResult.data || []).map((o) => ({
-      id: o.id,
-      userId: o.user_id,
-      productId: o.product_id,
-      productName: o.product_name,
-      productImage: o.product_image || '',
-      price: o.product_price,
-      deliveryPhoneNumber: o.delivery_phone_number || '',
-      status: o.status,
-      createdAt: new Date(o.created_at),
-    }));
-
-    cashbackTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
-    withdrawals.sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
-    orders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const balance = {
+      availableBalance,
+      totalEarned,
+      totalDeposit,
+      totalWithdrawn,
+      totalPendingWithdrawals,
+      totalOrders,
+    };
 
     let referredByName = null;
     if (userProfile.referredBy) {
@@ -426,11 +399,8 @@ export async function getUserDetails(userId: string) {
 
     return {
       userProfile,
-      balance: balanceData,
+      balance,
       tradingAccounts,
-      cashbackTransactions,
-      withdrawals,
-      orders,
       referredByName,
       referralsWithNames,
     };

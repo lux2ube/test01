@@ -602,7 +602,7 @@ export async function sendVerificationEmail(): Promise<{ success: boolean; error
             type: 'signup',
             email: user.email,
             options: {
-                emailRedirectTo: `${siteUrl}/auth/callback`
+                emailRedirectTo: `${siteUrl}/auth/confirm`
             }
         });
 

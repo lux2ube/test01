@@ -55,12 +55,35 @@ const accountTypeTranslations: Record<string, string> = {
 };
 
 const wikiFxRatings = [
-  { value: "1", label: "⭐ (1-2)", min: 1, max: 2 },
-  { value: "2", label: "⭐⭐ (2-4)", min: 2, max: 4 },
-  { value: "3", label: "⭐⭐⭐ (4-6)", min: 4, max: 6 },
-  { value: "4", label: "⭐⭐⭐⭐ (6-8)", min: 6, max: 8 },
-  { value: "5", label: "⭐⭐⭐⭐⭐ (8-10)", min: 8, max: 10 },
+  { value: "1", label: "⭐ وأعلى (1+)", minScore: 1 },
+  { value: "2", label: "⭐⭐ وأعلى (2+)", minScore: 2 },
+  { value: "3", label: "⭐⭐⭐ وأعلى (4+)", minScore: 4 },
+  { value: "4", label: "⭐⭐⭐⭐ وأعلى (6+)", minScore: 6 },
+  { value: "5", label: "⭐⭐⭐⭐⭐ وأعلى (8+)", minScore: 8 },
 ];
+
+const brokerTypeTranslations: Record<string, string> = {
+  "ECN": "ECN",
+  "ecn": "ECN",
+  "STP": "STP",
+  "stp": "STP",
+  "Market Maker": "صانع سوق",
+  "market maker": "صانع سوق",
+  "NDD": "NDD",
+  "ndd": "NDD",
+  "DD": "DD",
+  "dd": "DD",
+  "Hybrid": "هجين",
+  "hybrid": "هجين",
+  "DMA": "DMA",
+  "dma": "DMA",
+  "ECN/STP": "ECN/STP",
+  "STP/ECN": "ECN/STP",
+};
+
+const translateBrokerType = (type: string): string => {
+  return brokerTypeTranslations[type] || type;
+};
 
 const translateAccountType = (type: string): string => {
   return accountTypeTranslations[type] || type;
@@ -72,6 +95,8 @@ interface FilterState {
   accountTypes: string[];
   maxMinDeposit: string;
   wikiFxRatings: string[];
+  regulators: string[];
+  brokerTypes: string[];
   instruments: {
     crypto: boolean;
     stocks: boolean;
@@ -94,6 +119,8 @@ const defaultFilters: FilterState = {
   accountTypes: [],
   maxMinDeposit: "",
   wikiFxRatings: [],
+  regulators: [],
+  brokerTypes: [],
   instruments: {
     crypto: false,
     stocks: false,
@@ -217,6 +244,8 @@ export default function BrokersPage() {
     const platforms = new Set<string>();
     const paymentMethods = new Set<string>();
     const accountTypes = new Set<string>();
+    const regulators = new Set<string>();
+    const brokerTypes = new Set<string>();
     let maxDeposit = 0;
 
     allBrokers.forEach((broker) => {
@@ -235,6 +264,16 @@ export default function BrokersPage() {
         brokerAccountTypes.forEach((a) => accountTypes.add(a));
       }
       
+      const brokerRegulators = broker.regulation?.regulator_name;
+      if (Array.isArray(brokerRegulators)) {
+        brokerRegulators.forEach((r) => regulators.add(r));
+      }
+      
+      const brokerType = broker.basicInfo?.broker_type;
+      if (brokerType) {
+        brokerTypes.add(brokerType);
+      }
+      
       const deposit = broker.tradingConditions?.min_deposit;
       if (typeof deposit === 'number' && deposit > maxDeposit) {
         maxDeposit = deposit;
@@ -245,6 +284,8 @@ export default function BrokersPage() {
       platforms: Array.from(platforms).sort(),
       paymentMethods: Array.from(paymentMethods).sort(),
       accountTypes: Array.from(accountTypes).sort(),
+      regulators: Array.from(regulators).sort(),
+      brokerTypes: Array.from(brokerTypes).sort(),
       maxDeposit: maxDeposit || 10000,
     };
   }, [allBrokers]);
@@ -255,6 +296,8 @@ export default function BrokersPage() {
     if (filters.paymentMethods.length > 0) count++;
     if (filters.accountTypes.length > 0) count++;
     if (filters.wikiFxRatings.length > 0) count++;
+    if (filters.regulators.length > 0) count++;
+    if (filters.brokerTypes.length > 0) count++;
     if (filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0) count++;
     if (Object.values(filters.instruments).some(Boolean)) count++;
     if (Object.values(filters.features).some(Boolean)) count++;
@@ -310,9 +353,23 @@ export default function BrokersPage() {
         const matchesRating = filters.wikiFxRatings.some((ratingValue) => {
           const rating = wikiFxRatings.find((r) => r.value === ratingValue);
           if (!rating) return false;
-          return brokerScore >= rating.min && brokerScore <= rating.max;
+          return brokerScore >= rating.minScore;
         });
         if (!matchesRating) {
+          return false;
+        }
+      }
+
+      if (filters.regulators.length > 0) {
+        const brokerRegulators = broker.regulation?.regulator_name;
+        if (!Array.isArray(brokerRegulators) || !filters.regulators.some((r) => brokerRegulators.includes(r))) {
+          return false;
+        }
+      }
+
+      if (filters.brokerTypes.length > 0) {
+        const brokerType = broker.basicInfo?.broker_type || "";
+        if (!filters.brokerTypes.includes(brokerType)) {
           return false;
         }
       }
@@ -461,6 +518,23 @@ export default function BrokersPage() {
                     onSelectionChange={(s) => setFilters((f) => ({ ...f, wikiFxRatings: s }))}
                     placeholder="اختر التقييم..."
                     translateFn={(val) => wikiFxRatings.find((r) => r.value === val)?.label || val}
+                  />
+
+                  <MultiSelectDropdown
+                    label="الجهة الرقابية"
+                    options={availableOptions.regulators}
+                    selected={filters.regulators}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, regulators: s }))}
+                    placeholder="اختر الجهة الرقابية..."
+                  />
+
+                  <MultiSelectDropdown
+                    label="نوع التنفيذ"
+                    options={availableOptions.brokerTypes}
+                    selected={filters.brokerTypes}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, brokerTypes: s }))}
+                    placeholder="اختر نوع التنفيذ..."
+                    translateFn={translateBrokerType}
                   />
 
                   <div className="space-y-1.5">
@@ -664,6 +738,24 @@ export default function BrokersPage() {
                 <X
                   className="h-3 w-3 cursor-pointer"
                   onClick={() => setFilters((f) => ({ ...f, wikiFxRatings: [] }))}
+                />
+              </Badge>
+            )}
+            {filters.regulators.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                الجهة الرقابية ({filters.regulators.length})
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, regulators: [] }))}
+                />
+              </Badge>
+            )}
+            {filters.brokerTypes.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                نوع التنفيذ ({filters.brokerTypes.length})
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, brokerTypes: [] }))}
                 />
               </Badge>
             )}

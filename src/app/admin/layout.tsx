@@ -31,6 +31,8 @@ import {
     Settings,
     Activity,
     CircleDollarSign,
+    PieChart,
+    Scale,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -44,6 +46,8 @@ import { useToast } from "@/hooks/use-toast";
 const navLinks = [
     { href: "/admin/dashboard", icon: LayoutGrid, label: "لوحة التحكم" },
     { href: "/admin/users", icon: Users, label: "إدارة المستخدمين" },
+    { href: "/admin/user-balances", icon: Scale, label: "أرصدة المستخدمين" },
+    { href: "/admin/financial-reports", icon: PieChart, label: "التقارير المالية" },
     { href: "/admin/manage-accounts", icon: Briefcase, label: "إدارة الحسابات" },
     { href: "/admin/manage-verifications", icon: ShieldCheck, label: "إدارة التحققات"},
     { href: "/admin/manage-cashback", icon: PlusCircle, label: "إدارة الكاش باك" },

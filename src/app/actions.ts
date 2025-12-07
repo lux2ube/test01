@@ -140,7 +140,7 @@ export async function handleForgotPassword(email: string) {
                        (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS}` : 'http://localhost:5000');
         
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${siteUrl}/auth/confirm`,
+            redirectTo: `${siteUrl}/reset-password`,
         });
         
         if (error) {

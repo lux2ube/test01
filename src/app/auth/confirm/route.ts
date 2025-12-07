@@ -3,11 +3,17 @@ import { createSessionCookie } from '@/lib/auth/session';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
+function isValidRedirectUrl(url: string | null): boolean {
+  if (!url) return false;
+  return url.startsWith('/') && !url.startsWith('//') && !url.includes(':');
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const token_hash = requestUrl.searchParams.get('token_hash');
   const type = requestUrl.searchParams.get('type');
-  const next = requestUrl.searchParams.get('next') || '/dashboard';
+  const rawNext = requestUrl.searchParams.get('next');
+  const next: string = (rawNext && isValidRedirectUrl(rawNext)) ? rawNext : '/dashboard';
   
   let origin = requestUrl.origin;
   const headers = request.headers;

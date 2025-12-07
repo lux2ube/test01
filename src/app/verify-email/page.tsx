@@ -115,7 +115,7 @@ function VerifyEmailContent() {
     );
   }
 
-  const isEmailVerified = (user as any)?.email_confirmed_at || (user?.profile as any)?.email_verified;
+  const isEmailVerified = !!user?.emailConfirmedAt;
 
   if (isEmailVerified) {
     return (

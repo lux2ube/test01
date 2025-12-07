@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { createAdminClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
   try {
@@ -10,7 +11,9 @@ export async function GET() {
       return NextResponse.json({ user: null }, { status: 200 });
     }
 
-    // Get user profile from database
+    const supabaseClient = await createClient();
+    const { data: { user: authUser } } = await supabaseClient.auth.getUser();
+
     const supabase = await createAdminClient();
     const { data: profile, error } = await supabase
       .from('users')
@@ -28,6 +31,7 @@ export async function GET() {
       user: {
         id: session.userId,
         email: profile.email,
+        emailConfirmedAt: authUser?.email_confirmed_at || null,
         profile: {
           id: session.userId,
           email: profile.email,

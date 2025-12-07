@@ -6,6 +6,7 @@ import type { UserProfile } from '@/types';
 export interface AppUser {
     id: string;
     email?: string;
+    emailConfirmedAt?: string | null;
     profile?: UserProfile;
 }
 

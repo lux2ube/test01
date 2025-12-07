@@ -24,7 +24,6 @@ interface FilterState {
   accountTypes: string[];
   minDeposit: number;
   maxDeposit: number;
-  swapFree: boolean;
   riskLevels: string[];
   instruments: {
     crypto: boolean;
@@ -46,7 +45,6 @@ const defaultFilters: FilterState = {
   accountTypes: [],
   minDeposit: 0,
   maxDeposit: 10000,
-  swapFree: false,
   riskLevels: [],
   instruments: {
     crypto: false,
@@ -207,7 +205,6 @@ export default function BrokersPage() {
     if (filters.paymentMethods.length > 0) count++;
     if (filters.accountTypes.length > 0) count++;
     if (filters.riskLevels.length > 0) count++;
-    if (filters.swapFree) count++;
     if (filters.minDeposit > 0 || filters.maxDeposit < availableOptions.maxDeposit) count++;
     if (Object.values(filters.instruments).some(Boolean)) count++;
     if (Object.values(filters.features).some(Boolean)) count++;
@@ -262,10 +259,6 @@ export default function BrokersPage() {
         if (!filters.riskLevels.includes(broker.regulation?.risk_level || "")) {
           return false;
         }
-      }
-
-      if (filters.swapFree && !broker.tradingConditions?.swap_free) {
-        return false;
       }
 
       const brokerDeposit = broker.tradingConditions?.min_deposit ?? 0;
@@ -422,24 +415,6 @@ export default function BrokersPage() {
                         }
                         className="w-full"
                       />
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">خيارات التداول</Label>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="swapFree"
-                          checked={filters.swapFree}
-                          onCheckedChange={(c) => setFilters((f) => ({ ...f, swapFree: !!c }))}
-                        />
-                        <Label htmlFor="swapFree" className="text-sm cursor-pointer">
-                          حساب إسلامي (بدون سواب)
-                        </Label>
-                      </div>
                     </div>
                   </div>
 
@@ -603,15 +578,6 @@ export default function BrokersPage() {
                 <X
                   className="h-3 w-3 cursor-pointer"
                   onClick={() => setFilters((f) => ({ ...f, riskLevels: [] }))}
-                />
-              </Badge>
-            )}
-            {filters.swapFree && (
-              <Badge variant="secondary" className="text-xs gap-1">
-                إسلامي
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => setFilters((f) => ({ ...f, swapFree: false }))}
                 />
               </Badge>
             )}

@@ -4,22 +4,43 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/auth/server-auth';
 import type { Withdrawal } from '@/types';
 
-export async function getWalletHistory(): Promise<{ withdrawals: Withdrawal[] }> {
+export interface Deposit {
+    id: string;
+    userId: string;
+    amount: number;
+    reason: string;
+    adminName: string;
+    createdAt: Date;
+}
+
+export async function getWalletHistory(): Promise<{ withdrawals: Withdrawal[], deposits: Deposit[] }> {
     const { id: userId } = await getAuthenticatedUser();
     try {
         const supabase = await createAdminClient();
-        const { data, error } = await supabase
-            .from('withdrawals')
-            .select('*')
-            .eq('user_id', userId)
-            .order('requested_at', { ascending: false });
+        
+        const [withdrawalsResult, depositsResult] = await Promise.all([
+            supabase
+                .from('withdrawals')
+                .select('*')
+                .eq('user_id', userId)
+                .order('requested_at', { ascending: false }),
+            supabase
+                .from('transactions')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('type', 'deposit')
+                .order('created_at', { ascending: false })
+        ]);
 
-        if (error) {
-            console.error("Error fetching wallet history:", error);
-            return { withdrawals: [] };
+        if (withdrawalsResult.error) {
+            console.error("Error fetching withdrawals:", withdrawalsResult.error);
+        }
+        
+        if (depositsResult.error) {
+            console.error("Error fetching deposits:", depositsResult.error);
         }
 
-        const withdrawals = (data || []).map(item => ({
+        const withdrawals = (withdrawalsResult.data || []).map(item => ({
             id: item.id,
             userId: item.user_id,
             amount: item.amount,
@@ -32,10 +53,19 @@ export async function getWalletHistory(): Promise<{ withdrawals: Withdrawal[] }>
             rejectionReason: item.rejection_reason,
         } as Withdrawal));
 
-        return { withdrawals };
+        const deposits = (depositsResult.data || []).map(item => ({
+            id: item.id,
+            userId: item.user_id,
+            amount: item.amount,
+            reason: item.metadata?.reason || 'إيداع إداري',
+            adminName: item.metadata?.deposited_by_admin_name || 'مدير',
+            createdAt: new Date(item.created_at),
+        } as Deposit));
+
+        return { withdrawals, deposits };
 
     } catch (error) {
         console.error("Error fetching wallet history:", error);
-        return { withdrawals: [] };
+        return { withdrawals: [], deposits: [] };
     }
 }

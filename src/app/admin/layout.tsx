@@ -30,6 +30,7 @@ import {
     BadgePercent,
     Settings,
     Activity,
+    CircleDollarSign,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -48,6 +49,7 @@ const navLinks = [
     { href: "/admin/manage-cashback", icon: PlusCircle, label: "إدارة الكاش باك" },
     { href: "/admin/bulk-cashback", icon: Upload, label: "رفع كاش باك بالجملة" },
     { href: "/admin/manage-withdrawals", icon: ArrowDownUp, label: "إدارة السحوبات" },
+    { href: "/admin/manage-deposits", icon: CircleDollarSign, label: "إدارة الإيداعات" },
     { href: "/admin/manage-payment-methods", icon: Wallet, label: "طرق الدفع" },
     { href: "/admin/manage-brokers", icon: Briefcase, label: "إدارة الوسطاء" },
     { href: "/admin/blog", icon: Newspaper, label: "إدارة المدونة"},

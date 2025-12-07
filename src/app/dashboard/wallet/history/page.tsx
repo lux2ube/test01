@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/hooks/useAuthContext";
-import { getWalletHistory } from "../actions";
+import { getWalletHistory, type Deposit } from "../actions";
 import type { Withdrawal } from "@/types";
 
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -21,6 +21,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+function DepositsList({ deposits, isLoading }: { deposits: Deposit[], isLoading: boolean }) {
+    if (isLoading) {
+        return <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    }
+
+    return (
+        <Card>
+            <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="text-right text-xs">التاريخ</TableHead>
+                                <TableHead className="text-right text-xs">المبلغ</TableHead>
+                                <TableHead className="text-right text-xs">السبب</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {deposits.length > 0 ? (
+                                deposits.map((d) => (
+                                    <TableRow key={d.id}>
+                                        <TableCell className="text-xs">{format(new Date(d.createdAt), "PP")}</TableCell>
+                                        <TableCell className="font-medium text-xs text-green-600">+${d.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{d.reason}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center h-24">لا يوجد سجل إيداعات.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
 
 function WithdrawalsList({ withdrawals, isLoading }: { withdrawals: Withdrawal[], isLoading: boolean }) {
     const router = useRouter();
@@ -88,12 +127,14 @@ export default function WalletHistoryPage() {
     const { user } = useAuthContext();
     const router = useRouter();
     const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+    const [deposits, setDeposits] = useState<Deposit[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (user) {
             getWalletHistory().then(history => {
                 setWithdrawals(history.withdrawals);
+                setDeposits(history.deposits);
                 setIsLoading(false);
             });
         }
@@ -114,11 +155,7 @@ export default function WalletHistoryPage() {
                     <TabsTrigger value="withdrawals">السحوبات</TabsTrigger>
                 </TabsList>
                 <TabsContent value="deposits" className="mt-4">
-                     <Card>
-                        <CardContent className="p-10 text-center">
-                            <p className="text-muted-foreground text-sm">لا يوجد سجل إيداعات حتى الآن.</p>
-                        </CardContent>
-                    </Card>
+                    <DepositsList deposits={deposits} isLoading={isLoading} />
                 </TabsContent>
                 <TabsContent value="withdrawals" className="mt-4">
                    <WithdrawalsList withdrawals={withdrawals} isLoading={isLoading} />

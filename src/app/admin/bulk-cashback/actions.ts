@@ -4,50 +4,47 @@ import { createAdminClient } from '@/lib/supabase/server';
 import type { TradingAccount } from '@/types';
 import { addCashbackTransaction } from '../manage-cashback/actions';
 
-export async function processBulkCashback(validatedData: { accountNumber: string, cashbackAmount: number, note: string, userId: string, accountId: string, broker: string }[]) {
-  if (validatedData.length === 0) {
-    return { success: false, message: "No valid rows to process." };
+export interface BulkCashbackRecord {
+  id: string;
+  accountNumber: string;
+  cashbackAmount: number;
+  note: string;
+  userId: string;
+  accountId: string;
+  broker: string;
+  status: 'pending' | 'confirmed' | 'rejected' | 'error';
+  reason?: string;
+}
+
+export async function confirmSingleCashback(record: BulkCashbackRecord): Promise<{ success: boolean; message: string }> {
+  if (record.status !== 'pending') {
+    return { success: false, message: 'Record is not in pending status' };
   }
 
-  let successCount = 0;
-  let errorCount = 0;
-  const errors: string[] = [];
+  if (!record.userId || !record.accountId || !record.broker) {
+    return { success: false, message: 'Missing required account information' };
+  }
 
-  for (const data of validatedData) {
-    try {
-      const result = await addCashbackTransaction({
-        userId: data.userId,
-        accountId: data.accountId,
-        accountNumber: data.accountNumber,
-        broker: data.broker,
-        tradeDetails: data.note,
-        cashbackAmount: data.cashbackAmount,
-      });
+  try {
+    const result = await addCashbackTransaction({
+      userId: record.userId,
+      accountId: record.accountId,
+      accountNumber: record.accountNumber,
+      broker: record.broker,
+      tradeDetails: record.note || 'Bulk import',
+      cashbackAmount: record.cashbackAmount,
+    });
 
-      if (result.success) {
-        successCount++;
-      } else {
-        errorCount++;
-        errors.push(`Account ${data.accountNumber}: ${result.message}`);
-      }
-    } catch (error) {
-      errorCount++;
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      errors.push(`Account ${data.accountNumber}: ${errorMessage}`);
-      console.error(`Failed to process cashback for account ${data.accountNumber}:`, error);
+    if (result.success) {
+      return { success: true, message: 'تمت إضافة الكاش باك بنجاح' };
+    } else {
+      return { success: false, message: result.message || 'فشل إضافة الكاش باك' };
     }
+  } catch (error) {
+    console.error('Error confirming cashback:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message: errorMessage };
   }
-  
-  let message = `Processing complete. Successfully added ${successCount} transactions.`;
-  if (errorCount > 0) {
-    message += ` ${errorCount} failed.`;
-  }
-  
-  return { 
-    success: errorCount === 0, 
-    message: message,
-    errors: errors,
-  };
 }
 
 export async function getApprovedAccounts(): Promise<TradingAccount[]> {

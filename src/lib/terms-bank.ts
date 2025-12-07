@@ -27,9 +27,13 @@ export const TermsBank = {
   platforms: [
     { key: "MT4", label: "MT4" },
     { key: "MT5", label: "MT5" },
-    { key: "cTrader", label: "cTrader" },
-    { key: "WebTrader", label: "WebTrader" },
-    { key: "Proprietary", label: "منصة خاصة بالوسيط" }
+    { key: "MetaTrader 4", label: "ميتاتريدر 4" },
+    { key: "MetaTrader 5", label: "ميتاتريدر 5" },
+    { key: "cTrader", label: "سي تريدر" },
+    { key: "WebTrader", label: "ويب تريدر" },
+    { key: "Proprietary", label: "منصة خاصة بالوسيط" },
+    { key: "TradingView", label: "تريدنج فيو" },
+    { key: "Mobile App", label: "تطبيق الجوال" }
   ],
   accountTypes: [
     { key: "Standard", label: "قياسي" },
@@ -41,18 +45,46 @@ export const TermsBank = {
   depositMethods: [
     { key: "Bank Transfer", label: "تحويل بنكي" },
     { key: "Credit Card", label: "بطاقة ائتمان" },
+    { key: "Debit Card", label: "بطاقة خصم" },
+    { key: "Wire Transfer", label: "حوالة بنكية" },
     { key: "Skrill", label: "سكريل" },
-    { key: "Neteller", label: "نيتلر" },
+    { key: "Neteller", label: "نتلر" },
+    { key: "PayPal", label: "باي بال" },
     { key: "Crypto", label: "عملات رقمية" },
-    { key: "Perfect Money", label: "Perfect Money" }
+    { key: "Cryptocurrency", label: "عملات رقمية" },
+    { key: "Bitcoin", label: "بيتكوين" },
+    { key: "USDT", label: "USDT" },
+    { key: "Perfect Money", label: "بيرفكت موني" },
+    { key: "WebMoney", label: "ويب موني" },
+    { key: "Local Bank", label: "بنك محلي" },
+    { key: "E-Wallet", label: "محفظة إلكترونية" },
+    { key: "Apple Pay", label: "آبل باي" },
+    { key: "Google Pay", label: "جوجل باي" },
+    { key: "Fasapay", label: "فاسا باي" },
+    { key: "Sticpay", label: "ستيك باي" },
+    { key: "AstroPay", label: "أسترو باي" }
   ],
   withdrawalMethods: [
     { key: "Bank Transfer", label: "تحويل بنكي" },
     { key: "Credit Card", label: "بطاقة ائتمان" },
+    { key: "Debit Card", label: "بطاقة خصم" },
+    { key: "Wire Transfer", label: "حوالة بنكية" },
     { key: "Skrill", label: "سكريل" },
-    { key: "Neteller", label: "نيتلر" },
+    { key: "Neteller", label: "نتلر" },
+    { key: "PayPal", label: "باي بال" },
     { key: "Crypto", label: "عملات رقمية" },
-    { key: "Perfect Money", label: "Perfect Money" }
+    { key: "Cryptocurrency", label: "عملات رقمية" },
+    { key: "Bitcoin", label: "بيتكوين" },
+    { key: "USDT", label: "USDT" },
+    { key: "Perfect Money", label: "بيرفكت موني" },
+    { key: "WebMoney", label: "ويب موني" },
+    { key: "Local Bank", label: "بنك محلي" },
+    { key: "E-Wallet", label: "محفظة إلكترونية" },
+    { key: "Apple Pay", label: "آبل باي" },
+    { key: "Google Pay", label: "جوجل باي" },
+    { key: "Fasapay", label: "فاسا باي" },
+    { key: "Sticpay", label: "ستيك باي" },
+    { key: "AstroPay", label: "أسترو باي" }
   ],
   languagesSupported: [
     { key: "English", label: "إنجليزي" },

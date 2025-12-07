@@ -91,6 +91,76 @@ const translateAccountType = (type: string): string => {
   return accountTypeTranslations[type] || type;
 };
 
+const paymentMethodTranslations: Record<string, string> = {
+  "Bank Transfer": "تحويل بنكي",
+  "bank transfer": "تحويل بنكي",
+  "Credit Card": "بطاقة ائتمان",
+  "credit card": "بطاقة ائتمان",
+  "Debit Card": "بطاقة خصم",
+  "debit card": "بطاقة خصم",
+  "Wire Transfer": "حوالة بنكية",
+  "wire transfer": "حوالة بنكية",
+  "Skrill": "سكريل",
+  "skrill": "سكريل",
+  "Neteller": "نتلر",
+  "neteller": "نتلر",
+  "PayPal": "باي بال",
+  "paypal": "باي بال",
+  "Crypto": "عملات رقمية",
+  "crypto": "عملات رقمية",
+  "Cryptocurrency": "عملات رقمية",
+  "cryptocurrency": "عملات رقمية",
+  "Bitcoin": "بيتكوين",
+  "bitcoin": "بيتكوين",
+  "USDT": "USDT",
+  "usdt": "USDT",
+  "Perfect Money": "بيرفكت موني",
+  "perfect money": "بيرفكت موني",
+  "WebMoney": "ويب موني",
+  "webmoney": "ويب موني",
+  "Local Bank": "بنك محلي",
+  "local bank": "بنك محلي",
+  "E-Wallet": "محفظة إلكترونية",
+  "e-wallet": "محفظة إلكترونية",
+  "Apple Pay": "آبل باي",
+  "apple pay": "آبل باي",
+  "Google Pay": "جوجل باي",
+  "google pay": "جوجل باي",
+  "Fasapay": "فاسا باي",
+  "fasapay": "فاسا باي",
+  "Sticpay": "ستيك باي",
+  "sticpay": "ستيك باي",
+  "AstroPay": "أسترو باي",
+  "astropay": "أسترو باي",
+};
+
+const translatePaymentMethod = (method: string): string => {
+  return paymentMethodTranslations[method] || method;
+};
+
+const platformTranslations: Record<string, string> = {
+  "MT4": "MT4",
+  "mt4": "MT4",
+  "MT5": "MT5",
+  "mt5": "MT5",
+  "MetaTrader 4": "ميتاتريدر 4",
+  "MetaTrader 5": "ميتاتريدر 5",
+  "cTrader": "سي تريدر",
+  "ctrader": "سي تريدر",
+  "WebTrader": "ويب تريدر",
+  "webtrader": "ويب تريدر",
+  "Proprietary": "منصة خاصة بالوسيط",
+  "proprietary": "منصة خاصة بالوسيط",
+  "TradingView": "تريدنج فيو",
+  "tradingview": "تريدنج فيو",
+  "Mobile App": "تطبيق الجوال",
+  "mobile app": "تطبيق الجوال",
+};
+
+const translatePlatform = (platform: string): string => {
+  return platformTranslations[platform] || platform;
+};
+
 interface FilterState {
   platforms: string[];
   paymentMethods: string[];
@@ -507,6 +577,7 @@ export default function BrokersPage() {
                     selected={filters.platforms}
                     onSelectionChange={(s) => setFilters((f) => ({ ...f, platforms: s }))}
                     placeholder="اختر المنصات..."
+                    translateFn={translatePlatform}
                   />
 
                   <MultiSelectDropdown
@@ -515,6 +586,7 @@ export default function BrokersPage() {
                     selected={filters.paymentMethods}
                     onSelectionChange={(s) => setFilters((f) => ({ ...f, paymentMethods: s }))}
                     placeholder="اختر طرق الدفع..."
+                    translateFn={translatePaymentMethod}
                   />
 
                   <MultiSelectDropdown

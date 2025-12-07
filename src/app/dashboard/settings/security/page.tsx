@@ -23,9 +23,9 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Lock, KeyRound, ArrowLeft } from "lucide-react";
 
 const passwordSchema = z.object({
-    currentPassword: z.string().min(8, "يجب أن تكون كلمة المرور 8 أحرف على الأقل."),
-    newPassword: z.string().min(8, "يجب أن تكون كلمة المرور 8 أحرف على الأقل."),
-    confirmPassword: z.string().min(8, "يجب أن تكون كلمة المرور 8 أحرف على الأقل."),
+    currentPassword: z.string().min(6, "يجب أن تكون كلمة المرور 6 أحرف على الأقل."),
+    newPassword: z.string().min(6, "يجب أن تكون كلمة المرور 6 أحرف على الأقل."),
+    confirmPassword: z.string().min(6, "يجب أن تكون كلمة المرور 6 أحرف على الأقل."),
 }).refine(data => data.newPassword === data.confirmPassword, {
     message: "كلمات المرور الجديدة غير متطابقة.",
     path: ["confirmPassword"],

@@ -52,7 +52,7 @@ const getServiceClient = () => {
 
 /**
  * Get available balance for a user
- * Formula: total_earned - total_withdrawn - total_pending_withdrawals - total_orders
+ * Formula: total_earned + total_deposit - total_withdrawn - total_pending_withdrawals - total_orders
  */
 export async function getAvailableBalance(userId: string): Promise<AvailableBalance> {
   const supabase = getServiceClient();
@@ -71,8 +71,10 @@ export async function getAvailableBalance(userId: string): Promise<AvailableBala
     throw new Error(`Account not found for user ${userId}`);
   }
 
+  const totalDeposit = parseFloat(data.total_deposit || '0');
   const available_balance = 
-    data.total_earned - 
+    data.total_earned + 
+    totalDeposit -
     data.total_withdrawn - 
     data.total_pending_withdrawals - 
     data.total_orders;
@@ -80,6 +82,7 @@ export async function getAvailableBalance(userId: string): Promise<AvailableBala
   return {
     user_id: userId,
     total_earned: parseFloat(data.total_earned),
+    total_deposit: totalDeposit,
     total_withdrawn: parseFloat(data.total_withdrawn),
     total_pending_withdrawals: parseFloat(data.total_pending_withdrawals),
     total_orders: parseFloat(data.total_orders),
@@ -155,6 +158,81 @@ export async function addCashback(params: AddCashbackParams): Promise<Transactio
     transaction: transaction.data as Transaction,
     event: { id: result.transaction_id } as ImmutableEvent,
     audit_log: { id: result.transaction_id } as AuditLog,
+    updated_account: account.data as Account,
+  };
+}
+
+// ==================================================
+// Deposit Operations (Admin Only)
+// ==================================================
+
+export interface AddDepositParams {
+  userId: string;
+  amount: number;
+  referenceId: string;
+  metadata?: Record<string, any>;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+/**
+ * Add deposit to user's account (Admin Only)
+ * Increases total_deposit (NOT total_earned)
+ * Deposits are separate from cashback/referral earnings
+ */
+export async function addDeposit(params: AddDepositParams): Promise<TransactionResult> {
+  const supabase = getServiceClient();
+
+  console.log('🔵 [LEDGER] Calling ledger_add_deposit with params:', {
+    userId: params.userId,
+    amount: params.amount,
+    referenceId: params.referenceId,
+  });
+
+  const { data, error } = await supabase.rpc('ledger_add_deposit', {
+    p_user_id: params.userId,
+    p_amount: params.amount,
+    p_reference_id: params.referenceId,
+    p_metadata: params.metadata || {},
+    p_actor_id: params.metadata?._actor_id || null,
+    p_actor_action: params.metadata?._actor_action || null,
+  });
+
+  console.log('🔵 [LEDGER] RPC response:', { data, error });
+
+  if (error) {
+    console.error('🔴 [LEDGER] RPC error:', error);
+    throw new Error(`Failed to add deposit: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    console.error('🔴 [LEDGER] No data returned from stored procedure');
+    throw new Error('No data returned from ledger_add_deposit');
+  }
+
+  const result = data[0];
+  console.log('🟢 [LEDGER] Stored procedure returned:', result);
+
+  if (!result.success) {
+    throw new Error(`Stored procedure failed: ${result.error_message}`);
+  }
+
+  // Fetch the created records from database to ensure audit trail integrity
+  const [transaction, account, immutableEvent, auditLog] = await Promise.all([
+    supabase.from('transactions').select('*').eq('id', result.transaction_id).single(),
+    supabase.from('accounts').select('*').eq('user_id', params.userId).single(),
+    supabase.from('immutable_events').select('*').eq('transaction_id', result.transaction_id).single(),
+    supabase.from('audit_logs').select('*').eq('resource_id', params.referenceId).order('created_at', { ascending: false }).limit(1).single(),
+  ]);
+
+  if (transaction.error || account.error) {
+    throw new Error('Failed to fetch created records');
+  }
+
+  return {
+    transaction: transaction.data as Transaction,
+    event: (immutableEvent.data || { id: result.transaction_id }) as ImmutableEvent,
+    audit_log: (auditLog.data || { id: result.transaction_id }) as AuditLog,
     updated_account: account.data as Account,
   };
 }

@@ -467,3 +467,103 @@ export async function createAdminBalanceAdjustment(
     return { success: false, message: errorMessage };
   }
 }
+
+/**
+ * Admin Deposit - Add funds to user balance
+ * 
+ * This function adds a deposit to the user's account.
+ * Deposits increase total_deposit (NOT total_earned).
+ * Total_earned is reserved for cashback and referral earnings only.
+ * 
+ * SECURITY: Requires Supabase auth validation and admin role verification.
+ */
+export async function createAdminDeposit(
+  userId: string,
+  amount: number,
+  reason: string
+): Promise<{ success: boolean; message: string; transactionId?: string }> {
+  try {
+    // SECURITY: Verify admin authentication using Supabase auth.getUser()
+    const { getAuthenticatedUser } = await import('@/lib/auth/server-auth');
+    
+    let authenticatedUser;
+    try {
+      authenticatedUser = await getAuthenticatedUser();
+    } catch {
+      return { success: false, message: 'غير مصرح: يرجى تسجيل الدخول' };
+    }
+
+    if (authenticatedUser.role !== 'admin') {
+      console.error('Admin verification failed: User role is', authenticatedUser.role);
+      return { success: false, message: 'غير مصرح: صلاحيات المدير مطلوبة' };
+    }
+
+    const adminId = authenticatedUser.id;
+    
+    // Fetch admin name for audit trail
+    const supabase = await createAdminClient();
+    const { data: adminProfile } = await supabase
+      .from('users')
+      .select('name')
+      .eq('id', adminId)
+      .single();
+    
+    const adminName = adminProfile?.name || 'مدير';
+
+    if (!userId || !amount || amount <= 0) {
+      return { success: false, message: 'معرف المستخدم والمبلغ مطلوبان' };
+    }
+
+    if (!reason || !reason.trim()) {
+      return { success: false, message: 'سبب الإيداع مطلوب' };
+    }
+
+    // Check user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return { success: false, message: 'المستخدم غير موجود' };
+    }
+
+    // Generate a unique reference ID for this deposit
+    const referenceId = crypto.randomUUID();
+
+    // Add deposit to ledger using the ledger action
+    const { addDepositToLedger } = await import('@/app/actions/ledger');
+    const depositResult = await addDepositToLedger(
+      userId,
+      amount,
+      referenceId,
+      {
+        type: 'admin_deposit',
+        reason: reason,
+        deposited_by_admin_id: adminId,
+        deposited_by_admin_name: adminName,
+        deposited_at: new Date().toISOString()
+      }
+    );
+
+    if (!depositResult.success) {
+      console.error('Error adding deposit to ledger:', depositResult.error);
+      return { success: false, message: depositResult.error || 'فشل إضافة الإيداع للنظام المحاسبي' };
+    }
+
+    // Create notification for user - simple message with amount and reason
+    const message = `تم إيداع ${amount.toFixed(2)}$ - ${reason}`;
+    await createNotification(userId, message, 'cashback', '/dashboard/withdraw');
+
+    return { 
+      success: true, 
+      message: `تم إيداع ${amount.toFixed(2)}$ في رصيد المستخدم بنجاح`,
+      transactionId: depositResult.result?.transaction?.id
+    };
+  } catch (error) {
+    console.error('Error creating admin deposit:', error);
+    const errorMessage = error instanceof Error ? error.message : 'حدث خطأ غير متوقع';
+    return { success: false, message: errorMessage };
+  }
+}

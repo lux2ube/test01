@@ -2,6 +2,7 @@ export type TransactionType =
   | 'cashback'
   | 'referral'
   | 'referral_reversed'
+  | 'deposit'
   | 'withdrawal_completed'
   | 'withdrawal_processing'
   | 'withdrawal_cancelled'
@@ -12,6 +13,7 @@ export interface Account {
   id: string;
   user_id: string;
   total_earned: number;
+  total_deposit: number;
   total_withdrawn: number;
   total_pending_withdrawals: number;
   total_orders: number;
@@ -53,6 +55,7 @@ export interface AuditLog {
 export interface AvailableBalance {
   user_id: string;
   total_earned: number;
+  total_deposit: number;
   total_withdrawn: number;
   total_pending_withdrawals: number;
   total_orders: number;

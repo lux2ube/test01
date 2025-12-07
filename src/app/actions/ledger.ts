@@ -262,6 +262,57 @@ export async function addCashbackToLedger(
 }
 
 /**
+ * Add deposit to a user's account
+ * ADMIN ONLY - Deposits increase balance but are separate from earned money
+ * SECURITY: Requires admin privileges, uses Supabase auth.getUser() validation
+ */
+export async function addDepositToLedger(
+  userId: string,
+  amount: number,
+  referenceId: string,
+  metadata?: Record<string, any>
+) {
+  console.log('🟡 [ACTION] addDepositToLedger called:', { userId, amount, referenceId });
+  
+  // SECURITY: Verify admin privileges using Supabase auth validation
+  const auth = await verifyAdminOrServiceRole();
+  console.log('🟡 [ACTION] Admin verification result:', { isAdmin: auth.isAdmin, userId: auth.userId });
+  
+  if (!auth.isAdmin || !auth.userId) {
+    console.error('🔴 [ACTION] Unauthorized: Not admin');
+    return { 
+      success: false, 
+      error: 'Unauthorized: Admin privileges required for this operation' 
+    };
+  }
+
+  try {
+    console.log('🟡 [ACTION] Calling ledgerService.addDeposit');
+    const result = await ledgerService.addDeposit({
+      userId,
+      amount,
+      referenceId,
+      metadata: {
+        ...(metadata || {}),
+        _actor_id: auth.userId,
+        _actor_action: 'admin_add_deposit',
+      },
+      ipAddress: await getClientIp(),
+      userAgent: await getUserAgent(),
+    });
+
+    console.log('🟢 [ACTION] Ledger service returned success');
+    return { success: true, result };
+  } catch (error) {
+    console.error('🔴 [ACTION] Failed to add deposit:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to add deposit' 
+    };
+  }
+}
+
+/**
  * Add referral commission to a user's account
  * ADMIN/BACKEND USE ONLY - Called when referral earns commission
  * SECURITY: Requires admin privileges or service role

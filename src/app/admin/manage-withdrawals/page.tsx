@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { PageHeader } from "@/components/shared/PageHeader";
-import { approveWithdrawal, getWithdrawals, rejectWithdrawal, createAdminBalanceAdjustment } from './actions';
+import { approveWithdrawal, getWithdrawals, rejectWithdrawal, createAdminBalanceAdjustment, createAdminDeposit } from './actions';
 import { getUsers } from '../users/actions';
 import type { Withdrawal, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Hash, MessageSquare, CheckCircle, XCircle, Check, MinusCircle, Search, DollarSign, User } from 'lucide-react';
+import { Loader2, Hash, MessageSquare, CheckCircle, XCircle, Check, MinusCircle, Search, DollarSign, User, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -198,6 +198,16 @@ export default function ManageWithdrawalsPage() {
         userSearch: string;
     }>({ userId: '', amount: '', reason: '', userSearch: '' });
     const [isAdjusting, setIsAdjusting] = useState(false);
+    
+    const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+    const [depositData, setDepositData] = useState<{
+        userId: string;
+        amount: string;
+        reason: string;
+        userSearch: string;
+    }>({ userId: '', amount: '', reason: '', userSearch: '' });
+    const [isDepositing, setIsDepositing] = useState(false);
+    
     const { toast } = useToast();
 
     const fetchData = useCallback(async () => {
@@ -239,6 +249,20 @@ export default function ManageWithdrawalsPage() {
         return allUsers.find(u => u.id === adjustmentData.userId);
     }, [allUsers, adjustmentData.userId]);
 
+    const filteredUsersForDeposit = useMemo(() => {
+        if (!depositData.userSearch.trim()) return [];
+        const search = depositData.userSearch.toLowerCase();
+        return allUsers.filter(u => 
+            u.name?.toLowerCase().includes(search) ||
+            u.email?.toLowerCase().includes(search) ||
+            u.clientId?.toString().includes(search)
+        ).slice(0, 10);
+    }, [allUsers, depositData.userSearch]);
+
+    const selectedUserForDeposit = useMemo(() => {
+        return allUsers.find(u => u.id === depositData.userId);
+    }, [allUsers, depositData.userId]);
+
     const handleAdjustmentSubmit = async () => {
         const amount = parseFloat(adjustmentData.amount);
         if (!adjustmentData.userId) {
@@ -274,6 +298,44 @@ export default function ManageWithdrawalsPage() {
             toast({ variant: 'destructive', title: 'خطأ', description: 'حدث خطأ غير متوقع' });
         } finally {
             setIsAdjusting(false);
+        }
+    };
+
+    const handleDepositSubmit = async () => {
+        const amount = parseFloat(depositData.amount);
+        if (!depositData.userId) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'يرجى اختيار مستخدم' });
+            return;
+        }
+        if (isNaN(amount) || amount <= 0) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'يرجى إدخال مبلغ صحيح' });
+            return;
+        }
+        if (!depositData.reason.trim()) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'يرجى إدخال سبب الإيداع' });
+            return;
+        }
+
+        setIsDepositing(true);
+        try {
+            const result = await createAdminDeposit(
+                depositData.userId,
+                amount,
+                depositData.reason
+            );
+
+            if (result.success) {
+                toast({ title: 'نجاح', description: result.message });
+                setDepositDialogOpen(false);
+                setDepositData({ userId: '', amount: '', reason: '', userSearch: '' });
+                fetchData();
+            } else {
+                toast({ variant: 'destructive', title: 'خطأ', description: result.message });
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'حدث خطأ غير متوقع' });
+        } finally {
+            setIsDepositing(false);
         }
     };
 
@@ -342,6 +404,14 @@ export default function ManageWithdrawalsPage() {
                 >
                     <MinusCircle className="h-4 w-4 text-destructive" />
                     تعديل رصيد (خصم)
+                </Button>
+                <Button 
+                    variant="outline" 
+                    onClick={() => setDepositDialogOpen(true)}
+                    className="gap-2"
+                >
+                    <PlusCircle className="h-4 w-4 text-green-600" />
+                    إيداع رصيد
                 </Button>
             </div>
             <DataTable 
@@ -562,6 +632,119 @@ export default function ManageWithdrawalsPage() {
                         >
                             {isAdjusting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                             تأكيد الخصم
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen}>
+                <AlertDialogContent className="max-w-lg">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <PlusCircle className="h-5 w-5 text-green-600" />
+                            إيداع رصيد للمستخدم
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            إضافة مبلغ إلى رصيد المستخدم. سيتم تسجيل هذا الإيداع في النظام المحاسبي بشكل منفصل عن الأرباح.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>اختر المستخدم</Label>
+                            {selectedUserForDeposit ? (
+                                <Card className="p-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <User className="h-4 w-4 text-muted-foreground" />
+                                            <div>
+                                                <p className="font-medium text-sm">{selectedUserForDeposit.name}</p>
+                                                <p className="text-xs text-muted-foreground">{selectedUserForDeposit.email}</p>
+                                            </div>
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm"
+                                            onClick={() => setDepositData(prev => ({ ...prev, userId: '', userSearch: '' }))}
+                                        >
+                                            تغيير
+                                        </Button>
+                                    </div>
+                                </Card>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="ابحث بالاسم أو البريد أو رقم العميل..."
+                                            value={depositData.userSearch}
+                                            onChange={(e) => setDepositData(prev => ({ ...prev, userSearch: e.target.value }))}
+                                            className="pr-10"
+                                        />
+                                    </div>
+                                    {filteredUsersForDeposit.length > 0 && (
+                                        <Card className="max-h-48 overflow-y-auto">
+                                            {filteredUsersForDeposit.map(user => (
+                                                <div 
+                                                    key={user.id}
+                                                    className="p-2 hover:bg-muted cursor-pointer border-b last:border-0"
+                                                    onClick={() => setDepositData(prev => ({ 
+                                                        ...prev, 
+                                                        userId: user.id, 
+                                                        userSearch: '' 
+                                                    }))}
+                                                >
+                                                    <p className="font-medium text-sm">{user.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{user.email} | #{user.clientId}</p>
+                                                </div>
+                                            ))}
+                                        </Card>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="deposit-amount">المبلغ المراد إيداعه</Label>
+                            <div className="relative">
+                                <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    id="deposit-amount"
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={depositData.amount}
+                                    onChange={(e) => setDepositData(prev => ({ ...prev, amount: e.target.value }))}
+                                    className="pr-10"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="deposit-reason">سبب الإيداع</Label>
+                            <Textarea
+                                id="deposit-reason"
+                                placeholder="اكتب سبب الإيداع بالتفصيل..."
+                                value={depositData.reason}
+                                onChange={(e) => setDepositData(prev => ({ ...prev, reason: e.target.value }))}
+                                className="min-h-[80px]"
+                            />
+                        </div>
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setDepositDialogOpen(false);
+                            setDepositData({ userId: '', amount: '', reason: '', userSearch: '' });
+                        }}>
+                            إلغاء
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={handleDepositSubmit} 
+                            disabled={isDepositing || !depositData.userId || !depositData.amount || !depositData.reason}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            {isDepositing && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                            تأكيد الإيداع
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

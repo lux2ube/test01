@@ -10,9 +10,15 @@
 ALTER TABLE accounts 
 ADD COLUMN IF NOT EXISTS total_deposit NUMERIC(12, 2) NOT NULL DEFAULT 0.00;
 
--- Add constraint for positive values
-ALTER TABLE accounts
-ADD CONSTRAINT IF NOT EXISTS positive_total_deposit CHECK (total_deposit >= 0);
+-- Add constraint for positive values (drop first if exists to avoid errors)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'positive_total_deposit'
+    ) THEN
+        ALTER TABLE accounts ADD CONSTRAINT positive_total_deposit CHECK (total_deposit >= 0);
+    END IF;
+END $$;
 
 -- Add comment for documentation
 COMMENT ON COLUMN accounts.total_deposit IS 'Sum of all admin deposits. Separate from total_earned which tracks cashback/referrals only.';

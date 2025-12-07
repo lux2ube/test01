@@ -50,7 +50,17 @@ const accountTypeTranslations: Record<string, string> = {
   "premium": "بريميوم",
   "Prime": "برايم",
   "prime": "برايم",
+  "Proprietary": "منصة خاصة بالوسيط",
+  "proprietary": "منصة خاصة بالوسيط",
 };
+
+const wikiFxRatings = [
+  { value: "1", label: "⭐ (1-2)", min: 1, max: 2 },
+  { value: "2", label: "⭐⭐ (2-4)", min: 2, max: 4 },
+  { value: "3", label: "⭐⭐⭐ (4-6)", min: 4, max: 6 },
+  { value: "4", label: "⭐⭐⭐⭐ (6-8)", min: 6, max: 8 },
+  { value: "5", label: "⭐⭐⭐⭐⭐ (8-10)", min: 8, max: 10 },
+];
 
 const translateAccountType = (type: string): string => {
   return accountTypeTranslations[type] || type;
@@ -61,7 +71,7 @@ interface FilterState {
   paymentMethods: string[];
   accountTypes: string[];
   maxMinDeposit: string;
-  riskLevels: string[];
+  wikiFxRatings: string[];
   instruments: {
     crypto: boolean;
     stocks: boolean;
@@ -83,7 +93,7 @@ const defaultFilters: FilterState = {
   paymentMethods: [],
   accountTypes: [],
   maxMinDeposit: "",
-  riskLevels: [],
+  wikiFxRatings: [],
   instruments: {
     crypto: false,
     stocks: false,
@@ -207,7 +217,6 @@ export default function BrokersPage() {
     const platforms = new Set<string>();
     const paymentMethods = new Set<string>();
     const accountTypes = new Set<string>();
-    const riskLevels = new Set<string>();
     let maxDeposit = 0;
 
     allBrokers.forEach((broker) => {
@@ -226,10 +235,6 @@ export default function BrokersPage() {
         brokerAccountTypes.forEach((a) => accountTypes.add(a));
       }
       
-      if (broker.regulation?.risk_level) {
-        riskLevels.add(broker.regulation.risk_level);
-      }
-      
       const deposit = broker.tradingConditions?.min_deposit;
       if (typeof deposit === 'number' && deposit > maxDeposit) {
         maxDeposit = deposit;
@@ -240,7 +245,6 @@ export default function BrokersPage() {
       platforms: Array.from(platforms).sort(),
       paymentMethods: Array.from(paymentMethods).sort(),
       accountTypes: Array.from(accountTypes).sort(),
-      riskLevels: Array.from(riskLevels).sort(),
       maxDeposit: maxDeposit || 10000,
     };
   }, [allBrokers]);
@@ -250,7 +254,7 @@ export default function BrokersPage() {
     if (filters.platforms.length > 0) count++;
     if (filters.paymentMethods.length > 0) count++;
     if (filters.accountTypes.length > 0) count++;
-    if (filters.riskLevels.length > 0) count++;
+    if (filters.wikiFxRatings.length > 0) count++;
     if (filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0) count++;
     if (Object.values(filters.instruments).some(Boolean)) count++;
     if (Object.values(filters.features).some(Boolean)) count++;
@@ -301,8 +305,14 @@ export default function BrokersPage() {
         }
       }
 
-      if (filters.riskLevels.length > 0) {
-        if (!filters.riskLevels.includes(broker.regulation?.risk_level || "")) {
+      if (filters.wikiFxRatings.length > 0) {
+        const brokerScore = broker.reputation?.wikifx_score ?? 0;
+        const matchesRating = filters.wikiFxRatings.some((ratingValue) => {
+          const rating = wikiFxRatings.find((r) => r.value === ratingValue);
+          if (!rating) return false;
+          return brokerScore >= rating.min && brokerScore <= rating.max;
+        });
+        if (!matchesRating) {
           return false;
         }
       }
@@ -445,11 +455,12 @@ export default function BrokersPage() {
                   />
 
                   <MultiSelectDropdown
-                    label="مستوى المخاطر"
-                    options={availableOptions.riskLevels}
-                    selected={filters.riskLevels}
-                    onSelectionChange={(s) => setFilters((f) => ({ ...f, riskLevels: s }))}
-                    placeholder="اختر مستوى المخاطر..."
+                    label="تقييم WikiFX"
+                    options={wikiFxRatings.map((r) => r.value)}
+                    selected={filters.wikiFxRatings}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, wikiFxRatings: s }))}
+                    placeholder="اختر التقييم..."
+                    translateFn={(val) => wikiFxRatings.find((r) => r.value === val)?.label || val}
                   />
 
                   <div className="space-y-1.5">
@@ -647,12 +658,12 @@ export default function BrokersPage() {
                 />
               </Badge>
             )}
-            {filters.riskLevels.length > 0 && (
+            {filters.wikiFxRatings.length > 0 && (
               <Badge variant="secondary" className="text-xs gap-1">
-                المخاطر ({filters.riskLevels.length})
+                WikiFX ({filters.wikiFxRatings.length})
                 <X
                   className="h-3 w-3 cursor-pointer"
-                  onClick={() => setFilters((f) => ({ ...f, riskLevels: [] }))}
+                  onClick={() => setFilters((f) => ({ ...f, wikiFxRatings: [] }))}
                 />
               </Badge>
             )}

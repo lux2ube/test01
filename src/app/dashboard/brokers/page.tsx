@@ -13,17 +13,54 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+
+const accountTypeTranslations: Record<string, string> = {
+  "Standard": "قياسي",
+  "standard": "قياسي",
+  "Islamic": "إسلامي",
+  "islamic": "إسلامي",
+  "ECN": "ECN",
+  "ecn": "ECN",
+  "VIP": "VIP",
+  "vip": "VIP",
+  "Pro": "احترافي",
+  "pro": "احترافي",
+  "Professional": "احترافي",
+  "professional": "احترافي",
+  "Raw Spread": "سبريد خام",
+  "raw spread": "سبريد خام",
+  "Zero Spread": "سبريد صفر",
+  "zero spread": "سبريد صفر",
+  "Cent": "سنت",
+  "cent": "سنت",
+  "Micro": "مايكرو",
+  "micro": "مايكرو",
+  "Mini": "ميني",
+  "mini": "ميني",
+  "Demo": "تجريبي",
+  "demo": "تجريبي",
+  "Swap Free": "بدون سواب",
+  "swap free": "بدون سواب",
+  "Classic": "كلاسيك",
+  "classic": "كلاسيك",
+  "Premium": "بريميوم",
+  "premium": "بريميوم",
+  "Prime": "برايم",
+  "prime": "برايم",
+};
+
+const translateAccountType = (type: string): string => {
+  return accountTypeTranslations[type] || type;
+};
 
 interface FilterState {
   platforms: string[];
   paymentMethods: string[];
   accountTypes: string[];
-  minDeposit: number;
-  maxDeposit: number;
+  maxMinDeposit: string;
   riskLevels: string[];
   instruments: {
     crypto: boolean;
@@ -36,6 +73,8 @@ interface FilterState {
     demoAccount: boolean;
     educationCenter: boolean;
     welcomeBonus: boolean;
+    tradingContests: boolean;
+    regulatoryAlerts: boolean;
   };
 }
 
@@ -43,8 +82,7 @@ const defaultFilters: FilterState = {
   platforms: [],
   paymentMethods: [],
   accountTypes: [],
-  minDeposit: 0,
-  maxDeposit: 10000,
+  maxMinDeposit: "",
   riskLevels: [],
   instruments: {
     crypto: false,
@@ -57,6 +95,8 @@ const defaultFilters: FilterState = {
     demoAccount: false,
     educationCenter: false,
     welcomeBonus: false,
+    tradingContests: false,
+    regulatoryAlerts: false,
   },
 };
 
@@ -66,14 +106,20 @@ function MultiSelectDropdown({
   selected,
   onSelectionChange,
   placeholder,
+  translateFn,
 }: {
   label: string;
   options: string[];
   selected: string[];
   onSelectionChange: (selected: string[]) => void;
   placeholder?: string;
+  translateFn?: (option: string) => string;
 }) {
   const [open, setOpen] = useState(false);
+
+  const getDisplayName = (option: string) => {
+    return translateFn ? translateFn(option) : option;
+  };
 
   const toggleOption = (option: string) => {
     if (selected.includes(option)) {
@@ -122,7 +168,7 @@ function MultiSelectDropdown({
                     )}>
                       {selected.includes(option) && <Check className="h-3 w-3 text-primary-foreground" />}
                     </div>
-                    <span className="truncate">{option}</span>
+                    <span className="truncate">{getDisplayName(option)}</span>
                   </div>
                 ))
               )}
@@ -205,11 +251,11 @@ export default function BrokersPage() {
     if (filters.paymentMethods.length > 0) count++;
     if (filters.accountTypes.length > 0) count++;
     if (filters.riskLevels.length > 0) count++;
-    if (filters.minDeposit > 0 || filters.maxDeposit < availableOptions.maxDeposit) count++;
+    if (filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0) count++;
     if (Object.values(filters.instruments).some(Boolean)) count++;
     if (Object.values(filters.features).some(Boolean)) count++;
     return count;
-  }, [filters, availableOptions.maxDeposit]);
+  }, [filters]);
 
   useEffect(() => {
     const fetchBrokers = async () => {
@@ -261,9 +307,12 @@ export default function BrokersPage() {
         }
       }
 
-      const brokerDeposit = broker.tradingConditions?.min_deposit ?? 0;
-      if (brokerDeposit < filters.minDeposit || brokerDeposit > filters.maxDeposit) {
-        return false;
+      if (filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0) {
+        const threshold = parseInt(filters.maxMinDeposit);
+        const brokerDeposit = broker.tradingConditions?.min_deposit;
+        if (typeof brokerDeposit !== 'number' || brokerDeposit > threshold) {
+          return false;
+        }
       }
 
       if (filters.instruments.crypto && !broker.instruments?.crypto_trading) return false;
@@ -275,13 +324,15 @@ export default function BrokersPage() {
       if (filters.features.demoAccount && !broker.additionalFeatures?.demo_account) return false;
       if (filters.features.educationCenter && !broker.additionalFeatures?.education_center) return false;
       if (filters.features.welcomeBonus && !broker.additionalFeatures?.welcome_bonus) return false;
+      if (filters.features.tradingContests && !broker.additionalFeatures?.trading_contests) return false;
+      if (filters.features.regulatoryAlerts && !broker.additionalFeatures?.regulatory_alerts) return false;
 
       return true;
     });
   }, [allBrokers, searchQuery, filters]);
 
   const clearAllFilters = () => {
-    setFilters({ ...defaultFilters, maxDeposit: availableOptions.maxDeposit });
+    setFilters(defaultFilters);
   };
 
   const renderBrokerList = (brokers: Broker[]) => {
@@ -390,6 +441,7 @@ export default function BrokersPage() {
                     selected={filters.accountTypes}
                     onSelectionChange={(s) => setFilters((f) => ({ ...f, accountTypes: s }))}
                     placeholder="اختر نوع الحساب..."
+                    translateFn={translateAccountType}
                   />
 
                   <MultiSelectDropdown
@@ -400,22 +452,19 @@ export default function BrokersPage() {
                     placeholder="اختر مستوى المخاطر..."
                   />
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-muted-foreground">
-                      الحد الأدنى للإيداع: ${filters.minDeposit} - ${filters.maxDeposit}
+                      الحد الأقصى للإيداع الأدنى ($)
                     </Label>
-                    <div className="px-1">
-                      <Slider
-                        min={0}
-                        max={availableOptions.maxDeposit}
-                        step={10}
-                        value={[filters.minDeposit, filters.maxDeposit]}
-                        onValueChange={([min, max]) =>
-                          setFilters((f) => ({ ...f, minDeposit: min, maxDeposit: max }))
-                        }
-                        className="w-full"
-                      />
-                    </div>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="مثال: 100"
+                      value={filters.maxMinDeposit}
+                      onChange={(e) => setFilters((f) => ({ ...f, maxMinDeposit: e.target.value }))}
+                      className="h-9"
+                    />
+                    <p className="text-xs text-muted-foreground">يعرض الوسطاء الذين يقبلون هذا المبلغ أو أقل</p>
                   </div>
 
                   <Separator />
@@ -535,6 +584,32 @@ export default function BrokersPage() {
                         />
                         <Label htmlFor="welcomeBonus" className="text-sm cursor-pointer">مكافأة ترحيب</Label>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="tradingContests"
+                          checked={filters.features.tradingContests}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              features: { ...f.features, tradingContests: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="tradingContests" className="text-sm cursor-pointer">مسابقات تداول</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="regulatoryAlerts"
+                          checked={filters.features.regulatoryAlerts}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              features: { ...f.features, regulatoryAlerts: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="regulatoryAlerts" className="text-sm cursor-pointer">تنبيهات تنظيمية</Label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -581,14 +656,12 @@ export default function BrokersPage() {
                 />
               </Badge>
             )}
-            {(filters.minDeposit > 0 || filters.maxDeposit < availableOptions.maxDeposit) && (
+            {filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0 && (
               <Badge variant="secondary" className="text-xs gap-1">
-                الإيداع: ${filters.minDeposit}-${filters.maxDeposit}
+                الإيداع ≤ ${filters.maxMinDeposit}
                 <X
                   className="h-3 w-3 cursor-pointer"
-                  onClick={() =>
-                    setFilters((f) => ({ ...f, minDeposit: 0, maxDeposit: availableOptions.maxDeposit }))
-                  }
+                  onClick={() => setFilters((f) => ({ ...f, maxMinDeposit: "" }))}
                 />
               </Badge>
             )}
@@ -614,7 +687,14 @@ export default function BrokersPage() {
                   onClick={() =>
                     setFilters((f) => ({
                       ...f,
-                      features: { copyTrading: false, demoAccount: false, educationCenter: false, welcomeBonus: false },
+                      features: { 
+                        copyTrading: false, 
+                        demoAccount: false, 
+                        educationCenter: false, 
+                        welcomeBonus: false,
+                        tradingContests: false,
+                        regulatoryAlerts: false,
+                      },
                     }))
                   }
                 />

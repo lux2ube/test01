@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { Broker } from "@/types";
-import { Star, ChevronLeft, Banknote, Shield, TrendingUp } from "lucide-react";
+import { Star, ChevronLeft, Banknote, Shield, TrendingUp, AlertTriangle } from "lucide-react";
 
 function StarRating({ rating }: { rating: number }) {
     const roundedRating = Math.round(rating * 2) / 2;
@@ -39,7 +39,12 @@ const featureLabels: Record<string, string> = {
     welcome_bonus: 'بونص ع الايداع',
 };
 
-export function BrokerCard({ broker }: { broker: Broker }) {
+interface BrokerCardProps {
+  broker: Broker;
+  userCountry?: string;
+}
+
+export function BrokerCard({ broker, userCountry }: BrokerCardProps) {
   if (!broker) {
     return null; 
   }
@@ -54,6 +59,9 @@ export function BrokerCard({ broker }: { broker: Broker }) {
   
   const platforms = broker.platforms?.platforms_supported || [];
   
+  const restrictedCountries = broker.globalReach?.restricted_countries || [];
+  const isRestrictedInUserCountry = userCountry ? restrictedCountries.includes(userCountry) : false;
+  
   const activeFeatures: string[] = [];
   if (broker.tradingConditions?.swap_free) activeFeatures.push('swap_free');
   if (broker.additionalFeatures?.education_center) activeFeatures.push('education_center');
@@ -63,7 +71,7 @@ export function BrokerCard({ broker }: { broker: Broker }) {
   if (broker.additionalFeatures?.welcome_bonus) activeFeatures.push('welcome_bonus');
   
   return (
-    <Card className="w-full overflow-hidden hover:shadow-md transition-shadow duration-200 border-border/60">
+    <Card className={`w-full overflow-hidden hover:shadow-md transition-shadow duration-200 ${isRestrictedInUserCountry ? 'border-red-300 border-2' : 'border-border/60'}`}>
         <CardContent className="p-0">
             <Link href={`/dashboard/brokers/${broker.id}`} className="block group">
                 <div className="flex items-center gap-3 p-3 border-b border-border/40">
@@ -133,6 +141,15 @@ export function BrokerCard({ broker }: { broker: Broker }) {
                     </div>
                 </div>
             </Link>
+            
+            {isRestrictedInUserCountry && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
+                <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                <span className="text-xs text-red-600 dark:text-red-400">
+                  هذا الوسيط قد لا يقبل عملاء من دولتك
+                </span>
+              </div>
+            )}
             
             <div className="p-3 space-y-3">
                 <div className="flex items-center justify-between">

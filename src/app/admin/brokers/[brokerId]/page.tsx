@@ -138,6 +138,7 @@ function transformFormToBroker(formValues: BrokerFormValues): any {
       global_presence: formValues.globalReach.global_presence,
       languages_supported: formValues.globalReach.languages_supported,
       customer_support_channels: formValues.globalReach.customer_support_channels,
+      restricted_countries: formValues.globalReach.restricted_countries,
     },
     
     reputation: {
@@ -257,6 +258,7 @@ const formSchema = z.object({
     global_presence: z.string().optional().default(""),
     languages_supported: z.array(z.string()).optional().default([]),
     customer_support_channels: z.array(z.string()).optional().default([]),
+    restricted_countries: z.array(z.string()).optional().default([]),
   }),
   
   reputation: z.object({
@@ -303,7 +305,7 @@ const getSafeDefaultValues = (broker?: Broker | null): BrokerFormValues => {
     instruments: { forex_pairs: "", crypto_trading: false, stocks: false, commodities: false, indices: false },
     depositsWithdrawals: { payment_methods: [], min_withdrawal: 0, withdrawal_speed: "", deposit_fees: false, withdrawal_fees: false },
     cashback: { offers_cashback: false, cashback_amount: undefined, cashback_currency: "", cashback_frequency: "Daily", minimum_withdrawal: undefined, eligible_instruments: "", terms_and_conditions: "", affiliate_program_link: "", cashback_account_type: [], rebate_method: [], cashback_per_lot: 0 },
-    globalReach: { business_region: [], global_presence: "", languages_supported: [], customer_support_channels: [] },
+    globalReach: { business_region: [], global_presence: "", languages_supported: [], customer_support_channels: [], restricted_countries: [] },
     reputation: { wikifx_score: 0, trustpilot_rating: 0, reviews_count: 0, verified_users: 0 },
     additionalFeatures: { education_center: false, copy_trading: false, demo_account: false, trading_contests: false, regulatory_alerts: "", welcome_bonus: false },
     instructions: { description: "", new_account_instructions: "", new_account_link: "", new_account_link_text: "" },

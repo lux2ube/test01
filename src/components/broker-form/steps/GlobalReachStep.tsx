@@ -5,6 +5,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescripti
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiCountrySelector } from "@/components/ui/country-selector";
 
 interface GlobalReachStepProps {
   form: UseFormReturn<any>;
@@ -112,6 +113,31 @@ export function GlobalReachStep({ form }: GlobalReachStepProps) {
                 </div>
               ))}
             </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="globalReach.restricted_countries"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              <span className="ltr:inline hidden">Restricted Countries</span>
+              <span className="rtl:inline hidden">الدول المحظورة</span>
+            </FormLabel>
+            <FormControl>
+              <MultiCountrySelector
+                value={field.value || []}
+                onChange={field.onChange}
+                placeholder="اختر الدول المحظورة..."
+              />
+            </FormControl>
+            <FormDescription>
+              <span className="ltr:inline hidden">Countries where this broker cannot operate or accept clients</span>
+              <span className="rtl:inline hidden">الدول التي لا يستطيع هذا الوسيط العمل فيها أو قبول عملاء منها</span>
+            </FormDescription>
             <FormMessage />
           </FormItem>
         )}

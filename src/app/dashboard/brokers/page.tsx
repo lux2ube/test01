@@ -16,6 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useAuthContext } from "@/hooks/useAuthContext";
+import { MultiCountrySelector } from "@/components/ui/country-selector";
+import { countries } from "@/lib/countries";
 
 const accountTypeTranslations: Record<string, string> = {
   "Standard": "قياسي",
@@ -169,6 +172,7 @@ interface FilterState {
   wikiFxRatings: string[];
   regulators: string[];
   brokerTypes: string[];
+  supportedCountries: string[];
   instruments: {
     crypto: boolean;
     stocks: boolean;
@@ -193,6 +197,7 @@ const defaultFilters: FilterState = {
   wikiFxRatings: [],
   regulators: [],
   brokerTypes: [],
+  supportedCountries: [],
   instruments: {
     crypto: false,
     stocks: false,
@@ -305,12 +310,24 @@ function MultiSelectDropdown({
 }
 
 export default function BrokersPage() {
+  const { user } = useAuthContext();
+  const userCountry = user?.profile?.country || "";
+  
   const [allBrokers, setAllBrokers] = useState<Broker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("forex");
-  const [filters, setFilters] = useState<FilterState>(defaultFilters);
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    ...defaultFilters,
+    supportedCountries: userCountry ? [userCountry] : [],
+  }));
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  useEffect(() => {
+    if (userCountry && filters.supportedCountries.length === 0) {
+      setFilters((f) => ({ ...f, supportedCountries: [userCountry] }));
+    }
+  }, [userCountry]);
 
   const availableOptions = useMemo(() => {
     const platforms = new Set<string>();
@@ -378,6 +395,7 @@ export default function BrokersPage() {
     if (filters.wikiFxRatings.length > 0) count++;
     if (filters.regulators.length > 0) count++;
     if (filters.brokerTypes.length > 0) count++;
+    if (filters.supportedCountries.length > 0) count++;
     if (filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0) count++;
     if (Object.values(filters.instruments).some(Boolean)) count++;
     if (Object.values(filters.features).some(Boolean)) count++;
@@ -459,6 +477,16 @@ export default function BrokersPage() {
         }
       }
 
+      if (filters.supportedCountries.length > 0) {
+        const restrictedCountries = broker.globalReach?.restricted_countries || [];
+        if (restrictedCountries.length > 0) {
+          const isAvailableInAnySelectedCountry = filters.supportedCountries.some((country) => !restrictedCountries.includes(country));
+          if (!isAvailableInAnySelectedCountry) {
+            return false;
+          }
+        }
+      }
+
       if (filters.maxMinDeposit && parseInt(filters.maxMinDeposit) > 0) {
         const threshold = parseInt(filters.maxMinDeposit);
         const brokerDeposit = broker.tradingConditions?.min_deposit;
@@ -484,7 +512,10 @@ export default function BrokersPage() {
   }, [allBrokers, searchQuery, filters]);
 
   const clearAllFilters = () => {
-    setFilters(defaultFilters);
+    setFilters({
+      ...defaultFilters,
+      supportedCountries: userCountry ? [userCountry] : [],
+    });
   };
 
   const renderBrokerList = (brokers: Broker[]) => {
@@ -512,7 +543,7 @@ export default function BrokersPage() {
     return (
       <div className="flex flex-col space-y-4">
         {brokers.map((broker) => (
-          <BrokerCard key={broker.id} broker={broker} />
+          <BrokerCard key={broker.id} broker={broker} userCountry={userCountry} />
         ))}
       </div>
     );
@@ -770,6 +801,19 @@ export default function BrokersPage() {
 
                   <Separator />
 
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">الدول المتاحة</Label>
+                    <MultiCountrySelector
+                      value={filters.supportedCountries}
+                      onChange={(countries) => setFilters((f) => ({ ...f, supportedCountries: countries }))}
+                      placeholder="اختر الدول..."
+                      maxHeight="180px"
+                    />
+                    <p className="text-xs text-muted-foreground">يُخفي الوسطاء المقيدين في هذه الدول</p>
+                  </div>
+
+                  <Separator />
+
                   <MultiSelectDropdown
                     label="الجهة الرقابية"
                     options={availableOptions.regulators}
@@ -845,6 +889,15 @@ export default function BrokersPage() {
                 <X
                   className="h-3 w-3 cursor-pointer"
                   onClick={() => setFilters((f) => ({ ...f, brokerTypes: [] }))}
+                />
+              </Badge>
+            )}
+            {filters.supportedCountries.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                الدول ({filters.supportedCountries.length})
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, supportedCountries: [] }))}
                 />
               </Badge>
             )}

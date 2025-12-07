@@ -176,6 +176,7 @@ export interface Broker {
         global_presence: string;
         languages_supported: string[];
         customer_support_channels: string[];
+        restricted_countries: string[];
     };
     reputation: {
         wikifx_score: number;

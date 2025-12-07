@@ -607,23 +607,6 @@ export default function BrokersPage() {
                     translateFn={(val) => wikiFxRatings.find((r) => r.value === val)?.label || val}
                   />
 
-                  <MultiSelectDropdown
-                    label="الجهة الرقابية"
-                    options={availableOptions.regulators}
-                    selected={filters.regulators}
-                    onSelectionChange={(s) => setFilters((f) => ({ ...f, regulators: s }))}
-                    placeholder="اختر الجهة الرقابية..."
-                  />
-
-                  <MultiSelectDropdown
-                    label="نوع التنفيذ"
-                    options={availableOptions.brokerTypes}
-                    selected={filters.brokerTypes}
-                    onSelectionChange={(s) => setFilters((f) => ({ ...f, brokerTypes: s }))}
-                    placeholder="اختر نوع التنفيذ..."
-                    translateFn={translateBrokerType}
-                  />
-
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-muted-foreground">
                       الحد الأقصى للإيداع الأدنى ($)
@@ -784,6 +767,25 @@ export default function BrokersPage() {
                       </div>
                     </div>
                   </div>
+
+                  <Separator />
+
+                  <MultiSelectDropdown
+                    label="الجهة الرقابية"
+                    options={availableOptions.regulators}
+                    selected={filters.regulators}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, regulators: s }))}
+                    placeholder="اختر الجهة الرقابية..."
+                  />
+
+                  <MultiSelectDropdown
+                    label="نوع التنفيذ"
+                    options={availableOptions.brokerTypes}
+                    selected={filters.brokerTypes}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, brokerTypes: s }))}
+                    placeholder="اختر نوع التنفيذ..."
+                    translateFn={translateBrokerType}
+                  />
                 </div>
               </ScrollArea>
             </PopoverContent>

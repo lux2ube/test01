@@ -167,12 +167,28 @@ export default function BrokersPage() {
     let maxDeposit = 0;
 
     allBrokers.forEach((broker) => {
-      broker.platforms?.platforms_supported?.forEach((p) => platforms.add(p));
-      broker.depositsWithdrawals?.payment_methods?.forEach((p) => paymentMethods.add(p));
-      broker.tradingConditions?.account_types?.forEach((a) => accountTypes.add(a));
-      if (broker.regulation?.risk_level) riskLevels.add(broker.regulation.risk_level);
-      if (broker.tradingConditions?.min_deposit > maxDeposit) {
-        maxDeposit = broker.tradingConditions.min_deposit;
+      const brokerPlatforms = broker.platforms?.platforms_supported;
+      if (Array.isArray(brokerPlatforms)) {
+        brokerPlatforms.forEach((p) => platforms.add(p));
+      }
+      
+      const brokerPayments = broker.depositsWithdrawals?.payment_methods;
+      if (Array.isArray(brokerPayments)) {
+        brokerPayments.forEach((p) => paymentMethods.add(p));
+      }
+      
+      const brokerAccountTypes = broker.tradingConditions?.account_types;
+      if (Array.isArray(brokerAccountTypes)) {
+        brokerAccountTypes.forEach((a) => accountTypes.add(a));
+      }
+      
+      if (broker.regulation?.risk_level) {
+        riskLevels.add(broker.regulation.risk_level);
+      }
+      
+      const deposit = broker.tradingConditions?.min_deposit;
+      if (typeof deposit === 'number' && deposit > maxDeposit) {
+        maxDeposit = deposit;
       }
     });
 
@@ -222,22 +238,22 @@ export default function BrokersPage() {
       }
 
       if (filters.platforms.length > 0) {
-        const brokerPlatforms = broker.platforms?.platforms_supported || [];
-        if (!filters.platforms.some((p) => brokerPlatforms.includes(p))) {
+        const brokerPlatforms = broker.platforms?.platforms_supported;
+        if (!Array.isArray(brokerPlatforms) || !filters.platforms.some((p) => brokerPlatforms.includes(p))) {
           return false;
         }
       }
 
       if (filters.paymentMethods.length > 0) {
-        const brokerPayments = broker.depositsWithdrawals?.payment_methods || [];
-        if (!filters.paymentMethods.some((p) => brokerPayments.includes(p))) {
+        const brokerPayments = broker.depositsWithdrawals?.payment_methods;
+        if (!Array.isArray(brokerPayments) || !filters.paymentMethods.some((p) => brokerPayments.includes(p))) {
           return false;
         }
       }
 
       if (filters.accountTypes.length > 0) {
-        const brokerAccounts = broker.tradingConditions?.account_types || [];
-        if (!filters.accountTypes.some((a) => brokerAccounts.includes(a))) {
+        const brokerAccounts = broker.tradingConditions?.account_types;
+        if (!Array.isArray(brokerAccounts) || !filters.accountTypes.some((a) => brokerAccounts.includes(a))) {
           return false;
         }
       }

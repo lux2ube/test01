@@ -397,6 +397,7 @@ export default function FinancialReportsClient() {
                       onChange={(e) => setUserSearch(e.target.value)}
                       className="h-8"
                       onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
                     />
                   </div>
                   <SelectItem value="all">جميع المستخدمين</SelectItem>
@@ -451,6 +452,7 @@ export default function FinancialReportsClient() {
                       onChange={(e) => setAccountSearch(e.target.value)}
                       className="h-8"
                       onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
                     />
                   </div>
                   <SelectItem value="all">جميع الحسابات</SelectItem>

@@ -2,12 +2,10 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { BrokerCard } from "@/components/user/BrokerCard";
 import type { Broker } from "@/types";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Search, SlidersHorizontal, X } from "lucide-react";
+import { Loader2, Search, SlidersHorizontal, X, ChevronDown, Check } from "lucide-react";
 import { getBrokers } from "@/app/admin/manage-brokers/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -15,41 +13,196 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
-interface Filters {
+interface FilterState {
+  platforms: string[];
+  paymentMethods: string[];
+  accountTypes: string[];
+  minDeposit: number;
+  maxDeposit: number;
   swapFree: boolean;
-  lowRisk: boolean;
-  lowDeposit: boolean;
-  highLeverage: boolean;
-  mt4: boolean;
-  mt5: boolean;
+  riskLevels: string[];
+  instruments: {
+    crypto: boolean;
+    stocks: boolean;
+    commodities: boolean;
+    indices: boolean;
+  };
+  features: {
+    copyTrading: boolean;
+    demoAccount: boolean;
+    educationCenter: boolean;
+    welcomeBonus: boolean;
+  };
 }
 
-const defaultFilters: Filters = {
+const defaultFilters: FilterState = {
+  platforms: [],
+  paymentMethods: [],
+  accountTypes: [],
+  minDeposit: 0,
+  maxDeposit: 10000,
   swapFree: false,
-  lowRisk: false,
-  lowDeposit: false,
-  highLeverage: false,
-  mt4: false,
-  mt5: false,
+  riskLevels: [],
+  instruments: {
+    crypto: false,
+    stocks: false,
+    commodities: false,
+    indices: false,
+  },
+  features: {
+    copyTrading: false,
+    demoAccount: false,
+    educationCenter: false,
+    welcomeBonus: false,
+  },
 };
+
+function MultiSelectDropdown({
+  label,
+  options,
+  selected,
+  onSelectionChange,
+  placeholder,
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onSelectionChange: (selected: string[]) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const toggleOption = (option: string) => {
+    if (selected.includes(option)) {
+      onSelectionChange(selected.filter((s) => s !== option));
+    } else {
+      onSelectionChange([...selected, option]);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-between h-9 text-xs font-normal"
+          >
+            <span className="truncate">
+              {selected.length > 0
+                ? `${selected.length} محدد`
+                : placeholder || "اختر..."}
+            </span>
+            <ChevronDown className="h-3 w-3 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-0" align="start">
+          <ScrollArea className="h-48">
+            <div className="p-2 space-y-1">
+              {options.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">لا توجد خيارات</p>
+              ) : (
+                options.map((option) => (
+                  <div
+                    key={option}
+                    className={cn(
+                      "flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-accent text-sm",
+                      selected.includes(option) && "bg-accent"
+                    )}
+                    onClick={() => toggleOption(option)}
+                  >
+                    <div className={cn(
+                      "h-4 w-4 border rounded-sm flex items-center justify-center",
+                      selected.includes(option) ? "bg-primary border-primary" : "border-input"
+                    )}>
+                      {selected.includes(option) && <Check className="h-3 w-3 text-primary-foreground" />}
+                    </div>
+                    <span className="truncate">{option}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+          {selected.length > 0 && (
+            <>
+              <Separator />
+              <div className="p-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-7 text-xs"
+                  onClick={() => onSelectionChange([])}
+                >
+                  مسح الكل
+                </Button>
+              </div>
+            </>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 export default function BrokersPage() {
   const [allBrokers, setAllBrokers] = useState<Broker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("forex");
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const availableOptions = useMemo(() => {
+    const platforms = new Set<string>();
+    const paymentMethods = new Set<string>();
+    const accountTypes = new Set<string>();
+    const riskLevels = new Set<string>();
+    let maxDeposit = 0;
+
+    allBrokers.forEach((broker) => {
+      broker.platforms?.platforms_supported?.forEach((p) => platforms.add(p));
+      broker.depositsWithdrawals?.payment_methods?.forEach((p) => paymentMethods.add(p));
+      broker.tradingConditions?.account_types?.forEach((a) => accountTypes.add(a));
+      if (broker.regulation?.risk_level) riskLevels.add(broker.regulation.risk_level);
+      if (broker.tradingConditions?.min_deposit > maxDeposit) {
+        maxDeposit = broker.tradingConditions.min_deposit;
+      }
+    });
+
+    return {
+      platforms: Array.from(platforms).sort(),
+      paymentMethods: Array.from(paymentMethods).sort(),
+      accountTypes: Array.from(accountTypes).sort(),
+      riskLevels: Array.from(riskLevels).sort(),
+      maxDeposit: maxDeposit || 10000,
+    };
+  }, [allBrokers]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.platforms.length > 0) count++;
+    if (filters.paymentMethods.length > 0) count++;
+    if (filters.accountTypes.length > 0) count++;
+    if (filters.riskLevels.length > 0) count++;
+    if (filters.swapFree) count++;
+    if (filters.minDeposit > 0 || filters.maxDeposit < availableOptions.maxDeposit) count++;
+    if (Object.values(filters.instruments).some(Boolean)) count++;
+    if (Object.values(filters.features).some(Boolean)) count++;
+    return count;
+  }, [filters, availableOptions.maxDeposit]);
 
   useEffect(() => {
     const fetchBrokers = async () => {
       setIsLoading(true);
       try {
         const data = await getBrokers();
-        // Default sort by order
         data.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
         setAllBrokers(data);
       } catch (error) {
@@ -67,224 +220,427 @@ export default function BrokersPage() {
       if (!name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-      
+
+      if (filters.platforms.length > 0) {
+        const brokerPlatforms = broker.platforms?.platforms_supported || [];
+        if (!filters.platforms.some((p) => brokerPlatforms.includes(p))) {
+          return false;
+        }
+      }
+
+      if (filters.paymentMethods.length > 0) {
+        const brokerPayments = broker.depositsWithdrawals?.payment_methods || [];
+        if (!filters.paymentMethods.some((p) => brokerPayments.includes(p))) {
+          return false;
+        }
+      }
+
+      if (filters.accountTypes.length > 0) {
+        const brokerAccounts = broker.tradingConditions?.account_types || [];
+        if (!filters.accountTypes.some((a) => brokerAccounts.includes(a))) {
+          return false;
+        }
+      }
+
+      if (filters.riskLevels.length > 0) {
+        if (!filters.riskLevels.includes(broker.regulation?.risk_level || "")) {
+          return false;
+        }
+      }
+
       if (filters.swapFree && !broker.tradingConditions?.swap_free) {
         return false;
       }
-      
-      if (filters.lowRisk && broker.regulation?.risk_level !== 'low') {
+
+      const brokerDeposit = broker.tradingConditions?.min_deposit ?? 0;
+      if (brokerDeposit < filters.minDeposit || brokerDeposit > filters.maxDeposit) {
         return false;
       }
-      
-      if (filters.lowDeposit && (broker.tradingConditions?.min_deposit ?? 999) > 100) {
-        return false;
-      }
-      
-      if (filters.highLeverage) {
-        const leverage = broker.tradingConditions?.max_leverage || "";
-        const leverageNum = parseInt(leverage.replace(/[^0-9]/g, '')) || 0;
-        if (leverageNum < 500) {
-          return false;
-        }
-      }
-      
-      if (filters.mt4) {
-        const platforms = broker.platforms?.platforms_supported || [];
-        if (!platforms.some(p => p.toLowerCase().includes('mt4') || p.toLowerCase().includes('metatrader 4'))) {
-          return false;
-        }
-      }
-      
-      if (filters.mt5) {
-        const platforms = broker.platforms?.platforms_supported || [];
-        if (!platforms.some(p => p.toLowerCase().includes('mt5') || p.toLowerCase().includes('metatrader 5'))) {
-          return false;
-        }
-      }
-      
+
+      if (filters.instruments.crypto && !broker.instruments?.crypto_trading) return false;
+      if (filters.instruments.stocks && !broker.instruments?.stocks) return false;
+      if (filters.instruments.commodities && !broker.instruments?.commodities) return false;
+      if (filters.instruments.indices && !broker.instruments?.indices) return false;
+
+      if (filters.features.copyTrading && !broker.additionalFeatures?.copy_trading) return false;
+      if (filters.features.demoAccount && !broker.additionalFeatures?.demo_account) return false;
+      if (filters.features.educationCenter && !broker.additionalFeatures?.education_center) return false;
+      if (filters.features.welcomeBonus && !broker.additionalFeatures?.welcome_bonus) return false;
+
       return true;
     });
   }, [allBrokers, searchQuery, filters]);
 
-  const clearFilters = () => {
-    setFilters(defaultFilters);
-  };
-
-  const toggleFilter = (key: keyof Filters) => {
-    setFilters(prev => ({ ...prev, [key]: !prev[key] }));
+  const clearAllFilters = () => {
+    setFilters({ ...defaultFilters, maxDeposit: availableOptions.maxDeposit });
   };
 
   const renderBrokerList = (brokers: Broker[]) => {
     if (isLoading) {
       return (
-          <div className="flex justify-center items-center h-full min-h-[40vh]">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+        <div className="flex justify-center items-center h-full min-h-[40vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
       );
     }
-    
+
     if (brokers.length === 0) {
-        return (
-          <div className="text-center py-10">
-            <p className="text-muted-foreground text-sm">لا يوجد وسطاء في هذه الفئة.</p>
-          </div>
-        )
+      return (
+        <div className="text-center py-10">
+          <p className="text-muted-foreground text-sm">لا يوجد وسطاء مطابقين للفلاتر المحددة.</p>
+          {activeFilterCount > 0 && (
+            <Button variant="link" size="sm" onClick={clearAllFilters} className="mt-2">
+              مسح جميع الفلاتر
+            </Button>
+          )}
+        </div>
+      );
     }
 
     return (
-        <div className="flex flex-col space-y-4">
-          {brokers.map((broker) => (
-            <BrokerCard key={broker.id} broker={broker} />
-          ))}
-        </div>
-    )
-  }
-  
+      <div className="flex flex-col space-y-4">
+        {brokers.map((broker) => (
+          <BrokerCard key={broker.id} broker={broker} />
+        ))}
+      </div>
+    );
+  };
+
   const getBrokersForTab = (category: string) => {
-      return filteredBrokers.filter(b => {
-          const cat = b.category ?? 'other'; // Fallback for old data
-          return cat === category;
-      });
-  }
+    return filteredBrokers.filter((b) => {
+      const cat = b.category ?? "other";
+      return cat === category;
+    });
+  };
 
   return (
     <div className="max-w-md mx-auto w-full px-4 py-4 space-y-4">
-        <div className="space-y-2">
-            <h1 className="text-xl font-bold">كل الكاش باك</h1>
-            <div className="flex gap-2">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="بحث..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9"
-                    />
+      <div className="space-y-2">
+        <h1 className="text-xl font-bold">كل الكاش باك</h1>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="بحث..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
+          <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 px-3 relative">
+                <SlidersHorizontal className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  >
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              <div className="p-3 border-b">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm">تصفية النتائج</h4>
+                  {activeFilterCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                      onClick={clearAllFilters}
+                    >
+                      مسح الكل
+                    </Button>
+                  )}
                 </div>
-                <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 px-3 relative">
-                            <SlidersHorizontal className="h-4 w-4" />
-                            {activeFilterCount > 0 && (
-                                <Badge 
-                                    variant="destructive" 
-                                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
-                                >
-                                    {activeFilterCount}
-                                </Badge>
-                            )}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-3" align="end">
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <h4 className="font-semibold text-sm">تصفية حسب</h4>
-                                {activeFilterCount > 0 && (
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-6 px-2 text-xs text-muted-foreground"
-                                        onClick={clearFilters}
-                                    >
-                                        مسح الكل
-                                    </Button>
-                                )}
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox 
-                                        id="swapFree" 
-                                        checked={filters.swapFree}
-                                        onCheckedChange={() => toggleFilter('swapFree')}
-                                    />
-                                    <Label htmlFor="swapFree" className="text-sm cursor-pointer">حساب إسلامي (بدون سواب)</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox 
-                                        id="lowRisk" 
-                                        checked={filters.lowRisk}
-                                        onCheckedChange={() => toggleFilter('lowRisk')}
-                                    />
-                                    <Label htmlFor="lowRisk" className="text-sm cursor-pointer">مخاطر منخفضة</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox 
-                                        id="lowDeposit" 
-                                        checked={filters.lowDeposit}
-                                        onCheckedChange={() => toggleFilter('lowDeposit')}
-                                    />
-                                    <Label htmlFor="lowDeposit" className="text-sm cursor-pointer">إيداع أقل من $100</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox 
-                                        id="highLeverage" 
-                                        checked={filters.highLeverage}
-                                        onCheckedChange={() => toggleFilter('highLeverage')}
-                                    />
-                                    <Label htmlFor="highLeverage" className="text-sm cursor-pointer">رافعة عالية (500+)</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox 
-                                        id="mt4" 
-                                        checked={filters.mt4}
-                                        onCheckedChange={() => toggleFilter('mt4')}
-                                    />
-                                    <Label htmlFor="mt4" className="text-sm cursor-pointer">يدعم MT4</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Checkbox 
-                                        id="mt5" 
-                                        checked={filters.mt5}
-                                        onCheckedChange={() => toggleFilter('mt5')}
-                                    />
-                                    <Label htmlFor="mt5" className="text-sm cursor-pointer">يدعم MT5</Label>
-                                </div>
-                            </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </div>
-            {activeFilterCount > 0 && (
-                <div className="flex flex-wrap gap-1">
-                    {filters.swapFree && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                            حساب إسلامي
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => toggleFilter('swapFree')} />
-                        </Badge>
-                    )}
-                    {filters.lowRisk && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                            مخاطر منخفضة
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => toggleFilter('lowRisk')} />
-                        </Badge>
-                    )}
-                    {filters.lowDeposit && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                            إيداع أقل من $100
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => toggleFilter('lowDeposit')} />
-                        </Badge>
-                    )}
-                    {filters.highLeverage && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                            رافعة عالية
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => toggleFilter('highLeverage')} />
-                        </Badge>
-                    )}
-                    {filters.mt4 && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                            MT4
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => toggleFilter('mt4')} />
-                        </Badge>
-                    )}
-                    {filters.mt5 && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                            MT5
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => toggleFilter('mt5')} />
-                        </Badge>
-                    )}
+              </div>
+              <ScrollArea className="h-[400px]">
+                <div className="p-3 space-y-4">
+                  <MultiSelectDropdown
+                    label="المنصات"
+                    options={availableOptions.platforms}
+                    selected={filters.platforms}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, platforms: s }))}
+                    placeholder="اختر المنصات..."
+                  />
+
+                  <MultiSelectDropdown
+                    label="طرق الدفع"
+                    options={availableOptions.paymentMethods}
+                    selected={filters.paymentMethods}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, paymentMethods: s }))}
+                    placeholder="اختر طرق الدفع..."
+                  />
+
+                  <MultiSelectDropdown
+                    label="أنواع الحسابات"
+                    options={availableOptions.accountTypes}
+                    selected={filters.accountTypes}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, accountTypes: s }))}
+                    placeholder="اختر نوع الحساب..."
+                  />
+
+                  <MultiSelectDropdown
+                    label="مستوى المخاطر"
+                    options={availableOptions.riskLevels}
+                    selected={filters.riskLevels}
+                    onSelectionChange={(s) => setFilters((f) => ({ ...f, riskLevels: s }))}
+                    placeholder="اختر مستوى المخاطر..."
+                  />
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">
+                      الحد الأدنى للإيداع: ${filters.minDeposit} - ${filters.maxDeposit}
+                    </Label>
+                    <div className="px-1">
+                      <Slider
+                        min={0}
+                        max={availableOptions.maxDeposit}
+                        step={10}
+                        value={[filters.minDeposit, filters.maxDeposit]}
+                        onValueChange={([min, max]) =>
+                          setFilters((f) => ({ ...f, minDeposit: min, maxDeposit: max }))
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">خيارات التداول</Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="swapFree"
+                          checked={filters.swapFree}
+                          onCheckedChange={(c) => setFilters((f) => ({ ...f, swapFree: !!c }))}
+                        />
+                        <Label htmlFor="swapFree" className="text-sm cursor-pointer">
+                          حساب إسلامي (بدون سواب)
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">الأدوات المالية</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="crypto"
+                          checked={filters.instruments.crypto}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              instruments: { ...f.instruments, crypto: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="crypto" className="text-sm cursor-pointer">كريبتو</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="stocks"
+                          checked={filters.instruments.stocks}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              instruments: { ...f.instruments, stocks: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="stocks" className="text-sm cursor-pointer">أسهم</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="commodities"
+                          checked={filters.instruments.commodities}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              instruments: { ...f.instruments, commodities: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="commodities" className="text-sm cursor-pointer">سلع</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="indices"
+                          checked={filters.instruments.indices}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              instruments: { ...f.instruments, indices: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="indices" className="text-sm cursor-pointer">مؤشرات</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">ميزات إضافية</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="copyTrading"
+                          checked={filters.features.copyTrading}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              features: { ...f.features, copyTrading: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="copyTrading" className="text-sm cursor-pointer">نسخ التداول</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="demoAccount"
+                          checked={filters.features.demoAccount}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              features: { ...f.features, demoAccount: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="demoAccount" className="text-sm cursor-pointer">حساب تجريبي</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="educationCenter"
+                          checked={filters.features.educationCenter}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              features: { ...f.features, educationCenter: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="educationCenter" className="text-sm cursor-pointer">مركز تعليم</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="welcomeBonus"
+                          checked={filters.features.welcomeBonus}
+                          onCheckedChange={(c) =>
+                            setFilters((f) => ({
+                              ...f,
+                              features: { ...f.features, welcomeBonus: !!c },
+                            }))
+                          }
+                        />
+                        <Label htmlFor="welcomeBonus" className="text-sm cursor-pointer">مكافأة ترحيب</Label>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-            )}
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
         </div>
+
+        {activeFilterCount > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {filters.platforms.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                المنصات ({filters.platforms.length})
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, platforms: [] }))}
+                />
+              </Badge>
+            )}
+            {filters.paymentMethods.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                طرق الدفع ({filters.paymentMethods.length})
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, paymentMethods: [] }))}
+                />
+              </Badge>
+            )}
+            {filters.accountTypes.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                الحسابات ({filters.accountTypes.length})
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, accountTypes: [] }))}
+                />
+              </Badge>
+            )}
+            {filters.riskLevels.length > 0 && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                المخاطر ({filters.riskLevels.length})
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, riskLevels: [] }))}
+                />
+              </Badge>
+            )}
+            {filters.swapFree && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                إسلامي
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => setFilters((f) => ({ ...f, swapFree: false }))}
+                />
+              </Badge>
+            )}
+            {(filters.minDeposit > 0 || filters.maxDeposit < availableOptions.maxDeposit) && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                الإيداع: ${filters.minDeposit}-${filters.maxDeposit}
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() =>
+                    setFilters((f) => ({ ...f, minDeposit: 0, maxDeposit: availableOptions.maxDeposit }))
+                  }
+                />
+              </Badge>
+            )}
+            {Object.values(filters.instruments).some(Boolean) && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                الأدوات
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() =>
+                    setFilters((f) => ({
+                      ...f,
+                      instruments: { crypto: false, stocks: false, commodities: false, indices: false },
+                    }))
+                  }
+                />
+              </Badge>
+            )}
+            {Object.values(filters.features).some(Boolean) && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                الميزات
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() =>
+                    setFilters((f) => ({
+                      ...f,
+                      features: { copyTrading: false, demoAccount: false, educationCenter: false, welcomeBonus: false },
+                    }))
+                  }
+                />
+              </Badge>
+            )}
+          </div>
+        )}
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -293,18 +649,15 @@ export default function BrokersPage() {
           <TabsTrigger value="other">أخرى</TabsTrigger>
         </TabsList>
         <TabsContent value="forex" className="mt-4">
-          {renderBrokerList(getBrokersForTab('forex'))}
+          {renderBrokerList(getBrokersForTab("forex"))}
         </TabsContent>
         <TabsContent value="crypto" className="mt-4">
-          {renderBrokerList(getBrokersForTab('crypto'))}
+          {renderBrokerList(getBrokersForTab("crypto"))}
         </TabsContent>
         <TabsContent value="other" className="mt-4">
-          {renderBrokerList(getBrokersForTab('other'))}
+          {renderBrokerList(getBrokersForTab("other"))}
         </TabsContent>
       </Tabs>
-
     </div>
   );
 }
-
-    

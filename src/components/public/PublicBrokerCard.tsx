@@ -172,7 +172,7 @@ export function PublicBrokerCard({ broker }: PublicBrokerCardProps) {
                         </Button>
                     )}
                     <Button asChild size="sm" className="font-medium h-8 text-xs">
-                        <Link href={`/login?next=/brokers/${broker.id}`}>
+                        <Link href={`/login?next=/dashboard/brokers/${broker.id}`}>
                             <Gift className="h-3.5 w-3.5 ml-1" />
                             احصل على كاش باك
                         </Link>
